@@ -27,6 +27,8 @@ public sealed class Layer {
   public string Id { get; set; }
   public LayerKind Kind { get; set; }
   public bool FromEntry { get; set; }
+  public bool GameSeparator { get; set; }
+  public bool HasTint { get; set; }
   public List<string> Images { get; } = [];
   public ColorValue Color { get; set; }
   public TextStyle Text { get; set; }
@@ -41,6 +43,8 @@ public sealed class Layout {
   public bool ShowsEntryImage => Layers.Any(layer => layer.FromEntry);
 
   public bool ShowsText => Layers.Any(layer => layer.Kind == LayerKind.Text);
+
+  public bool ShowsSeparator => Layers.Any(layer => layer.GameSeparator);
 }
 
 public sealed class Entry {

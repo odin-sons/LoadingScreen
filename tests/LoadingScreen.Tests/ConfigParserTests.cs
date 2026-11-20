@@ -253,6 +253,54 @@ public class ConfigParserTests {
     Assert.True(ColorValue.TryParse(text, out ColorValue color));
     Assert.Equal(new ColorValue((byte) r, (byte) g, (byte) b, (byte) a), color);
   }
+
+  [Fact]
+  public void ParsesGameSeparatorLayer() {
+    const string yaml = """
+        layouts:
+          lined:
+            layers:
+              - source: entry
+              - separator: game
+                color: "#FFFFFF80"
+                fit: { width: 40% }
+                position: { anchor: bottom, y: -20% }
+        situations:
+          general:
+            layout: lined
+            entries: [ general/a.jpg ]
+        """;
+
+    ConfigLoadResult result = Parse(yaml);
+
+    Assert.Empty(result.Warnings);
+    Layout layout = result.Config.Layouts["lined"];
+    Layer separator = layout.Layers[1];
+    Assert.True(layout.ShowsSeparator);
+    Assert.True(separator.GameSeparator);
+    Assert.Equal(LayerKind.Image, separator.Kind);
+    Assert.True(separator.HasTint);
+    Assert.Equal(Anchor.Bottom, separator.Placement.Anchor);
+  }
+
+  [Fact]
+  public void RejectsUnknownSeparatorAndMixedSources() {
+    const string yaml = """
+        layouts:
+          broken:
+            layers:
+              - separator: fancy
+              - separator: game
+                image: common/logo.png
+              - source: entry
+        """;
+
+    ConfigLoadResult result = Parse(yaml);
+
+    Assert.Contains(result.Warnings, warning => warning.Contains("'separator' supports only 'game'"));
+    Assert.Contains(result.Warnings, warning => warning.Contains("use only one of"));
+    Assert.False(result.Config.Layouts["broken"].ShowsSeparator);
+  }
 }
 
 public class ExampleConfigTests {

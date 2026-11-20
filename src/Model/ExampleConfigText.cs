@@ -32,7 +32,8 @@ public static class ExampleConfigText {
       #   animate: true | false   (slow zoom, uses the LoadingImage.ScaleLerp settings)
       #
       # Layers: "color" (solid fill), "image" (one file), "images" (a random file per screen),
-      # "source: entry" (the image of the chosen entry) and "text: caption" (the entry text or a tip).
+      # "source: entry" (the image of the chosen entry), "separator: game" (the game's ornament line,
+      # takes placement and a "color" tint, replaces the built-in separator) and "text: caption" (the entry text or a tip).
       # A text layer takes position, opacity, "fit: { width }" and: size, color, align (left | center | right),
       # background (a color box behind the text). Without a text layer the usual tip line is used.
 

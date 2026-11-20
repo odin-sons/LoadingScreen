@@ -411,6 +411,10 @@ layouts:
         background: "#00000099"
         fit: { width: 50% }
         position: { anchor: bottom, y: -6% }
+      - separator: game        # the game's ornament line
+        color: "#FFFFFFCC"     # optional tint
+        fit: { width: 35% }
+        position: { anchor: bottom, y: -14% }
 ```
 
 Placement options, accepted in `defaults`, on a layout, on a layer and in an entry's `place`. The most specific
@@ -427,6 +431,11 @@ value wins: entry `place`, then layer, then layout, then `defaults`.
 A text layer accepts `position`, `opacity`, `fit: { width }` (the text box width, default 80% of the screen) and
 `size`, `color`, `align` (`left`, `center`, `right`), `background` (a color box behind the text). Without a text
 layer, the caption goes to the usual tip line.
+
+A `separator: game` layer draws the game's ornament line as an image layer. It takes the placement options and an
+optional `color` tint; without placement it keeps its native size near the bottom. A layout with such a layer hides
+the built-in separator from `[LoadingScreen.PanelSeparator]`. To use your own line, add it as an `image` layer and
+turn `showPanelSeparator` off.
 
 ### Settings
 
