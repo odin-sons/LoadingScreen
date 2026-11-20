@@ -124,3 +124,36 @@ public class ConditionsTests {
     }
   }
 }
+
+public class ReadmeConditionExamplesTests {
+  static string FindReadme() {
+    for (System.IO.DirectoryInfo dir = new(System.AppContext.BaseDirectory); dir != null; dir = dir.Parent) {
+      string path = System.IO.Path.Combine(dir.FullName, "README.md");
+
+      if (System.IO.File.Exists(path) && System.IO.File.Exists(System.IO.Path.Combine(dir.FullName, "manifest.json"))) {
+        return path;
+      }
+    }
+
+    return null;
+  }
+
+  [Fact]
+  public void ConditionExamplesParseWithoutWarnings() {
+    string readme = System.IO.File.ReadAllText(FindReadme());
+    List<string> blocks = System.Text.RegularExpressions.Regex
+        .Matches(readme, "```yaml\r?\n(.*?)```", System.Text.RegularExpressions.RegexOptions.Singleline)
+        .Select(match => match.Groups[1].Value)
+        .Where(block => block.Contains("when:"))
+        .ToList();
+
+    Assert.True(blocks.Count >= 3);
+
+    foreach (string block in blocks) {
+      ConfigLoadResult result = new ConfigParser(_ => true, DeathCauses.Names).Parse(block);
+
+      Assert.Empty(result.Warnings);
+      Assert.True(result.Config.EntryCount > 0);
+    }
+  }
+}

@@ -126,7 +126,7 @@ situations:
 |---|---|---|
 | `knownItem` | the player has ever picked up the item | item prefab name (`Demister`) or `$item_` token |
 | `hasItem` | the item is in the inventory now | same as above |
-| `knownRecipe` | the player knows the recipe for the item | same as above |
+| `knownRecipe` | the player knows the recipe for the item or build piece | same as above, or a piece token (`$ship_karve`) |
 | `knownBiome` | the player has discovered the biome | biome name from the list above |
 | `globalKey` | the world has the global key | key name (`defeated_bonemass`, `defeated_queen`, ...) |
 | `playerKey` | the player has the unique key | key name |
@@ -136,6 +136,259 @@ every name must match. Player conditions need a loaded character, so entries wit
 and on the first loading screen of a session. An entry with an unknown condition is ignored with a log message.
 Steam or Xbox achievements are not available to mods on every platform; use the global key or item the achievement
 is about instead.
+
+#### Condition recipes
+
+Boss progress. The global key is set for the whole world when the boss dies:
+
+| Boss | Summoned or reached with | Drops | Global key |
+|---|---|---|---|
+| Eikthyr | `TrophyDeer` | `HardAntler`, `TrophyEikthyr` | `defeated_eikthyr` |
+| The Elder | `AncientSeed` | `CryptKey`, `TrophyTheElder` | `defeated_gdking` |
+| Bonemass | `WitheredBone` | `Wishbone`, `TrophyBonemass` | `defeated_bonemass` |
+| Moder | `DragonEgg` | `DragonTear`, `TrophyDragonQueen` | `defeated_dragon` |
+| Yagluth | `GoblinTotem` | `YagluthDrop`, `TrophyGoblinKing` | `defeated_goblinking` |
+| The Queen | `DvergrKey` (from `DvergrKeyFragment`) | `QueenDrop`, `TrophySeekerQueen` | `defeated_queen` |
+| Fader | `Bell` (from `BellFragment`) | `FaderDrop`, `TrophyFader` | `defeated_fader` |
+
+Other world keys: `KilledTroll`, `killed_surtling`, `KilledBat`.
+
+Materials that mark progress through the biomes:
+
+| Biome | Item prefab names |
+|---|---|
+| Meadows | `Wood`, `Stone`, `Flint`, `Resin`, `LeatherScraps`, `DeerHide`, `Feathers` |
+| Black Forest | `CopperOre`, `Copper`, `TinOre`, `Tin`, `Bronze`, `FineWood`, `RoundLog`, `SurtlingCore`, `TrollHide`, `Thistle` |
+| Swamp | `IronScrap`, `Iron`, `Guck`, `Bloodbag`, `Ooze`, `Chain`, `Root`, `ElderBark`, `Entrails` |
+| Mountain | `SilverOre`, `Silver`, `WolfPelt`, `WolfFang`, `FreezeGland`, `Obsidian`, `Thunderstone` |
+| Plains | `BlackMetalScrap`, `BlackMetal`, `Barley`, `BarleyFlour`, `Flax`, `LoxPelt`, `Needle`, `Tar` |
+| Mistlands | `BlackMarble`, `Sap`, `Eitr`, `BlackCore`, `Softtissue`, `Carapace`, `Mandible`, `Wisp`, `YggdrasilWood`, `RoyalJelly`, `MushroomJotunPuffs`, `MushroomMagecap`, `JuteRed`, `ScaleHide`, `MechanicalSpring` |
+| Ashlands | `FlametalOreNew`, `FlametalNew`, `Blackwood`, `AskHide`, `CharredBone`, `Grausten`, `MoltenCore`, `Bilebag`, `CelestialFeather`, `MorgenHeart`, `CeramicPlate` |
+| Deep North | `GoldOre`, `Gold`, `Frostwood`, `FrostCore`, `Ice`, `FrozenFuel`, `MooseHide` |
+| Ocean | `SerpentScale`, `Chitin`, `SerpentMeat` |
+
+Key tools and gear: `Hammer`, `Hoe`, `Cultivator`, `PickaxeAntler`, `PickaxeBronze`, `PickaxeIron`,
+`PickaxeBlackMetal`, `Demister` (Wisplight), `Lantern`, `MeadFrostResist`, `MeadPoisonResist`, `CapeWolf`,
+`CapeLox`, `FishingRod`, `Scythe`. Any other item works by its prefab name; the
+[Jotunn item list](https://valheim-modding.github.io/Jotunn/data/objects/item-list.html) has all of them.
+
+Haldor, the Black Forest trader:
+
+| Goods | Prefab or key | Sold after |
+|---|---|---|
+| Megingjord | `BeltStrength` | always |
+| Dverger circlet | `HelmetDverger` | always |
+| Barrel hoops | `BarrelRings` | always |
+| Fishing rod, bait | `FishingRod`, `FishingBait` | always |
+| Thunder stone | `Thunderstone` | `defeated_gdking` |
+| Ymir flesh | `YmirRemains` | `defeated_gdking` |
+| Egg | `ChickenEgg` | `defeated_goblinking` |
+| Wider Pockets, +1 inventory row | player key `invrows 5` | `defeated_dragon` |
+| Deeper Pockets, +1 inventory row | player key `invrows 6` | `defeated_queen` |
+
+The pockets are not items: the game stores the number of inventory rows as the player key `invrows N`, starting at
+`invrows 4`. `playerKey: invrows 4` therefore means the player has not bought Wider Pockets yet.
+
+The Bog Witch, the Swamp trader:
+
+| Goods | Prefab | Sold after |
+|---|---|---|
+| Candle wick | `CandleWick` | always |
+| Cured squirrel hamstring | `CuredSquirrelHamstring` | always |
+| Fresh seaweed | `FreshSeaweed` | always |
+| Ivy seeds | `VineGreenSeeds` | always |
+| Love potion | `MeadTrollPheromones` | always |
+| Powdered dragon eggshells | `PowderedDragonEgg` | always |
+| Pungent pebbles | `PungentPebbles` | always |
+| Serving tray | `Feaster` | always |
+| Woodland herb blend | `SpiceForests` | `defeated_gdking` |
+| Fragrant bundle | `FragrantBundle` | `defeated_dragon` |
+| Mountain peak pepper powder | `SpiceMountains` | `defeated_dragon` |
+| Toadstool | `MushroomBzerker` | `defeated_dragon` |
+| Scythe handle | `ScytheHandle` | `defeated_dragon` |
+| Grasslands herbalist harvest | `SpicePlains` | `defeated_goblinking` |
+| Herbs of the hidden hills | `SpiceMistlands` | `defeated_queen` |
+| Fiery spice powder | `SpiceAshlands` | `defeated_fader` |
+| Seafarer's herbs | `SpiceOceans` | a killed serpent |
+
+Build pieces are known by their token, so use `knownRecipe` with it. Ships: `$ship_raft`, `$ship_karve`,
+`$ship_longship`, `$ship_longship_ashlands` (Drakkar). Stations: `$piece_workbench`, `$piece_forge`, `$piece_smelter`,
+`$piece_charcoalkiln`, `$piece_stonecutter`, `$piece_fermenter`, `$piece_cauldron`, `$piece_artisanstation`,
+`$piece_spinningwheel`, `$piece_windmill`, `$piece_blastfurnace`, `$piece_blackforge`, `$piece_eitrrefinery`,
+`$piece_sapcollector`, `$piece_preptable`, `$piece_meadcauldron`, `$piece_portal`.
+
+A tip for the next boss, shown on any loading screen while that boss is the next one:
+
+```yaml
+situations:
+  general:
+    - text: Two deer trophies on the mystical altar call Eikthyr, the first of the Forsaken.
+      when: { notGlobalKey: defeated_eikthyr }
+    - text: Ancient seeds from the greydwarf nests summon the Elder in the Black Forest.
+      when: { globalKey: defeated_eikthyr, notGlobalKey: defeated_gdking }
+    - text: The Swamp key from the Elder opens the sunken crypts.
+      when: { globalKey: defeated_gdking, notKnownItem: CryptKey }
+    - text: Withered bones from the sunken crypts summon Bonemass.
+      when: { globalKey: defeated_gdking, notGlobalKey: defeated_bonemass }
+    - text: Dragon eggs from the mountain peaks summon Moder.
+      when: { globalKey: defeated_bonemass, notGlobalKey: defeated_dragon }
+    - text: Fuling totems from the Plains villages summon Yagluth.
+      when: { globalKey: defeated_dragon, notGlobalKey: defeated_goblinking }
+    - text: Sealbreaker fragments from the infested mines open the Queen's lair.
+      when: { globalKey: defeated_goblinking, notGlobalKey: defeated_queen }
+    - text: Bell fragments in the Ashlands summon Fader.
+      when: { globalKey: defeated_queen, notGlobalKey: defeated_fader }
+```
+
+What to do after each boss, until the player has done it:
+
+```yaml
+situations:
+  general:
+    - text: Eikthyr's hard antlers make a pickaxe. Copper and tin wait in the Black Forest.
+      when: { globalKey: defeated_eikthyr, notKnownItem: PickaxeAntler }
+    - text: Copper and tin smelt into bronze. A smelter needs surtling cores from the burial chambers.
+      when: { knownItem: PickaxeAntler, notKnownItem: Bronze }
+    - text: Wood, leather scraps and resin make a raft. Slow, but it floats.
+      when: { notKnownRecipe: $ship_raft }
+    - text: Bronze nails and fine wood build a karve, a real ship for the open sea.
+      when: { knownItem: Bronze, notKnownRecipe: $ship_karve }
+    - text: Iron scrap lies in the sunken crypts. Bring a bronze pickaxe and the Elder's key.
+      when: { globalKey: defeated_gdking, notKnownItem: IronScrap }
+    - text: Iron nails and ancient bark build a longship that carries much more cargo.
+      when: { knownItem: Iron, notKnownRecipe: $ship_longship }
+    - text: An iron pickaxe breaks silver ore. The Wishbone shows where it is buried.
+      when: { globalKey: defeated_bonemass, notKnownItem: PickaxeIron }
+    - text: Haldor now sells Wider Pockets, one more row in your inventory.
+      when: { globalKey: defeated_dragon, playerKey: invrows 4 }
+    - text: The Bog Witch now sells a scythe handle. A scythe cuts crops in a wide arc.
+      when: { globalKey: defeated_dragon, notKnownItem: Scythe }
+    - text: Black metal makes the strongest pickaxe yet.
+      when: { knownItem: BlackMetal, notKnownItem: PickaxeBlackMetal }
+    - text: Haldor now sells Deeper Pockets, one more row in your inventory.
+      when: { globalKey: defeated_queen, playerKey: invrows 5 }
+    - text: Take a Drakkar into the Ashlands seas.
+      when: { globalKey: defeated_queen, notKnownRecipe: $ship_longship_ashlands }
+```
+
+Biome tips for every biome, shown until the player has found the item the tip is about:
+
+```yaml
+situations:
+  teleport:
+    Meadows:
+      - text: Wood and stone make a hammer. Build a workbench under a roof.
+        when: { notKnownRecipe: $piece_workbench }
+      - text: Flint lies along the shores. It makes better axes and spears.
+        when: { notKnownItem: Flint }
+    BlackForest:
+      - text: Eikthyr's antlers make a pickaxe; copper and tin are waiting.
+        when: { notKnownItem: PickaxeAntler }
+      - text: Burial chambers hold surtling cores, the heart of a smelter.
+        when: { notKnownItem: SurtlingCore }
+      - text: Greydwarf nests drop ancient seeds that summon the Elder.
+        when: { notGlobalKey: defeated_gdking, notKnownItem: AncientSeed }
+      - text: Trolls drop hides for light, quiet armor.
+        when: { notKnownItem: TrollHide }
+    Swamp:
+      - text: Bring poison resistance mead before the leeches find you.
+        when: { notKnownItem: MeadPoisonResist }
+      - text: The sunken crypts hide iron scrap behind the Elder's key.
+        when: { globalKey: defeated_gdking, notKnownItem: IronScrap }
+      - text: Ancient trees give ancient bark, but only to a bronze axe or better.
+        when: { notKnownItem: ElderBark }
+      - text: Guck hangs from the tall swamp trees.
+        when: { notKnownItem: Guck }
+    Mountain:
+      - text: Without frost resistance the mountain freezes you to death.
+        when: { notKnownItem: [MeadFrostResist, CapeWolf] }
+      - text: The Wishbone hums near buried silver.
+        when: { globalKey: defeated_bonemass, notKnownItem: SilverOre }
+      - text: Wolves drop pelts for warm armor.
+        when: { notKnownItem: WolfPelt }
+    Plains:
+      - text: Fulings in the Plains villages carry black metal scrap.
+        when: { notKnownItem: BlackMetalScrap }
+      - text: Barley and flax grow wild in the fuling villages and only in the Plains.
+        when: { notKnownItem: [Barley, Flax] }
+      - text: Tar pits give tar for black metal work and roofs.
+        when: { notKnownItem: Tar }
+    Ocean:
+      - text: Serpent scales make one of the best shields of the early seas.
+        when: { notKnownItem: SerpentScale }
+      - text: Leviathans sink when struck. Mine chitin from their backs while you can.
+        when: { notKnownItem: Chitin }
+    Mistlands:
+      - text: The mist is thick. Craft a Wisplight to see further.
+        when: { notKnownItem: Demister }
+      - text: A sap extractor on the giant roots collects sap.
+        when: { notKnownItem: Sap }
+      - text: Seekers drop carapace for strong armor.
+        when: { notKnownItem: Carapace }
+    AshLands:
+      - text: Flametal ore is found in the lava fields.
+        when: { notKnownItem: FlametalOreNew }
+      - text: Fire resistance barley wine keeps the heat bearable.
+        when: { notKnownItem: BarleyWine }
+    DeepNorth:
+      - text: The north freezes everything. Bring frost resistance.
+        when: { notKnownItem: [MeadFrostResist, CapeWolf, CapeDeepNorth] }
+      - text: Moose hide makes a warm cape for the north.
+        when: { notKnownItem: MooseHide }
+      - text: Bloodgold is the metal of the north.
+        when: { notKnownItem: Gold }
+  death:
+    Freezing:
+      - text: Frost resistance mead or a wolf cape keeps the cold away.
+        when: { notKnownItem: [MeadFrostResist, CapeWolf] }
+      - text: A campfire and a roof warm you up and remove the Wet effect.
+    Frost:
+      - text: Drakes and frost spells hit hard. Frost resistance mead cuts the damage.
+        when: { notKnownItem: MeadFrostResist }
+    Poisoned:
+      - text: Poison resistance mead makes the poison much weaker.
+        when: { notKnownItem: MeadPoisonResist }
+      - text: Healing mead outlasts poison. Keep a few in the hotbar.
+        when: { notKnownItem: MeadHealthMinor }
+    Poison:
+      - text: Blobs and leeches poison you. Fight them from range or drink poison resistance mead.
+    Burning:
+      - text: Fire resistance barley wine keeps you from burning.
+        when: { notKnownItem: BarleyWine }
+      - text: Jump into water to put the fire out.
+    Fire:
+      - text: Surtlings and fire spells burn. Keep a fire resistance brew ready.
+    Fall:
+      - text: A feather cape lets you glide down from any height.
+        when: { notKnownItem: CapeFeather }
+      - text: Long falls hurt. Climb down slowly on steep cliffs.
+    Drowning:
+      - text: Swimming drains stamina. Stamina mead and more food keep you afloat longer.
+        when: { notKnownItem: [MeadStaminaMinor, MeadStaminaMedium] }
+      - text: Drop heavy cargo before a long swim.
+    Smoke:
+      - text: Smoke needs a way out. Leave a gap in the roof or build a chimney.
+    Tree:
+      - text: Falling trees and logs crush anyone below. Step aside after the last chop.
+    Structural:
+      - text: Unsupported buildings collapse. Check the support color before you go inside.
+    AshlandsOcean:
+      - text: The Ashlands sea boils. Stay on the boat.
+    AshlandsLava:
+      - text: Lava burns through any armor. Watch your step on glowing rock.
+    Blunt:
+      - text: Skeletons and trolls deal blunt damage. Block or parry with a shield.
+        when: { notKnownItem: [ShieldWood, ShieldBronzeBuckler] }
+    Spirit:
+      - text: Ghosts and wraiths fear silver. A silver sword or Frostner works well.
+        when: { notKnownItem: [SwordSilver, MaceSilver] }
+    EnemyHit:
+      - text: Eat three different foods before a fight. More health and stamina win battles.
+      - text: Rest by a fire under a roof to get the Rested bonus before heading out.
+      - text: A well-timed parry staggers most enemies.
+```
+
+`notKnownItem: [A, B]` means the player knows neither item. Items count as known once picked up or crafted.
 
 ### Layouts and layers
 
