@@ -73,6 +73,7 @@ public static class LoadingManager {
   public static void SetLoadingImage(Image loadingImage) {
     if (loadingImage && CustomAssets.GetRandomLoadingImage(out Sprite loadingImageSprite)) {
       loadingImage.SetSprite(loadingImageSprite);
+      CustomAssets.Pin(loadingImage, [loadingImageSprite]);
     }
   }
 

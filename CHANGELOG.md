@@ -16,6 +16,8 @@
     into `BepInEx/cache/LoadingScreen/` with size, path and hash checks. New settings `[ServerImages] serveToClients`
     and `downloadFromServer`.
   * Console command `loadingscreen reload|status`.
+  * Images are checked before decoding (PNG or JPEG, at most 8192 px per side and 16.7 megapixels) and decoded
+    without mipmaps or a CPU copy.
   * The chosen image is decoded when the death or teleport happens; at most 16 decoded images are kept in memory.
   * Not yet tested in the game.
 
