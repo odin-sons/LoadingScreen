@@ -4,6 +4,8 @@ using System.Collections.Generic;
 
 using global::LoadingScreen.Screens;
 
+using TMPro;
+
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -17,7 +19,19 @@ public sealed class LayerHost : MonoBehaviour {
     public readonly List<(Sides Side, RectTransform Rect, Length? Size)> Fades = [];
   }
 
+  sealed class PlacedText {
+    public RectTransform Rect;
+    public TMP_Text Text;
+    public Placement Placement;
+    public float Padding;
+  }
+
+  const float TextBackgroundPadding = 12f;
+
   static readonly Dictionary<Layer, string> _lastPoolPick = [];
+
+  readonly List<PlacedText> _texts = [];
+  TMP_Text _hiddenTemplate;
 
   readonly List<PlacedImage> _placed = [];
   readonly List<Transform> _animated = [];
@@ -54,7 +68,7 @@ public sealed class LayerHost : MonoBehaviour {
     return host;
   }
 
-  public bool Show(Selection selection) {
+  public bool Show(Selection selection, string caption = null, TMP_Text textTemplate = null) {
     Clear();
 
     if (selection == null) {
@@ -75,6 +89,14 @@ public sealed class LayerHost : MonoBehaviour {
     foreach (Layer layer in layout.Layers) {
       if (layer.Kind == LayerKind.Color) {
         AddColorLayer(layer);
+        continue;
+      }
+
+      if (layer.Kind == LayerKind.Text) {
+        if (textTemplate) {
+          AddTextLayer(layer, Placement.Merge(layer.Placement, layout.Placement), caption ?? string.Empty, textTemplate);
+        }
+
         continue;
       }
 
@@ -165,6 +187,57 @@ public sealed class LayerHost : MonoBehaviour {
     image.raycastTarget = false;
   }
 
+  public bool ShowsOwnText => _texts.Count > 0;
+
+  void AddTextLayer(Layer layer, Placement placement, string caption, TMP_Text template) {
+    RectTransform container = CreateChild<RectTransform>($"Text-{layer.Id}", _root);
+    TextStyle style = layer.Text ?? new();
+    float padding = 0f;
+
+    if (style.Background.HasValue) {
+      Image background = container.gameObject.AddComponent<Image>();
+      background.color = ToColor(style.Background.Value);
+      background.raycastTarget = false;
+      padding = TextBackgroundPadding;
+    }
+
+    TMP_Text text = Instantiate(template, container, worldPositionStays: false);
+    text.name = "Caption";
+    text.enabled = true;
+    text.gameObject.SetActive(true);
+    text.textWrappingMode = TextWrappingModes.Normal;
+    text.raycastTarget = false;
+    text.alignment = (style.Align ?? TextAlign.Center) switch {
+      TextAlign.Left => TextAlignmentOptions.TopLeft,
+      TextAlign.Right => TextAlignmentOptions.TopRight,
+      _ => TextAlignmentOptions.Top,
+    };
+
+    if (style.FontSize.HasValue) {
+      text.fontSize = style.FontSize.Value;
+    }
+
+    Color color = style.Color.HasValue ? ToColor(style.Color.Value) : template.color;
+    color.a *= placement.Opacity ?? 1f;
+    text.color = color;
+    text.SetText(caption);
+
+    RectTransform textRect = text.rectTransform;
+    textRect.anchorMin = Vector2.zero;
+    textRect.anchorMax = Vector2.one;
+    textRect.pivot = new(0.5f, 0.5f);
+    textRect.anchoredPosition = Vector2.zero;
+    textRect.offsetMin = new(padding, padding);
+    textRect.offsetMax = new(-padding, -padding);
+
+    if (!_hiddenTemplate) {
+      _hiddenTemplate = template;
+      template.enabled = false;
+    }
+
+    _texts.Add(new() { Rect = container, Text = text, Placement = placement, Padding = padding });
+  }
+
   void AddImageLayer(Layer layer, Sprite sprite, Placement placement) {
     Image image = CreateChild<Image>($"Image-{layer.Id ?? sprite.name}", _root);
     image.sprite = sprite;
@@ -241,6 +314,23 @@ public sealed class LayerHost : MonoBehaviour {
     Vector2 size = _root.rect.size;
     _lastSize = size;
 
+    foreach (PlacedText placed in _texts) {
+      Fit fit = placed.Placement.Fit;
+      float width = fit?.Mode == FitMode.Box && fit.Width.HasValue ? fit.Width.Value.Resolve(size.x) : size.x * 0.8f;
+      float innerWidth = Mathf.Max(1f, width - (2f * placed.Padding));
+      float height = placed.Text.GetPreferredValues(placed.Text.text, innerWidth, 0f).y + (2f * placed.Padding);
+
+      Placement textPlacement = Placement.Merge(new() { Fit = new() { Mode = FitMode.None } }, placed.Placement);
+      LayerRect textRect = PlacementSolver.Solve(textPlacement, size.x, size.y, width, height);
+      Vector2 textAnchor = new(textRect.AnchorX, textRect.AnchorY);
+
+      placed.Rect.anchorMin = textAnchor;
+      placed.Rect.anchorMax = textAnchor;
+      placed.Rect.pivot = textAnchor;
+      placed.Rect.anchoredPosition = new(textRect.OffsetX, textRect.OffsetY);
+      placed.Rect.sizeDelta = new(textRect.Width, textRect.Height);
+    }
+
     foreach (PlacedImage placed in _placed) {
       LayerRect layerRect =
           PlacementSolver.Solve(placed.Placement, size.x, size.y, placed.ImageSize.x, placed.ImageSize.y);
@@ -276,6 +366,12 @@ public sealed class LayerHost : MonoBehaviour {
     StopAllCoroutines();
     _placed.Clear();
     _animated.Clear();
+    _texts.Clear();
+
+    if (_hiddenTemplate) {
+      _hiddenTemplate.enabled = true;
+      _hiddenTemplate = null;
+    }
 
     for (int i = _root.childCount - 1; i >= 0; i--) {
       Destroy(_root.GetChild(i).gameObject);
@@ -285,7 +381,7 @@ public sealed class LayerHost : MonoBehaviour {
   static T CreateChild<T>(string name, Transform parent) where T : Component {
     GameObject child = new(name, typeof(RectTransform));
     child.transform.SetParent(parent, worldPositionStays: false);
-    return child.AddComponent<T>();
+    return child.TryGetComponent(out T existing) ? existing : child.AddComponent<T>();
   }
 
   static Color ToColor(ColorValue value) {

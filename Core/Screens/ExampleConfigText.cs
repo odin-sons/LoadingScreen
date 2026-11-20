@@ -27,6 +27,11 @@ public static class ExampleConfigText {
       #   fade: { sides: [left, bottom], color: "#000000", size: 15%, curve: smooth | linear }
       #        (gradient from the color into the image; size is % of the image size or px)
       #   animate: true | false   (slow zoom, uses the LoadingImage.ScaleLerp settings)
+      #
+      # Layers: "color" (solid fill), "image" (one file), "images" (a random file per screen),
+      # "source: entry" (the image of the chosen entry) and "text: caption" (the entry text or a tip).
+      # A text layer takes position, opacity, "fit: { width }" and: size, color, align (left | center | right),
+      # background (a color box behind the text). Without a text layer the usual tip line is used.
 
       # defaults:
       #   fit: contain
@@ -53,6 +58,11 @@ public static class ExampleConfigText {
       #       - image: common/logo.png
       #         fit: { width: 30% }
       #         position: { anchor: top, y: 8% }
+      #       - text: caption
+      #         size: 28
+      #         background: "#00000099"
+      #         fit: { width: 50% }
+      #         position: { anchor: bottom, y: -6% }
 
       # situations:
       #   general:
