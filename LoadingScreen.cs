@@ -25,13 +25,19 @@ public sealed class LoadingScreen : BaseUnityPlugin {
     BindConfig(Config);
 
     if (IsModEnabled.Value) {
-      CustomAssets.Initialize(Path.Combine(Path.GetDirectoryName(Config.ConfigFilePath), PluginName));
+      string pluginDir = Path.Combine(Path.GetDirectoryName(Config.ConfigFilePath), PluginName);
+      CustomAssets.Initialize(pluginDir);
+      ScreenConfigLoader.Load(pluginDir);
       Harmony.CreateAndPatchAll(Assembly.GetExecutingAssembly(), harmonyInstanceId: PluginGuid);
     }
   }
 
   public static void LogInfo(object obj) {
     _logger.LogInfo($"[{DateTime.Now.ToString(DateTimeFormatInfo.InvariantInfo)}] {obj}");
+  }
+
+  public static void LogWarning(object obj) {
+    _logger.LogWarning($"[{DateTime.Now.ToString(DateTimeFormatInfo.InvariantInfo)}] {obj}");
   }
 
   public static void LogError(object obj) {

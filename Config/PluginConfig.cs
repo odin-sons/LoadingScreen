@@ -34,6 +34,8 @@ public static class PluginConfig {
   public static ConfigEntry<bool> ShowLoadingScreenImmediatelyOnDeath { get; private set; }
   public static ConfigEntry<bool> ShowLoadingScreenOnTeleport { get; private set; }
 
+  public static ConfigEntry<bool> CaptionUseTipWhenNoText { get; private set; }
+
   public static void BindConfig(ConfigFile config) {
     IsModEnabled =
         config.BindInOrder(
@@ -171,7 +173,15 @@ public static class PluginConfig {
             "Hud.LoadingScreen",
             "showOnTeleport",
             true,
-            "If set, will show loading screen instead of vanilla teleport animation.");
+            "If set, will show loading screen instead of vanilla teleport animation. "
+                + "Required for teleport-biome screens.");
+
+    CaptionUseTipWhenNoText =
+        config.BindInOrder(
+            "Situations",
+            "useTipWhenNoText",
+            true,
+            "If set, a situational entry without text shows a random tip from tips.txt; otherwise no text.");
   }
 
   static void OnLoadingImageConfigChanged(object sender, EventArgs args) {

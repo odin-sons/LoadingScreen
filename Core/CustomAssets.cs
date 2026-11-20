@@ -77,6 +77,17 @@ public static class CustomAssets {
     return sprite;
   }
 
+  public static void ClearImageCache() {
+    foreach (Sprite sprite in _loadingImageCache.Values) {
+      if (sprite) {
+        Object.Destroy(sprite.texture);
+        Object.Destroy(sprite);
+      }
+    }
+
+    _loadingImageCache.Clear();
+  }
+
   public static bool GetRandomLoadingTip(out string tipText) {
     if (LoadingTips.Count > 0) {
       tipText = LoadingTips[Random.Range(0, LoadingTips.Count)];

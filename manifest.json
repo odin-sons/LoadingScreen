@@ -4,5 +4,5 @@
   "website_url": "https://github.com/odin-sons/LoadingScreen",
   "author": "Odin_Sons",
   "description": "Loading-screen images and tips chosen by situation. Modified fork of Intermission by redseiko.",
-  "dependencies": [ "denikson-BepInExPack_Valheim-5.4.2202" ]
+  "dependencies": [ "denikson-BepInExPack_Valheim-5.4.2202", "ValheimModding-YamlDotNet-16.3.1" ]
 }
