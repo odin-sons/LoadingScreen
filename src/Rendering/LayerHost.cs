@@ -42,6 +42,15 @@ public sealed class LayerHost : MonoBehaviour {
 
   public bool IsShowing { get; private set; }
 
+  public Transform Separator { get; set; }
+
+  static readonly Placement _separatorDefaults = new() {
+    Fit = new() { Mode = FitMode.None },
+    Anchor = Anchor.Bottom,
+    Y = new Length(-150f, LengthUnit.Pixels),
+    Animate = false,
+  };
+
   public static LayerHost Attach(Graphic vanillaImage) {
     Transform parent = vanillaImage.transform.parent;
     Transform existing = parent.Find("LoadingScreenLayers");
@@ -101,6 +110,14 @@ public sealed class LayerHost : MonoBehaviour {
         continue;
       }
 
+      if (layer.GameSeparator) {
+        if (LoadingManager.SeparatorSprite) {
+          AddImageLayer(layer, LoadingManager.SeparatorSprite, Placement.Merge(layer.Placement, _separatorDefaults));
+        }
+
+        continue;
+      }
+
       Sprite sprite;
 
       if (layer.FromEntry && selection.Entry.Image == null) {
@@ -132,7 +149,12 @@ public sealed class LayerHost : MonoBehaviour {
       _vanillaImage.enabled = false;
     }
 
-    CustomAssets.Pin(this, _placed.Select(placed => placed.Rect.GetComponent<Image>().sprite));
+    CustomAssets.Pin(
+        this,
+        _placed
+            .Select(placed => placed.Rect.GetComponent<Image>().sprite)
+            .Where(sprite => sprite != LoadingManager.SeparatorSprite));
+    SetSeparatorVisible(!layout.ShowsSeparator);
     IsShowing = true;
     Relayout();
     StartAnimations();
@@ -143,9 +165,16 @@ public sealed class LayerHost : MonoBehaviour {
     Clear();
     IsShowing = false;
     gameObject.SetActive(false);
+    SetSeparatorVisible(true);
 
     if (_vanillaImage) {
       _vanillaImage.enabled = true;
+    }
+  }
+
+  void SetSeparatorVisible(bool visible) {
+    if (Separator) {
+      Separator.gameObject.SetActive(visible && LoadingScreenShowPanelSeparator.Value);
     }
   }
 
@@ -253,7 +282,7 @@ public sealed class LayerHost : MonoBehaviour {
     image.preserveAspect = false;
     image.raycastTarget = false;
 
-    Color color = layer.FromEntry ? LoadingImageBaseColor.Value : Color.white;
+    Color color = layer.FromEntry ? LoadingImageBaseColor.Value : layer.HasTint ? ToColor(layer.Color) : Color.white;
     color.a *= placement.Opacity ?? 1f;
     image.color = color;
 

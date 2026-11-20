@@ -21,7 +21,7 @@ public sealed class ConfigParser {
 
   static readonly string[] _placementKeys = ["fit", "position", "opacity", "fade", "animate"];
   static readonly string[] _layerKeys = [
-    "id", "color", "image", "images", "source", "text", "size", "align", "background", .. _placementKeys
+    "id", "color", "image", "images", "source", "separator", "text", "size", "align", "background", .. _placementKeys
   ];
   static readonly string[] _layoutKeys = ["layers", .. _placementKeys];
   static readonly string[] _entryKeys = ["image", "text", "layout", "place", "when"];
@@ -193,12 +193,13 @@ public sealed class ConfigParser {
     YamlNode image = Child(mapping, "image");
     YamlNode images = Child(mapping, "images");
     YamlNode source = Child(mapping, "source");
+    YamlNode separator = Child(mapping, "separator");
     YamlNode text = Child(mapping, "text");
 
-    int imageSources = new[] { image, images, source, text }.Count(child => child != null);
+    int imageSources = new[] { image, images, source, separator, text }.Count(child => child != null);
 
     if (imageSources > 1) {
-      Warn(node, $"{where}: use only one of 'image', 'images', 'source' and 'text' in a layer, ignored");
+      Warn(node, $"{where}: use only one of 'image', 'images', 'source', 'separator' and 'text' in a layer, ignored");
       return null;
     }
 
@@ -214,7 +215,7 @@ public sealed class ConfigParser {
 
     if (imageSources == 0) {
       if (color == null) {
-        Warn(node, $"{where}: a layer needs 'image', 'images', 'source' or 'color', ignored");
+        Warn(node, $"{where}: a layer needs 'image', 'images', 'source', 'separator' or 'color', ignored");
         return null;
       }
 
@@ -228,11 +229,30 @@ public sealed class ConfigParser {
       return layer;
     }
 
+    layer.Kind = LayerKind.Image;
+
+    if (separator != null) {
+      if (!string.Equals(Scalar(separator), "game", StringComparison.OrdinalIgnoreCase)) {
+        Warn(separator, $"{where}: 'separator' supports only 'game' (the game's ornament line), layer ignored");
+        return null;
+      }
+
+      if (color != null) {
+        if (!ColorValue.TryParse(Scalar(color), out ColorValue tint)) {
+          Warn(color, $"{where}: invalid color '{Scalar(color)}', use #RRGGBB or #RRGGBBAA; tint ignored");
+        } else {
+          layer.Color = tint;
+          layer.HasTint = true;
+        }
+      }
+
+      layer.GameSeparator = true;
+      return layer;
+    }
+
     if (color != null) {
       Warn(color, $"{where}: 'color' is ignored on an image layer");
     }
-
-    layer.Kind = LayerKind.Image;
 
     if (source != null) {
       if (!string.Equals(Scalar(source), "entry", StringComparison.OrdinalIgnoreCase)) {

@@ -29,6 +29,8 @@ public static class LoadingManager {
 
   public static string CurrentCaption { get; private set; }
 
+  public static Sprite SeparatorSprite { get; private set; }
+
   public static bool ShowSituation(
       LayerHost host, Situation situation, TMP_Text tipText, Selection preselected = null) {
     CurrentCaption = null;
@@ -180,6 +182,11 @@ public static class LoadingManager {
       panelSeparator = _cachedPanelSeparator;
     } else {
       LoadingScreen.LogError($"Could not find a PanelSeparator to setup!");
+      return;
+    }
+
+    if (!SeparatorSprite) {
+      SeparatorSprite = panelSeparator.GetComponentInChildren<Image>(includeInactive: true).Ref()?.sprite;
     }
 
     panelSeparator.gameObject.SetActive(LoadingScreenShowPanelSeparator.Value);
@@ -230,6 +237,7 @@ public static class LoadingManager {
     SetupPanelSeparator(panelSeparator);
 
     FejdStartupHost = LayerHost.Attach(loadingImage);
+    FejdStartupHost.Separator = panelSeparator;
 
     if (!ShowSituation(FejdStartupHost, Situation.General, loadingText)) {
       ShowFallback(FejdStartupHost, loadingImage, loadingText);
@@ -245,6 +253,7 @@ public static class LoadingManager {
     SetupPanelSeparator(panelSeparator);
 
     HudHost = LayerHost.Attach(hud.m_loadingImage);
+    HudHost.Separator = panelSeparator;
     ShowFallback(HudHost, hud.m_loadingImage, hud.m_loadingTip);
 
     loadingProgress.Find("TopFade").Ref()?.gameObject.SetActive(false);
