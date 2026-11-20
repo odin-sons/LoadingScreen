@@ -1,6 +1,6 @@
 namespace LoadingScreen.Tests;
 
-using LoadingScreen.Screens;
+using LoadingScreen.Model;
 
 using Xunit;
 

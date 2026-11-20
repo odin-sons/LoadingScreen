@@ -3,7 +3,7 @@ namespace LoadingScreen.Tests;
 using System.Collections.Generic;
 using System.Linq;
 
-using LoadingScreen.Screens;
+using LoadingScreen.Model;
 
 using Xunit;
 
