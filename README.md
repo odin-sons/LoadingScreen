@@ -341,9 +341,51 @@ situations:
     Freezing:
       - text: Frost resistance mead or a wolf cape keeps the cold away.
         when: { notKnownItem: [MeadFrostResist, CapeWolf] }
+      - text: A campfire and a roof warm you up and remove the Wet effect.
+    Frost:
+      - text: Drakes and frost spells hit hard. Frost resistance mead cuts the damage.
+        when: { notKnownItem: MeadFrostResist }
     Poisoned:
       - text: Poison resistance mead makes the poison much weaker.
         when: { notKnownItem: MeadPoisonResist }
+      - text: Healing mead outlasts poison. Keep a few in the hotbar.
+        when: { notKnownItem: MeadHealthMinor }
+    Poison:
+      - text: Blobs and leeches poison you. Fight them from range or drink poison resistance mead.
+    Burning:
+      - text: Fire resistance barley wine keeps you from burning.
+        when: { notKnownItem: BarleyWine }
+      - text: Jump into water to put the fire out.
+    Fire:
+      - text: Surtlings and fire spells burn. Keep a fire resistance brew ready.
+    Fall:
+      - text: A feather cape lets you glide down from any height.
+        when: { notKnownItem: CapeFeather }
+      - text: Long falls hurt. Climb down slowly on steep cliffs.
+    Drowning:
+      - text: Swimming drains stamina. Stamina mead and more food keep you afloat longer.
+        when: { notKnownItem: [MeadStaminaMinor, MeadStaminaMedium] }
+      - text: Drop heavy cargo before a long swim.
+    Smoke:
+      - text: Smoke needs a way out. Leave a gap in the roof or build a chimney.
+    Tree:
+      - text: Falling trees and logs crush anyone below. Step aside after the last chop.
+    Structural:
+      - text: Unsupported buildings collapse. Check the support color before you go inside.
+    AshlandsOcean:
+      - text: The Ashlands sea boils. Stay on the boat.
+    AshlandsLava:
+      - text: Lava burns through any armor. Watch your step on glowing rock.
+    Blunt:
+      - text: Skeletons and trolls deal blunt damage. Block or parry with a shield.
+        when: { notKnownItem: [ShieldWood, ShieldBronzeBuckler] }
+    Spirit:
+      - text: Ghosts and wraiths fear silver. A silver sword or Frostner works well.
+        when: { notKnownItem: [SwordSilver, MaceSilver] }
+    EnemyHit:
+      - text: Eat three different foods before a fight. More health and stamina win battles.
+      - text: Rest by a fire under a roof to get the Rested bonus before heading out.
+      - text: A well-timed parry staggers most enemies.
 ```
 
 `notKnownItem: [A, B]` means the player knows neither item. Items count as known once picked up or crafted.
