@@ -7,6 +7,8 @@ using ComfyLib;
 
 using HarmonyLib;
 
+using global::LoadingScreen.Screens;
+
 using UnityEngine;
 
 using static PluginConfig;
@@ -31,10 +33,12 @@ static class HudPatch {
   [HarmonyPatch(nameof(Hud.UpdateBlackScreen))]
   static void UpdateBlackScreenPostfix(Hud __instance) {
     if (!_loadingScreenState && __instance.m_loadingProgress.activeInHierarchy) {
-      LoadingManager.SetLoadingImage(__instance.m_loadingImage);
-      LoadingManager.SetLoadingTip(__instance.m_loadingTip);
+      Situation situation = SituationTracker.Consume();
 
-      __instance.ScaleLerpLoadingImage(__instance.m_loadingImage);
+      if (!LoadingManager.ShowSituation(LoadingManager.HudHost, situation, __instance.m_loadingTip)) {
+        LoadingManager.ShowFallback(LoadingManager.HudHost, __instance.m_loadingImage, __instance.m_loadingTip);
+        __instance.ScaleLerpLoadingImage(__instance.m_loadingImage);
+      }
     }
   }
 
@@ -127,6 +131,10 @@ static class HudPatch {
   }
 
   static string LoadingTipSetTextDelegate(string text) {
+    if (LoadingManager.CurrentCaption != null) {
+      return LoadingManager.CurrentCaption;
+    }
+
     if (CustomAssets.GetRandomLoadingTip(out string loadingTip)) {
       return loadingTip;
     }

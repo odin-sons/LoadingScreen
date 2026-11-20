@@ -2,6 +2,8 @@ namespace LoadingScreen;
 
 using HarmonyLib;
 
+using global::LoadingScreen.Screens;
+
 using TMPro;
 
 using UnityEngine;
@@ -18,6 +20,7 @@ static class SceneLoaderPatch {
   }
 
   static Image _loadingImage;
+  static LayerHost _host;
   static TMP_Text _loadingText;
 
   static float _startTime;
@@ -26,15 +29,15 @@ static class SceneLoaderPatch {
   static void SetupSceneLoader(SceneLoader sceneLoader) {
     _loadingImage = sceneLoader.gameLogo.transform.parent.Find("Bkg").GetComponent<Image>();
 
-    if (SceneLoaderUseLoadingImages.Value && CustomAssets.LoadingImageFiles.Count > 0) {
+    if (SceneLoaderUseLoadingImages.Value && HasImages()) {
       sceneLoader._showLogos = false;
       sceneLoader._showSaveNotification = false;
       sceneLoader._showHealthWarning = false;
 
       LoadingManager.SetupLoadingBackground(_loadingImage.transform.parent);
       LoadingManager.SetupLoadingImage(_loadingImage);
-      LoadingManager.SetLoadingImage(_loadingImage);
-      sceneLoader.ScaleLerpLoadingImage(_loadingImage);
+      _host = LayerHost.Attach(_loadingImage);
+      ShowNextImage(sceneLoader);
 
       sceneLoader.gameLogo = _loadingImage.gameObject;
     }
@@ -81,6 +84,21 @@ static class SceneLoaderPatch {
 
     if (SceneLoaderShowProgressText.Value && _loadingText) {
       _loadingText.text = $"<b>{__instance._fakeProgress * 100:F0}%</b>\n<size=-4>({time - _startTime:F1}s)</size>";
+    }
+  }
+
+  static bool HasImages() {
+    return CustomAssets.LoadingImageFiles.Count > 0 || ScreenConfigLoader.Current.General.Entries.Count > 0;
+  }
+
+  static void ShowNextImage(SceneLoader sceneLoader) {
+    if (!LoadingManager.ShowSituation(_host, Situation.General, tipText: null)) {
+      if (_host) {
+        _host.Hide();
+      }
+
+      LoadingManager.SetLoadingImage(_loadingImage);
+      sceneLoader.ScaleLerpLoadingImage(_loadingImage);
     }
   }
 }
