@@ -2,6 +2,8 @@ namespace LoadingScreen;
 
 using ComfyLib;
 
+using global::LoadingScreen.Screens;
+
 using TMPro;
 
 using UnityEngine;
@@ -14,6 +16,54 @@ public static class LoadingManager {
   static Image _cachedLoadingImage;
   static Image _cachedLoadingBackground;
   static Transform _cachedPanelSeparator;
+
+  public static LayerHost HudHost { get; private set; }
+  public static LayerHost FejdStartupHost { get; private set; }
+
+  public static string CurrentCaption { get; private set; }
+
+  public static bool ShowSituation(LayerHost host, Situation situation, TMP_Text tipText) {
+    CurrentCaption = null;
+
+    if (!host) {
+      return false;
+    }
+
+    Selection selection = ScreenConfigLoader.Selector.Select(situation);
+
+    if (!host.Show(selection)) {
+      return false;
+    }
+
+    LoadingScreen.LogInfo($"Loading screen for {situation}: {selection.List.Name} -> {selection.Entry.Image}");
+
+    if (!string.IsNullOrEmpty(selection.Entry.Text)) {
+      CurrentCaption = selection.Entry.Text;
+    } else if (!CaptionUseTipWhenNoText.Value) {
+      CurrentCaption = string.Empty;
+    }
+
+    if (tipText) {
+      if (CurrentCaption != null) {
+        tipText.SetText(CurrentCaption);
+      } else {
+        SetLoadingTip(tipText);
+      }
+    }
+
+    return true;
+  }
+
+  public static void ShowFallback(LayerHost host, Image loadingImage, TMP_Text tipText) {
+    CurrentCaption = null;
+
+    if (host) {
+      host.Hide();
+    }
+
+    SetLoadingImage(loadingImage);
+    SetLoadingTip(tipText);
+  }
 
   public static void SetLoadingImage(Image loadingImage) {
     if (loadingImage && CustomAssets.GetRandomLoadingImage(out Sprite loadingImageSprite)) {
@@ -131,8 +181,11 @@ public static class LoadingManager {
     SetupLoadingImage(loadingImage);
     SetupPanelSeparator(panelSeparator);
 
-    SetLoadingTip(loadingText);
-    SetLoadingImage(loadingImage);
+    FejdStartupHost = LayerHost.Attach(loadingImage);
+
+    if (!ShowSituation(FejdStartupHost, Situation.General, loadingText)) {
+      ShowFallback(FejdStartupHost, loadingImage, loadingText);
+    }
   }
 
   public static void SetupHud(Hud hud) {
@@ -143,8 +196,8 @@ public static class LoadingManager {
     SetupLoadingImage(hud.m_loadingImage);
     SetupPanelSeparator(panelSeparator);
 
-    SetLoadingTip(hud.m_loadingTip);
-    SetLoadingImage(hud.m_loadingImage);
+    HudHost = LayerHost.Attach(hud.m_loadingImage);
+    ShowFallback(HudHost, hud.m_loadingImage, hud.m_loadingTip);
 
     loadingProgress.Find("TopFade").Ref()?.gameObject.SetActive(false);
     loadingProgress.Find("BottomFade").Ref()?.gameObject.SetActive(false);
