@@ -164,7 +164,8 @@ Materials that mark progress through the biomes:
 | Plains | `BlackMetalScrap`, `BlackMetal`, `Barley`, `BarleyFlour`, `Flax`, `LoxPelt`, `Needle`, `Tar` |
 | Mistlands | `BlackMarble`, `Sap`, `Eitr`, `BlackCore`, `Softtissue`, `Carapace`, `Mandible`, `Wisp`, `YggdrasilWood`, `RoyalJelly`, `MushroomJotunPuffs`, `MushroomMagecap`, `JuteRed`, `ScaleHide`, `MechanicalSpring` |
 | Ashlands | `FlametalOreNew`, `FlametalNew`, `Blackwood`, `AskHide`, `CharredBone`, `Grausten`, `MoltenCore`, `Bilebag`, `CelestialFeather`, `MorgenHeart`, `CeramicPlate` |
-| Ocean | `SerpentScale` |
+| Deep North | `GoldOre`, `Gold`, `Frostwood`, `FrostCore`, `Ice`, `FrozenFuel`, `MooseHide` |
+| Ocean | `SerpentScale`, `Chitin`, `SerpentMeat` |
 
 Key tools and gear: `Hammer`, `Hoe`, `Cultivator`, `PickaxeAntler`, `PickaxeBronze`, `PickaxeIron`,
 `PickaxeBlackMetal`, `Demister` (Wisplight), `Lantern`, `MeadFrostResist`, `MeadPoisonResist`, `CapeWolf`,
@@ -270,31 +271,72 @@ situations:
       when: { globalKey: defeated_queen, notKnownRecipe: $ship_longship_ashlands }
 ```
 
-Biome tips for players who have not found the key item yet:
+Biome tips for every biome, shown until the player has found the item the tip is about:
 
 ```yaml
 situations:
   teleport:
+    Meadows:
+      - text: Wood and stone make a hammer. Build a workbench under a roof.
+        when: { notKnownRecipe: $piece_workbench }
+      - text: Flint lies along the shores. It makes better axes and spears.
+        when: { notKnownItem: Flint }
     BlackForest:
       - text: Eikthyr's antlers make a pickaxe; copper and tin are waiting.
         when: { notKnownItem: PickaxeAntler }
+      - text: Burial chambers hold surtling cores, the heart of a smelter.
+        when: { notKnownItem: SurtlingCore }
+      - text: Greydwarf nests drop ancient seeds that summon the Elder.
+        when: { notGlobalKey: defeated_gdking, notKnownItem: AncientSeed }
+      - text: Trolls drop hides for light, quiet armor.
+        when: { notKnownItem: TrollHide }
     Swamp:
       - text: Bring poison resistance mead before the leeches find you.
         when: { notKnownItem: MeadPoisonResist }
+      - text: The sunken crypts hide iron scrap behind the Elder's key.
+        when: { globalKey: defeated_gdking, notKnownItem: IronScrap }
+      - text: Ancient trees give ancient bark, but only to a bronze axe or better.
+        when: { notKnownItem: ElderBark }
+      - text: Guck hangs from the tall swamp trees.
+        when: { notKnownItem: Guck }
     Mountain:
       - text: Without frost resistance the mountain freezes you to death.
         when: { notKnownItem: [MeadFrostResist, CapeWolf] }
       - text: The Wishbone hums near buried silver.
         when: { globalKey: defeated_bonemass, notKnownItem: SilverOre }
+      - text: Wolves drop pelts for warm armor.
+        when: { notKnownItem: WolfPelt }
     Plains:
       - text: Fulings in the Plains villages carry black metal scrap.
         when: { notKnownItem: BlackMetalScrap }
+      - text: Barley and flax grow wild in the fuling villages and only in the Plains.
+        when: { notKnownItem: [Barley, Flax] }
+      - text: Tar pits give tar for black metal work and roofs.
+        when: { notKnownItem: Tar }
+    Ocean:
+      - text: Serpent scales make one of the best shields of the early seas.
+        when: { notKnownItem: SerpentScale }
+      - text: Leviathans sink when struck. Mine chitin from their backs while you can.
+        when: { notKnownItem: Chitin }
     Mistlands:
       - text: The mist is thick. Craft a Wisplight to see further.
         when: { notKnownItem: Demister }
+      - text: A sap extractor on the giant roots collects sap.
+        when: { notKnownItem: Sap }
+      - text: Seekers drop carapace for strong armor.
+        when: { notKnownItem: Carapace }
     AshLands:
       - text: Flametal ore is found in the lava fields.
         when: { notKnownItem: FlametalOreNew }
+      - text: Fire resistance barley wine keeps the heat bearable.
+        when: { notKnownItem: BarleyWine }
+    DeepNorth:
+      - text: The north freezes everything. Bring frost resistance.
+        when: { notKnownItem: [MeadFrostResist, CapeWolf, CapeDeepNorth] }
+      - text: Moose hide makes a warm cape for the north.
+        when: { notKnownItem: MooseHide }
+      - text: Bloodgold is the metal of the north.
+        when: { notKnownItem: Gold }
   death:
     Freezing:
       - text: Frost resistance mead or a wolf cape keeps the cold away.
