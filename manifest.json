@@ -1,0 +1,8 @@
+{
+  "name": "LoadingScreen",
+  "version_number": "0.1.0",
+  "website_url": "",
+  "author": "Odin_Sons",
+  "description": "Loading-screen images and tips chosen by situation. Modified fork of Intermission by redseiko.",
+  "dependencies": [ "denikson-BepInExPack_Valheim-5.4.2202" ]
+}
