@@ -279,3 +279,63 @@ public class ExampleConfigTests {
     Assert.Equal(5, result.Config.EntryCount);
   }
 }
+
+public class TextLayerTests {
+  [Fact]
+  public void ParsesTextLayer() {
+    const string yaml = """
+        layouts:
+          captioned:
+            layers:
+              - source: entry
+              - text: caption
+                size: 32
+                color: "#FFFFFF"
+                align: left
+                background: "#00000080"
+                fit: { width: 40% }
+                position: { anchor: bottom-left, x: 5%, y: -5% }
+        """;
+
+    ConfigLoadResult result = new ConfigParser(_ => true).Parse(yaml);
+    Layer text = result.Config.Layouts["captioned"].Layers[1];
+
+    Assert.Empty(result.Warnings);
+    Assert.Equal(LayerKind.Text, text.Kind);
+    Assert.Equal(32f, text.Text.FontSize);
+    Assert.Equal(TextAlign.Left, text.Text.Align);
+    Assert.Equal(128, text.Text.Background.Value.A);
+    Assert.Equal(Anchor.BottomLeft, text.Placement.Anchor);
+    Assert.True(result.Config.Layouts["captioned"].ShowsText);
+  }
+
+  [Fact]
+  public void RejectsInvalidTextLayer() {
+    const string yaml = """
+        layouts:
+          broken:
+            layers:
+              - source: entry
+              - text: weather
+              - text: caption
+                image: a.png
+              - text: caption
+                fit: cover
+                size: -3
+              - image: a.png
+                align: left
+        """;
+
+    ConfigLoadResult result = new ConfigParser(_ => true).Parse(yaml);
+    Layout layout = result.Config.Layouts["broken"];
+
+    Assert.Equal(3, layout.Layers.Count);
+    Assert.Null(layout.Layers[1].Placement.Fit);
+    Assert.Null(layout.Layers[1].Text.FontSize);
+    Assert.Contains(result.Warnings, warning => warning.Contains("'caption'"));
+    Assert.Contains(result.Warnings, warning => warning.Contains("only one of"));
+    Assert.Contains(result.Warnings, warning => warning.Contains("text width"));
+    Assert.Contains(result.Warnings, warning => warning.Contains("positive font size"));
+    Assert.Contains(result.Warnings, warning => warning.Contains("only to text layers"));
+  }
+}

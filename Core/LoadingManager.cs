@@ -32,24 +32,28 @@ public static class LoadingManager {
 
     Selection selection = preselected ?? ScreenConfigLoader.Selector.Select(situation);
 
-    if (!host.Show(selection)) {
+    if (selection == null) {
+      host.Hide();
+      return false;
+    }
+
+    bool hasEntryText = !string.IsNullOrEmpty(selection.Entry.Text);
+    string caption = hasEntryText ? selection.Entry.Text : null;
+
+    if (!hasEntryText && CaptionUseTipWhenNoText.Value && CustomAssets.GetRandomLoadingTip(out string tip)) {
+      caption = tip;
+    }
+
+    if (!host.Show(selection, caption, tipText)) {
       return false;
     }
 
     LoadingScreen.LogInfo($"Loading screen for {situation}: {selection.List.Name} -> {selection.Entry.Image}");
 
-    if (!string.IsNullOrEmpty(selection.Entry.Text)) {
-      CurrentCaption = selection.Entry.Text;
-    } else if (!CaptionUseTipWhenNoText.Value) {
-      CurrentCaption = string.Empty;
-    }
+    CurrentCaption = hasEntryText ? selection.Entry.Text : CaptionUseTipWhenNoText.Value ? null : string.Empty;
 
-    if (tipText) {
-      if (CurrentCaption != null) {
-        tipText.SetText(CurrentCaption);
-      } else {
-        SetLoadingTip(tipText);
-      }
+    if (tipText && !host.ShowsOwnText) {
+      tipText.SetText(caption ?? string.Empty);
     }
 
     return true;

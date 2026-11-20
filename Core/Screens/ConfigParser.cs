@@ -17,7 +17,9 @@ public sealed class ConfigLoadResult {
 
 public sealed class ConfigParser {
   static readonly string[] _placementKeys = ["fit", "position", "opacity", "fade", "animate"];
-  static readonly string[] _layerKeys = ["id", "color", "image", "images", "source", .. _placementKeys];
+  static readonly string[] _layerKeys = [
+    "id", "color", "image", "images", "source", "text", "size", "align", "background", .. _placementKeys
+  ];
   static readonly string[] _layoutKeys = ["layers", .. _placementKeys];
   static readonly string[] _entryKeys = ["image", "text", "layout", "place"];
 
@@ -155,12 +157,23 @@ public sealed class ConfigParser {
     YamlNode image = Child(mapping, "image");
     YamlNode images = Child(mapping, "images");
     YamlNode source = Child(mapping, "source");
+    YamlNode text = Child(mapping, "text");
 
-    int imageSources = new[] { image, images, source }.Count(child => child != null);
+    int imageSources = new[] { image, images, source, text }.Count(child => child != null);
 
     if (imageSources > 1) {
-      Warn(node, $"{where}: use only one of 'image', 'images' and 'source' in a layer, ignored");
+      Warn(node, $"{where}: use only one of 'image', 'images', 'source' and 'text' in a layer, ignored");
       return null;
+    }
+
+    if (text != null) {
+      return ParseTextLayer(layer, mapping, text, where);
+    }
+
+    foreach (string key in new[] { "size", "align", "background" }) {
+      if (Child(mapping, key) != null) {
+        Warn(Child(mapping, key), $"{where}: '{key}' applies only to text layers");
+      }
     }
 
     if (imageSources == 0) {
@@ -211,6 +224,61 @@ public sealed class ConfigParser {
     }
 
     return layer;
+  }
+
+  Layer ParseTextLayer(Layer layer, YamlMappingNode mapping, YamlNode text, string where) {
+    if (!string.Equals(Scalar(text), "caption", StringComparison.OrdinalIgnoreCase)) {
+      Warn(text, $"{where}: 'text' supports only 'caption' (the entry text or a tip), layer ignored");
+      return null;
+    }
+
+    layer.Kind = LayerKind.Text;
+    layer.Text = new();
+
+    YamlNode size = Child(mapping, "size");
+
+    if (!IsNull(size)) {
+      if (float.TryParse(Scalar(size), NumberStyles.Float, CultureInfo.InvariantCulture, out float value)
+          && value > 0f) {
+        layer.Text.FontSize = value;
+      } else {
+        Warn(size, $"{where}: 'size' must be a positive font size");
+      }
+    }
+
+    layer.Text.Color = ParseColor(Child(mapping, "color"), where, "color");
+    layer.Text.Background = ParseColor(Child(mapping, "background"), where, "background");
+
+    YamlNode align = Child(mapping, "align");
+
+    if (!IsNull(align)) {
+      if (Enum.TryParse(Scalar(align), ignoreCase: true, out TextAlign value)
+          && Enum.IsDefined(typeof(TextAlign), value)) {
+        layer.Text.Align = value;
+      } else {
+        Warn(align, $"{where}: invalid align '{Scalar(align)}', use left, center or right");
+      }
+    }
+
+    if (layer.Placement.Fit != null && layer.Placement.Fit.Mode != FitMode.Box) {
+      Warn(Child(mapping, "fit"), $"{where}: a text layer supports only 'fit: {{ width }}' (the text width)");
+      layer.Placement.Fit = null;
+    }
+
+    return layer;
+  }
+
+  ColorValue? ParseColor(YamlNode node, string where, string key) {
+    if (IsNull(node)) {
+      return null;
+    }
+
+    if (ColorValue.TryParse(Scalar(node), out ColorValue value)) {
+      return value;
+    }
+
+    Warn(node, $"{where}: invalid {key} '{Scalar(node)}', use #RRGGBB or #RRGGBBAA");
+    return null;
   }
 
   void ParseSituations(YamlNode node) {

@@ -6,7 +6,21 @@ using System.Linq;
 
 public enum LayerKind {
   Image,
-  Color
+  Color,
+  Text
+}
+
+public enum TextAlign {
+  Left,
+  Center,
+  Right
+}
+
+public sealed class TextStyle {
+  public float? FontSize { get; set; }
+  public ColorValue? Color { get; set; }
+  public TextAlign? Align { get; set; }
+  public ColorValue? Background { get; set; }
 }
 
 public sealed class Layer {
@@ -15,6 +29,7 @@ public sealed class Layer {
   public bool FromEntry { get; set; }
   public List<string> Images { get; } = [];
   public ColorValue Color { get; set; }
+  public TextStyle Text { get; set; }
   public Placement Placement { get; set; } = new();
 }
 
@@ -24,6 +39,8 @@ public sealed class Layout {
   public Placement Placement { get; set; } = new();
 
   public bool ShowsEntryImage => Layers.Any(layer => layer.FromEntry);
+
+  public bool ShowsText => Layers.Any(layer => layer.Kind == LayerKind.Text);
 }
 
 public sealed class Entry {
