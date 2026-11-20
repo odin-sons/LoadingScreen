@@ -255,6 +255,38 @@ public class ConfigParserTests {
   }
 
   [Fact]
+  public void ParsesEnemyListsAndOrder() {
+    const string yaml = """
+        order: sequential
+        situations:
+          general:
+            order: random
+            entries: [ general/a.jpg ]
+          death:
+            enemy:
+              Dragon:
+                - text: Drakes spit frost.
+            Fall: [ death/fall.jpg ]
+        """;
+
+    ConfigLoadResult result = Parse(yaml, [.. DeathCauses.Names]);
+
+    Assert.Empty(result.Warnings);
+    Assert.Equal(PickOrder.Sequential, result.Config.Order);
+    Assert.Equal(PickOrder.Random, result.Config.General.Order);
+    Assert.Equal("death.enemy.Dragon", result.Config.Death[DeathCauses.EnemyKey("dragon")].Name);
+    Assert.Contains("Fall", result.Config.Death.Keys);
+  }
+
+  [Fact]
+  public void RejectsUnknownOrder() {
+    ConfigLoadResult result = Parse("order: shuffled");
+
+    Assert.Contains(result.Warnings, warning => warning.Contains("use 'random' or 'sequential'"));
+    Assert.Equal(PickOrder.Random, result.Config.Order);
+  }
+
+  [Fact]
   public void ParsesGameSeparatorLayer() {
     const string yaml = """
         layouts:

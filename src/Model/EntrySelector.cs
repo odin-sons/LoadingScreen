@@ -89,6 +89,10 @@ public sealed class EntrySelector {
       return null;
     }
 
+    if ((list.Order ?? _config.Order) == PickOrder.Sequential) {
+      return PickNext(list, usable);
+    }
+
     if (usable.Count > 1 && _lastPicked.TryGetValue(list, out Entry last)) {
       usable.Remove(last);
     }
@@ -96,6 +100,22 @@ public sealed class EntrySelector {
     Entry picked = usable[_random.Next(usable.Count)];
     _lastPicked[list] = picked;
 
+    return picked;
+  }
+
+  Entry PickNext(EntryList list, List<Entry> usable) {
+    int start = _lastPicked.TryGetValue(list, out Entry last) ? list.Entries.IndexOf(last) + 1 : 0;
+    Entry picked = null;
+
+    for (int offset = 0; offset < list.Entries.Count && picked == null; offset++) {
+      Entry candidate = list.Entries[(start + offset) % list.Entries.Count];
+
+      if (usable.Contains(candidate)) {
+        picked = candidate;
+      }
+    }
+
+    _lastPicked[list] = picked;
     return picked;
   }
 }
