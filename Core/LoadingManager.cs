@@ -1,5 +1,8 @@
 namespace LoadingScreen;
 
+using System.Collections.Generic;
+using System.Linq;
+
 using ComfyLib;
 
 using global::LoadingScreen.Screens;
@@ -12,6 +15,10 @@ using UnityEngine.UI;
 using static PluginConfig;
 
 public static class LoadingManager {
+  sealed record VanillaLook(Sprite Sprite, Color Color, Image.Type Type, bool PreserveAspect);
+
+  static readonly Dictionary<Image, VanillaLook> _vanillaLooks = [];
+
   static TMP_Text _cachedTipText;
   static Image _cachedLoadingImage;
   static Image _cachedLoadingBackground;
@@ -71,9 +78,16 @@ public static class LoadingManager {
   }
 
   public static void SetLoadingImage(Image loadingImage) {
-    if (loadingImage && CustomAssets.GetRandomLoadingImage(out Sprite loadingImageSprite)) {
+    if (!loadingImage) {
+      return;
+    }
+
+    if (CustomAssets.GetRandomLoadingImage(out Sprite loadingImageSprite)) {
       loadingImage.SetSprite(loadingImageSprite);
+      ApplyCustomLook(loadingImage);
       CustomAssets.Pin(loadingImage, [loadingImageSprite]);
+    } else {
+      RestoreVanillaLook(loadingImage);
     }
   }
 
@@ -90,12 +104,40 @@ public static class LoadingManager {
       loadingImage = _cachedLoadingImage;
     } else {
       LoadingScreen.LogError($"Could not find a LoadingImage to setup!");
+      return;
     }
 
+    foreach (Image destroyed in _vanillaLooks.Keys.Where(key => !key).ToList()) {
+      _vanillaLooks.Remove(destroyed);
+    }
+
+    if (!_vanillaLooks.TryGetValue(loadingImage, out VanillaLook vanilla)) {
+      vanilla = new(loadingImage.sprite, loadingImage.color, loadingImage.type, loadingImage.preserveAspect);
+      _vanillaLooks[loadingImage] = vanilla;
+    }
+
+    if (loadingImage.sprite != vanilla.Sprite) {
+      ApplyCustomLook(loadingImage);
+    }
+  }
+
+  static void ApplyCustomLook(Image loadingImage) {
     loadingImage
         .SetType(Image.Type.Simple)
         .SetColor(LoadingImageBaseColor.Value)
         .SetPreserveAspect(true);
+  }
+
+  static void RestoreVanillaLook(Image loadingImage) {
+    if (_vanillaLooks.TryGetValue(loadingImage, out VanillaLook vanilla)) {
+      loadingImage
+          .SetSprite(vanilla.Sprite)
+          .SetType(vanilla.Type)
+          .SetColor(vanilla.Color)
+          .SetPreserveAspect(vanilla.PreserveAspect);
+    }
+
+    CustomAssets.Pin(loadingImage, []);
   }
 
   public static void SetupLoadingBackground(Transform parentTransform) {
