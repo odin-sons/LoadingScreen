@@ -18,6 +18,9 @@ public static class ExampleConfigText {
       # Damage types (checked first for EnemyHit, PlayerHit, Turret, Catapult, Undefined): Blunt, Slash, Pierce,
       #   Chop, Pickaxe, Fire, Frost, Lightning, Poison, Spirit
       #
+      # Conditions ("when" on an entry, all must hold; prefix with "not" to invert, e.g. notKnownItem):
+      #   knownItem, hasItem, knownRecipe (item prefab name like Demister), knownBiome, globalKey, playerKey
+      #
       # Placement options (defaults, layouts, layers and an entry's "place"; the most specific one wins):
       #   fit: cover | contain | stretch | none | { width: 40%, height: 300px }
       #        (one axis keeps the aspect ratio; both axes fit the image inside that box)
@@ -77,6 +80,9 @@ public static class ExampleConfigText {
       #         text: Light your wisp.
       #         layout: backdrop-art
       #         place: { position: { anchor: right, x: -5% } }
+      #       - text: The mist is thick. Craft a Wisplight to see further.
+      #         when:
+      #           notKnownItem: Demister
       #   death:
       #     Fall:
       #       - image: death/fall.jpg

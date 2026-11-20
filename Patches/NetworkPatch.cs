@@ -29,5 +29,6 @@ static class NetworkPatch {
   static void ZNetOnDestroyPostfix() {
     ServerImages.Reset();
     SituationTracker.Clear();
+    PlayerConditions.Instance.ClearCache();
   }
 }

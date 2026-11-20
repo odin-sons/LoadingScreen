@@ -68,7 +68,7 @@ public static class SituationTracker {
     _pendingSince = Time.realtimeSinceStartup;
     _preselected = ScreenConfigLoader.Selector.Select(situation);
 
-    if (_preselected != null) {
+    if (_preselected?.Entry.Image != null) {
       CustomAssets.ReadLoadingImage(ScreenConfigLoader.ResolveImagePath(_preselected.Entry.Image));
     }
   }

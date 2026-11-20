@@ -31,6 +31,8 @@ on Unity, but **the mod has not been tested in the game yet**. See the
   entry's image, the caption), each sized and positioned on its own, with gradient edges and an optional slow zoom.
   Two presets are included in the example config.
 - **Captions.** An entry can carry its own text; without it, a tip from `tips.txt` is shown.
+- **Conditions.** An entry can be limited to players who, for example, have never held a Wisplight or have not
+  defeated a boss yet, so a tip only reaches the players who need it.
 - **Server images.** A server that runs the mod can share its config and images; clients download the images in the
   background and use the server's screens while connected.
 - **Reload in game** with the `loadingscreen reload` console command.
@@ -101,6 +103,39 @@ situations:
 Image paths are relative to the config folder; `.png`, `.jpg` and `.jpeg` are supported, up to 8192 px per side
 and 16.7 megapixels (for example 3840x2160 or 5120x2880; larger files are skipped with a log message). An entry without a layout
 uses a single layer that shows its image with the `defaults` placement (`contain`, centered, unless changed).
+
+An entry may have only a `text`; it is shown over a random plain image from the config folder, or over the game's
+own image if there is none.
+
+### Conditions
+
+`when` limits an entry to players for whom every condition holds:
+
+```yaml
+situations:
+  teleport:
+    Mistlands:
+      - text: The mist is thick. Craft a Wisplight to see further.
+        when:
+          notKnownItem: Demister        # has never picked up a Wisplight
+          notGlobalKey: defeated_queen  # the Queen is still alive in this world
+      - mistlands/fog.jpg
+```
+
+| Condition | Holds when | Value |
+|---|---|---|
+| `knownItem` | the player has ever picked up the item | item prefab name (`Demister`) or `$item_` token |
+| `hasItem` | the item is in the inventory now | same as above |
+| `knownRecipe` | the player knows the recipe for the item | same as above |
+| `knownBiome` | the player has discovered the biome | biome name from the list above |
+| `globalKey` | the world has the global key | key name (`defeated_bonemass`, `defeated_queen`, ...) |
+| `playerKey` | the player has the unique key | key name |
+
+Prefix a condition with `not` to invert it (`notKnownItem`, `notGlobalKey`, ...). A value can be one name or a list;
+every name must match. Player conditions need a loaded character, so entries with them are skipped on the main menu
+and on the first loading screen of a session. An entry with an unknown condition is ignored with a log message.
+Steam or Xbox achievements are not available to mods on every platform; use the global key or item the achievement
+is about instead.
 
 ### Layouts and layers
 

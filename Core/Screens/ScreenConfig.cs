@@ -48,6 +48,7 @@ public sealed class Entry {
   public string Text { get; set; }
   public string LayoutName { get; set; }
   public Placement Place { get; set; } = new();
+  public List<Condition> Conditions { get; } = [];
 }
 
 public sealed class EntryList {

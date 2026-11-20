@@ -1,5 +1,11 @@
 ## Changelog
 
+### Unreleased
+
+  * Entry conditions: `when` with `knownItem`, `hasItem`, `knownRecipe`, `knownBiome`, `globalKey` and `playerKey`,
+    each also as `not...`; an entry is shown only when every condition holds.
+  * Entries may have only a `text`; it is shown over a random plain image.
+
 ### 0.2.0 (2026-11-20)
 
   * Situational loading screens from `BepInEx/config/LoadingScreen/loadingscreen.yaml` (YamlDotNet, new dependency
