@@ -26,10 +26,19 @@ public sealed class LoadingScreen : BaseUnityPlugin {
 
     if (IsModEnabled.Value) {
       string pluginDir = Path.Combine(Path.GetDirectoryName(Config.ConfigFilePath), PluginName);
-      CustomAssets.Initialize(pluginDir);
-      ScreenConfigLoader.Load(pluginDir);
+      try {
+        CustomAssets.Initialize(pluginDir);
+        ScreenConfigLoader.Load(pluginDir);
+      } catch (Exception exception) {
+        LogError($"Could not load the loading screen config: {exception}");
+      }
+
       Harmony.CreateAndPatchAll(Assembly.GetExecutingAssembly(), harmonyInstanceId: PluginGuid);
     }
+  }
+
+  void Update() {
+    ServerImages.Tick();
   }
 
   public static void LogInfo(object obj) {

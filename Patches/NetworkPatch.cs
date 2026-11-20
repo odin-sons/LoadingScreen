@@ -7,7 +7,13 @@ static class NetworkPatch {
   [HarmonyPostfix]
   [HarmonyPatch(typeof(Game), nameof(Game.Start))]
   static void GameStartPostfix() {
-    ServerImages.RegisterRpcs();
+    ServerImages.OnGameStart();
+  }
+
+  [HarmonyPostfix]
+  [HarmonyPatch(typeof(ZNet), nameof(ZNet.OnNewConnection))]
+  static void ZNetOnNewConnectionPostfix(ZNetPeer peer) {
+    ServerImages.OnNewConnection(peer);
   }
 
   [HarmonyPostfix]

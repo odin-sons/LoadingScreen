@@ -74,6 +74,7 @@ Settings are in `BepInEx/config/Odin_Sons.LoadingScreen.cfg`.
 - For `EnemyHit`, `PlayerHit`, `Turret`, `Catapult` and `Undefined`, the dominant damage type of the killing hit is
   tried first: `Blunt`, `Slash`, `Pierce`, `Chop`, `Pickaxe`, `Fire`, `Frost`, `Lightning`, `Poison`, `Spirit`.
   Example: a frost drake kill uses `death.Frost` if it exists, then `death.EnemyHit`, then `general`.
+- YAML anchors and aliases are not supported, and nesting is limited to 32 levels.
 - Names are case-insensitive. Unknown names, missing files and invalid values are reported in
   `BepInEx/LogOutput.log` with line numbers; the rest of the config still loads.
 
@@ -97,7 +98,8 @@ situations:
     Fall: [ death/fall.jpg ]
 ```
 
-Image paths are relative to the config folder; `.png`, `.jpg` and `.jpeg` are supported. An entry without a layout
+Image paths are relative to the config folder; `.png`, `.jpg` and `.jpeg` are supported, up to 8192 px per side
+and 16.7 megapixels (for example 3840x2160 or 5120x2880; larger files are skipped with a log message). An entry without a layout
 uses a single layer that shows its image with the `defaults` placement (`contain`, centered, unless changed).
 
 ### Layouts and layers
@@ -166,9 +168,19 @@ it uses. A client with the mod then:
    servers. The folder can be deleted at any time.
 
 An image that is not downloaded yet is skipped, so a download never delays a loading screen. PNG files are
-gzip-compressed for the transfer; JPEG files are sent as they are. Limits: 16 MiB per image, 512 MiB and 2000 images
-per server. Every file is checked against its size and hash before use, paths must stay inside the folder, and
-decompression is bounded. The game start screen can only use local images, because no server is connected yet.
+gzip-compressed for the transfer; JPEG files are sent as they are.
+
+The transfer runs over the direct connection between the client and the server, so other players cannot inject
+data. Everything from the server is treated as untrusted:
+
+- limits: 16 MiB per image, 512 MiB and 2000 images per server, 256 KiB of YAML, 1 GiB of cache on disk (the oldest
+  files of other servers are removed first);
+- every file is checked against its size and SHA-256 hash and must be a PNG or JPEG within the image size limit
+  below; paths must stay inside the folder; decompression is bounded;
+- server captions are cut to 500 characters and rich-text tags are removed;
+- the server answers each client at a limited rate, and a client gives up on a piece after a few timeouts.
+
+The game start screen can only use local images, because no server is connected yet.
 
 ## Image formats
 

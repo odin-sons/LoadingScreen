@@ -7,6 +7,7 @@ using System.IO;
 using System.Linq;
 
 using YamlDotNet.Core;
+using YamlDotNet.Core.Events;
 using YamlDotNet.RepresentationModel;
 
 public sealed class ConfigLoadResult {
@@ -16,6 +17,8 @@ public sealed class ConfigLoadResult {
 }
 
 public sealed class ConfigParser {
+  const int MaxNestingDepth = 32;
+
   static readonly string[] _placementKeys = ["fit", "position", "opacity", "fade", "animate"];
   static readonly string[] _layerKeys = [
     "id", "color", "image", "images", "source", "text", "size", "align", "background", .. _placementKeys
@@ -43,6 +46,14 @@ public sealed class ConfigParser {
     YamlStream stream = new();
 
     try {
+      string structureProblem = CheckStructure(yaml);
+
+      if (structureProblem != null) {
+        Warn(0, $"{structureProblem}, config ignored");
+        _result.IsValid = false;
+        return _result;
+      }
+
       stream.Load(new StringReader(yaml));
     } catch (YamlException exception) {
       Warn(exception.Start.Line, $"invalid YAML, config ignored: {exception.Message}");
@@ -82,6 +93,31 @@ public sealed class ConfigParser {
 
     ValidateLayoutReferences();
     return _result;
+  }
+
+  static string CheckStructure(string yaml) {
+    Parser parser = new(new StringReader(yaml));
+    int depth = 0;
+
+    while (parser.MoveNext()) {
+      switch (parser.Current) {
+        case AnchorAlias:
+          return "YAML aliases (*name) are not supported";
+
+        case MappingStart or SequenceStart:
+          if (++depth > MaxNestingDepth) {
+            return $"YAML is nested deeper than {MaxNestingDepth} levels";
+          }
+
+          break;
+
+        case MappingEnd or SequenceEnd:
+          depth--;
+          break;
+      }
+    }
+
+    return null;
   }
 
   void ParseLayouts(YamlNode node) {
@@ -621,14 +657,20 @@ public sealed class ConfigParser {
     }
 
     string normalized = NormalizePath(path);
+    string extension;
 
-    if (Path.IsPathRooted(path) || normalized.StartsWith("/", StringComparison.Ordinal)
-        || normalized.Split('/').Any(segment => segment == "..")) {
-      Warn(node, $"{where}: image path '{path}' must be relative to the config folder, ignored");
+    try {
+      if (Path.IsPathRooted(path) || normalized.StartsWith("/", StringComparison.Ordinal)
+          || normalized.Split('/').Any(segment => segment == "..")) {
+        Warn(node, $"{where}: image path '{path}' must be relative to the config folder, ignored");
+        return false;
+      }
+
+      extension = Path.GetExtension(normalized);
+    } catch (ArgumentException) {
+      Warn(node, $"{where}: image path '{path}' contains invalid characters, ignored");
       return false;
     }
-
-    string extension = Path.GetExtension(normalized);
 
     if (!KnownNames.ImageExtensions.Any(
         known => string.Equals(known, extension, StringComparison.OrdinalIgnoreCase))) {

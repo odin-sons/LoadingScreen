@@ -1,6 +1,7 @@
 namespace LoadingScreen;
 
 using System.Collections.Generic;
+using System.Linq;
 
 using global::LoadingScreen.Screens;
 
@@ -125,6 +126,7 @@ public sealed class LayerHost : MonoBehaviour {
       _vanillaImage.enabled = false;
     }
 
+    CustomAssets.Pin(this, _placed.Select(placed => placed.Rect.GetComponent<Image>().sprite));
     IsShowing = true;
     Relayout();
     StartAnimations();
@@ -285,6 +287,10 @@ public sealed class LayerHost : MonoBehaviour {
     }
   }
 
+  void OnDestroy() {
+    CustomAssets.Pin(this, []);
+  }
+
   void OnEnable() {
     if (IsShowing) {
       StartAnimations();
@@ -363,6 +369,7 @@ public sealed class LayerHost : MonoBehaviour {
   }
 
   void Clear() {
+    CustomAssets.Pin(this, []);
     StopAllCoroutines();
     _placed.Clear();
     _animated.Clear();

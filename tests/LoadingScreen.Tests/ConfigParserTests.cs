@@ -339,3 +339,28 @@ public class TextLayerTests {
     Assert.Contains(result.Warnings, warning => warning.Contains("only to text layers"));
   }
 }
+
+public class YamlLimitsTests {
+  [Fact]
+  public void RejectsDeepNesting() {
+    string yaml = "situations: " + new string('[', 5000) + new string(']', 5000);
+    ConfigLoadResult result = new ConfigParser(_ => true).Parse(yaml);
+
+    Assert.False(result.IsValid);
+    Assert.Contains(result.Warnings, warning => warning.Contains("nested deeper"));
+  }
+
+  [Fact]
+  public void RejectsAliases() {
+    const string yaml = """
+        situations:
+          general: &list [ a.jpg ]
+          death: { Fall: *list }
+        """;
+
+    ConfigLoadResult result = new ConfigParser(_ => true).Parse(yaml);
+
+    Assert.False(result.IsValid);
+    Assert.Contains(result.Warnings, warning => warning.Contains("aliases"));
+  }
+}

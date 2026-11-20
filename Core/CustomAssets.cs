@@ -2,7 +2,10 @@ namespace LoadingScreen;
 
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Reflection;
+
+using global::LoadingScreen.Screens;
 
 using HarmonyLib;
 
@@ -16,10 +19,13 @@ public static class CustomAssets {
 
   static readonly Dictionary<string, Sprite> _loadingImageCache = [];
   static readonly LinkedList<string> _loadingImageUsage = new();
+  static readonly Dictionary<Object, HashSet<Sprite>> _pinnedSprites = [];
 
   static readonly MethodInfo _loadImageMethod =
       AccessTools.Method(
-          typeof(ImageConversion), nameof(ImageConversion.LoadImage), [typeof(Texture2D), typeof(byte[])]);
+          typeof(ImageConversion),
+          nameof(ImageConversion.LoadImage),
+          [typeof(Texture2D), typeof(byte[]), typeof(bool)]);
 
   public static void Initialize(string pluginDir) {
     LoadingTips.Clear();
@@ -71,18 +77,28 @@ public static class CustomAssets {
       return null;
     }
 
-    Texture2D texture = new(1, 1) {
-      name = $"intermission.texture-{Path.GetFileName(imageFile)}"
+    byte[] data = File.ReadAllBytes(imageFile);
+
+    if (!ImageHeader.TryRead(data, out int headerWidth, out int headerHeight)
+        || !ImageHeader.IsAllowed(headerWidth, headerHeight)) {
+      LoadingScreen.LogError(
+          $"Skipping {Path.GetFileName(imageFile)}: not a PNG or JPEG file, or larger than "
+              + $"{ImageHeader.MaxSide} px per side or {ImageHeader.MaxPixels / 1000000} megapixels.");
+      return null;
+    }
+
+    Texture2D texture = new(1, 1, TextureFormat.RGBA32, mipChain: false) {
+      name = $"loadingscreen.texture-{Path.GetFileName(imageFile)}"
     };
 
     System.Diagnostics.Stopwatch stopwatch = System.Diagnostics.Stopwatch.StartNew();
-    _loadImageMethod.Invoke(obj: null, [texture, File.ReadAllBytes(imageFile)]);
+    _loadImageMethod.Invoke(obj: null, [texture, data, true]);
     LoadingScreen.LogInfo(
         $"Loaded image {Path.GetFileName(imageFile)} ({texture.width}x{texture.height}) "
             + $"in {stopwatch.ElapsedMilliseconds} ms.");
 
     sprite = Sprite.Create(texture, new(0, 0, texture.width, texture.height), Vector2.zero, 1);
-    sprite.name = $"intermission.sprite-{Path.GetFileName(imageFile)}";
+    sprite.name = $"loadingscreen.sprite-{Path.GetFileName(imageFile)}";
 
     _loadingImageCache[imageFile] = sprite;
     TouchCachedImage(imageFile);
@@ -96,30 +112,66 @@ public static class CustomAssets {
     _loadingImageUsage.AddLast(imageFile);
   }
 
-  static void EvictCachedImages() {
-    while (_loadingImageUsage.Count > MaxCachedImages) {
-      string oldest = _loadingImageUsage.First.Value;
-      _loadingImageUsage.RemoveFirst();
+  public static void Pin(Object owner, IEnumerable<Sprite> sprites) {
+    List<Sprite> released = [];
 
-      if (_loadingImageCache.TryGetValue(oldest, out Sprite sprite) && sprite) {
-        Object.Destroy(sprite.texture);
-        Object.Destroy(sprite);
+    foreach (Object destroyed in _pinnedSprites.Keys.Where(key => !key).ToList()) {
+      released.AddRange(_pinnedSprites[destroyed]);
+      _pinnedSprites.Remove(destroyed);
+    }
+
+    if (_pinnedSprites.TryGetValue(owner, out HashSet<Sprite> previous)) {
+      released.AddRange(previous);
+    }
+
+    HashSet<Sprite> pinned = new(sprites.Where(sprite => sprite));
+
+    if (owner && pinned.Count > 0) {
+      _pinnedSprites[owner] = pinned;
+    } else {
+      _pinnedSprites.Remove(owner);
+    }
+
+    foreach (Sprite sprite in released) {
+      DestroyIfOrphaned(sprite);
+    }
+  }
+
+  static bool IsPinned(Sprite sprite) {
+    return _pinnedSprites.Values.Any(set => set.Contains(sprite));
+  }
+
+  static void DestroyIfOrphaned(Sprite sprite) {
+    if (sprite && !IsPinned(sprite) && !_loadingImageCache.ContainsValue(sprite)) {
+      Object.Destroy(sprite.texture);
+      Object.Destroy(sprite);
+    }
+  }
+
+  static void EvictCachedImages() {
+    LinkedListNode<string> node = _loadingImageUsage.First;
+
+    while (_loadingImageUsage.Count > MaxCachedImages && node != null) {
+      LinkedListNode<string> next = node.Next;
+
+      if (!_loadingImageCache.TryGetValue(node.Value, out Sprite sprite) || !IsPinned(sprite)) {
+        _loadingImageUsage.Remove(node);
+        _loadingImageCache.Remove(node.Value);
+        DestroyIfOrphaned(sprite);
       }
 
-      _loadingImageCache.Remove(oldest);
+      node = next;
     }
   }
 
   public static void ClearImageCache() {
-    foreach (Sprite sprite in _loadingImageCache.Values) {
-      if (sprite) {
-        Object.Destroy(sprite.texture);
-        Object.Destroy(sprite);
-      }
-    }
-
+    List<Sprite> sprites = [.. _loadingImageCache.Values];
     _loadingImageCache.Clear();
     _loadingImageUsage.Clear();
+
+    foreach (Sprite sprite in sprites) {
+      DestroyIfOrphaned(sprite);
+    }
   }
 
   public static bool GetRandomLoadingTip(out string tipText) {
