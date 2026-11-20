@@ -137,6 +137,99 @@ and on the first loading screen of a session. An entry with an unknown condition
 Steam or Xbox achievements are not available to mods on every platform; use the global key or item the achievement
 is about instead.
 
+#### Condition recipes
+
+Boss progress. The global key is set for the whole world when the boss dies:
+
+| Boss | Summoned or reached with | Drops | Global key |
+|---|---|---|---|
+| Eikthyr | `TrophyDeer` | `HardAntler`, `TrophyEikthyr` | `defeated_eikthyr` |
+| The Elder | `AncientSeed` | `CryptKey`, `TrophyTheElder` | `defeated_gdking` |
+| Bonemass | `WitheredBone` | `Wishbone`, `TrophyBonemass` | `defeated_bonemass` |
+| Moder | `DragonEgg` | `DragonTear`, `TrophyDragonQueen` | `defeated_dragon` |
+| Yagluth | `GoblinTotem` | `YagluthDrop`, `TrophyGoblinKing` | `defeated_goblinking` |
+| The Queen | `DvergrKey` (from `DvergrKeyFragment`) | `QueenDrop`, `TrophySeekerQueen` | `defeated_queen` |
+| Fader | `Bell` (from `BellFragment`) | `FaderDrop`, `TrophyFader` | `defeated_fader` |
+
+Other world keys: `KilledTroll`, `killed_surtling`, `KilledBat`.
+
+Materials that mark progress through the biomes:
+
+| Biome | Item prefab names |
+|---|---|
+| Meadows | `Wood`, `Stone`, `Flint`, `Resin`, `LeatherScraps`, `DeerHide`, `Feathers` |
+| Black Forest | `CopperOre`, `Copper`, `TinOre`, `Tin`, `Bronze`, `FineWood`, `RoundLog`, `SurtlingCore`, `TrollHide`, `Thistle` |
+| Swamp | `IronScrap`, `Iron`, `Guck`, `Bloodbag`, `Ooze`, `Chain`, `Root`, `ElderBark`, `Entrails` |
+| Mountain | `SilverOre`, `Silver`, `WolfPelt`, `WolfFang`, `FreezeGland`, `Obsidian`, `Thunderstone` |
+| Plains | `BlackMetalScrap`, `BlackMetal`, `Barley`, `BarleyFlour`, `Flax`, `LoxPelt`, `Needle`, `Tar` |
+| Mistlands | `BlackMarble`, `Sap`, `Eitr`, `BlackCore`, `Softtissue`, `Carapace`, `Mandible`, `Wisp`, `YggdrasilWood`, `RoyalJelly`, `MushroomJotunPuffs`, `MushroomMagecap`, `JuteRed`, `ScaleHide`, `MechanicalSpring` |
+| Ashlands | `FlametalOreNew`, `FlametalNew`, `Blackwood`, `AskHide`, `CharredBone`, `Grausten`, `MoltenCore`, `Bilebag`, `CelestialFeather`, `MorgenHeart`, `CeramicPlate` |
+| Ocean | `SerpentScale` |
+
+Key tools and gear: `Hammer`, `Hoe`, `Cultivator`, `PickaxeAntler`, `PickaxeBronze`, `PickaxeIron`,
+`PickaxeBlackMetal`, `Demister` (Wisplight), `Lantern`, `MeadFrostResist`, `MeadPoisonResist`, `CapeWolf`,
+`CapeLox`, `BeltStrength`. Any other item works by its prefab name; the
+[Jotunn item list](https://valheim-modding.github.io/Jotunn/data/objects/item-list.html) has all of them.
+
+A tip for the next boss, shown on any loading screen while that boss is the next one:
+
+```yaml
+situations:
+  general:
+    - text: Two deer trophies on the mystical altar call Eikthyr, the first of the Forsaken.
+      when: { notGlobalKey: defeated_eikthyr }
+    - text: Ancient seeds from the greydwarf nests summon the Elder in the Black Forest.
+      when: { globalKey: defeated_eikthyr, notGlobalKey: defeated_gdking }
+    - text: The Swamp key from the Elder opens the sunken crypts.
+      when: { globalKey: defeated_gdking, notKnownItem: CryptKey }
+    - text: Withered bones from the sunken crypts summon Bonemass.
+      when: { globalKey: defeated_gdking, notGlobalKey: defeated_bonemass }
+    - text: Dragon eggs from the mountain peaks summon Moder.
+      when: { globalKey: defeated_bonemass, notGlobalKey: defeated_dragon }
+    - text: Fuling totems from the Plains villages summon Yagluth.
+      when: { globalKey: defeated_dragon, notGlobalKey: defeated_goblinking }
+    - text: Sealbreaker fragments from the infested mines open the Queen's lair.
+      when: { globalKey: defeated_goblinking, notGlobalKey: defeated_queen }
+    - text: Bell fragments in the Ashlands summon Fader.
+      when: { globalKey: defeated_queen, notGlobalKey: defeated_fader }
+```
+
+Biome tips for players who have not found the key item yet:
+
+```yaml
+situations:
+  teleport:
+    BlackForest:
+      - text: Eikthyr's antlers make a pickaxe; copper and tin are waiting.
+        when: { notKnownItem: PickaxeAntler }
+    Swamp:
+      - text: Bring poison resistance mead before the leeches find you.
+        when: { notKnownItem: MeadPoisonResist }
+    Mountain:
+      - text: Without frost resistance the mountain freezes you to death.
+        when: { notKnownItem: [MeadFrostResist, CapeWolf] }
+      - text: The Wishbone hums near buried silver.
+        when: { globalKey: defeated_bonemass, notKnownItem: SilverOre }
+    Plains:
+      - text: Fulings in the Plains villages carry black metal scrap.
+        when: { notKnownItem: BlackMetalScrap }
+    Mistlands:
+      - text: The mist is thick. Craft a Wisplight to see further.
+        when: { notKnownItem: Demister }
+    AshLands:
+      - text: Flametal ore is found in the lava fields.
+        when: { notKnownItem: FlametalOreNew }
+  death:
+    Freezing:
+      - text: Frost resistance mead or a wolf cape keeps the cold away.
+        when: { notKnownItem: [MeadFrostResist, CapeWolf] }
+    Poisoned:
+      - text: Poison resistance mead makes the poison much weaker.
+        when: { notKnownItem: MeadPoisonResist }
+```
+
+`notKnownItem: [A, B]` means the player knows neither item. Items count as known once picked up or crafted.
+
 ### Layouts and layers
 
 ```yaml
