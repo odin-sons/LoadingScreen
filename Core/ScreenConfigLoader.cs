@@ -13,12 +13,40 @@ public static class ScreenConfigLoader {
   public static ScreenConfig Current { get; private set; } = new();
   public static EntrySelector Selector { get; private set; } = new(new ScreenConfig());
   public static string PluginDir { get; private set; }
+  public static ScreenConfig LocalConfig { get; private set; } = new();
+  public static bool IsUsingServerConfig { get; private set; }
+
+  static Func<string, string> _resolver = LocalImagePath;
+  static int _lastWarningCount;
 
   public static string ResolveImagePath(string relativePath) {
-    return Path.Combine(PluginDir, relativePath.Replace('/', Path.DirectorySeparatorChar));
+    return relativePath == null ? null : _resolver(relativePath);
   }
 
-  static int _lastWarningCount;
+  public static bool IsImageAvailable(string relativePath) {
+    string path = ResolveImagePath(relativePath);
+    return path != null && File.Exists(path);
+  }
+
+  public static string LocalImagePath(string relativePath) {
+    return PluginDir == null ? null : Path.Combine(PluginDir, relativePath.Replace('/', Path.DirectorySeparatorChar));
+  }
+
+  public static void UseServerConfig(ScreenConfig config, Func<string, string> resolver) {
+    IsUsingServerConfig = true;
+    Activate(config, resolver);
+    LoadingScreen.LogInfo($"Using the server's loading screens. {Summary()}");
+  }
+
+  public static void UseLocalConfig() {
+    if (!IsUsingServerConfig) {
+      return;
+    }
+
+    IsUsingServerConfig = false;
+    Activate(LocalConfig, LocalImagePath);
+    LoadingScreen.LogInfo("Using the local loading screens again.");
+  }
 
   public static void Reload() {
     if (PluginDir == null) {
@@ -31,13 +59,14 @@ public static class ScreenConfigLoader {
   }
 
   public static string Summary() {
-    return $"{ConfigFileName}: {Current.General.Entries.Count} general, "
+    return $"{(IsUsingServerConfig ? "server config" : ConfigFileName)}: {Current.General.Entries.Count} general, "
         + $"{Current.Teleport.Values.Sum(list => list.Entries.Count)} teleport "
         + $"({string.Join(", ", Current.Teleport.Keys)}), "
         + $"{Current.Death.Values.Sum(list => list.Entries.Count)} death entries "
         + $"({string.Join(", ", Current.Death.Keys)}), {Current.Layouts.Count} layouts, "
-        + $"{_lastWarningCount} warnings (see BepInEx/LogOutput.log); "
-        + $"{CustomAssets.LoadingImageFiles.Count} plain images, {CustomAssets.LoadingTips.Count} tips.";
+        + $"{_lastWarningCount} warnings in {ConfigFileName} (see BepInEx/LogOutput.log); "
+        + $"{CustomAssets.LoadingImageFiles.Count} plain images, {CustomAssets.LoadingTips.Count} tips."
+        + (IsUsingServerConfig ? $" {ServerImages.Status()}" : string.Empty);
   }
 
   public static bool Load(string pluginDir) {
@@ -53,6 +82,25 @@ public static class ScreenConfigLoader {
     }
   }
 
+  public static ConfigLoadResult ParseServerYaml(string yaml, Func<string, bool> isListed) {
+    try {
+      return ParseWithYaml(yaml, isListed);
+    } catch (Exception exception) when (exception is FileNotFoundException or TypeLoadException) {
+      LoadingScreen.LogError($"Could not load YamlDotNet ({exception.Message}); server config ignored.");
+      return null;
+    }
+  }
+
+  public static string ReadLocalYaml() {
+    string path = PluginDir == null ? null : Path.Combine(PluginDir, ConfigFileName);
+    return path != null && File.Exists(path) ? File.ReadAllText(path) : string.Empty;
+  }
+
+  [MethodImpl(MethodImplOptions.NoInlining)]
+  static ConfigLoadResult ParseWithYaml(string yaml, Func<string, bool> imageExists) {
+    return new ConfigParser(imageExists, DeathCauses.Names).Parse(yaml);
+  }
+
   [MethodImpl(MethodImplOptions.NoInlining)]
   static bool LoadWithYaml(string pluginDir) {
     string path = Path.Combine(pluginDir, ConfigFileName);
@@ -61,24 +109,34 @@ public static class ScreenConfigLoader {
       ExampleConfig.Write(path);
     }
 
-    ConfigParser parser = new(relativePath => File.Exists(ResolveImagePath(relativePath)), DeathCauses.Names);
-    ConfigLoadResult result = parser.Parse(File.ReadAllText(path));
+    ConfigLoadResult result =
+        ParseWithYaml(File.ReadAllText(path), relativePath => File.Exists(LocalImagePath(relativePath)));
 
     foreach (string warning in result.Warnings) {
       LoadingScreen.LogWarning($"{ConfigFileName}: {warning}");
     }
 
-    if (!result.IsValid && !Current.IsEmpty) {
+    if (!result.IsValid && !LocalConfig.IsEmpty) {
       LoadingScreen.LogWarning($"{ConfigFileName} is invalid; keeping the previously loaded config.");
       return false;
     }
 
-    Current = result.Config;
-    Selector = new(Current, entry => File.Exists(ResolveImagePath(entry.Image)));
-
+    LocalConfig = result.Config;
     _lastWarningCount = result.Warnings.Count;
+
+    if (!IsUsingServerConfig) {
+      Activate(LocalConfig, LocalImagePath);
+    }
+
     LoadingScreen.LogInfo(Summary());
+    ServerImages.OnLocalConfigLoaded();
 
     return true;
+  }
+
+  static void Activate(ScreenConfig config, Func<string, string> resolver) {
+    _resolver = resolver;
+    Current = config;
+    Selector = new(Current, entry => IsImageAvailable(entry.Image));
   }
 }

@@ -36,6 +36,9 @@ public static class PluginConfig {
 
   public static ConfigEntry<bool> CaptionUseTipWhenNoText { get; private set; }
 
+  public static ConfigEntry<bool> ServeImagesToClients { get; private set; }
+  public static ConfigEntry<bool> DownloadServerImages { get; private set; }
+
   public static void BindConfig(ConfigFile config) {
     IsModEnabled =
         config.BindInOrder(
@@ -182,6 +185,21 @@ public static class PluginConfig {
             "useTipWhenNoText",
             true,
             "If set, a situational entry without text shows a random tip from tips.txt; otherwise no text.");
+
+    ServeImagesToClients =
+        config.BindInOrder(
+            "ServerImages",
+            "serveToClients",
+            true,
+            "Server only: share loadingscreen.yaml and its images with clients that run this mod.");
+
+    DownloadServerImages =
+        config.BindInOrder(
+            "ServerImages",
+            "downloadFromServer",
+            true,
+            "Client only: use the server's loading screens while connected and download their images in the "
+                + "background into BepInEx/cache/LoadingScreen.");
   }
 
   static void OnLoadingImageConfigChanged(object sender, EventArgs args) {
