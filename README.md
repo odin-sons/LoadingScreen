@@ -92,7 +92,7 @@ layouts:
   backdrop-art:
     layers:
       - color: "#000000"
-      - image: common/parchment.webp
+      - image: common/parchment.jpg
         fit: stretch
       - id: art
         source: entry
@@ -114,17 +114,17 @@ situations:
   general:
     layout: logo-over-backdrops
     entries:
-      - image: general/valheim.avif
+      - image: general/valheim.jpg
         text: Skol!
   teleport:
     Mistlands:
-      - image: mistlands/fog.webp
+      - image: mistlands/fog.jpg
         text: Light your wisp.
         layout: backdrop-art
         place: { position: { anchor: right, x: -5% } }
   death:
     Fall:
-      - image: death/fall.jxl
+      - image: death/fall.png
         text: Mind the cliff.
 ```
 
@@ -137,8 +137,11 @@ situations:
 
 ### 3. Image formats
 
-Unity can decode only PNG and JPEG (`ImageConversion.LoadImage`). Newer formats need a decoder shipped with the mod.
-All three candidates are royalty-free, with reference decoders under permissive licenses compatible with GPL-3.0:
+**Now: PNG and JPEG only.** Unity decodes them itself (`ImageConversion.LoadImage`), so the main package stays a
+single plugin DLL with no native code.
+
+**Later (not scheduled): WebP, AVIF and JPEG XL in a separate optional download.** These formats need native decoders.
+All three are royalty-free, with decoders under permissive licenses compatible with GPL-3.0:
 
 | Format | Decoder | License | Typical size vs. JPEG |
 |---|---|---|---|
@@ -149,16 +152,20 @@ All three candidates are royalty-free, with reference decoders under permissive 
 A patent pool (Sisvel) claims patents on AV1 outside the AOMedia license; no fees are known to be charged for
 software decoders, but this is a reading of public information, not legal advice.
 
-Plan:
+Packaging rules for the decoder download:
 
-- Load decoders as native libraries through P/Invoke, one build per platform (Windows x64, Linux x64; macOS
-  optional). A format whose decoder is missing is skipped with a warning; PNG and JPEG always work.
-- Start with WebP (smallest decoder, widest tool support), then AVIF and JPEG XL.
-- Decode on a worker thread and upload with `Texture2D.LoadRawTextureData`, so loading a large image does not stall
-  the frame that shows the loading screen.
-- Unload textures that are no longer shown to keep VRAM low.
-- Document recommended resolution (1920x1080 or 2560x1440) and quality settings, and give example commands for the
-  standard encoders (`cwebp`, `avifenc`, `cjxl`).
+- A separate package (an "extra formats" kit) that holds the decoder libraries as plain files, one build per platform
+  (Windows x64, Linux x64; macOS optional), plus their license and patent files. The main mod detects it and
+  enables the formats it finds; without it, those files are skipped with a warning.
+- Never embed native libraries in the plugin DLL and extract them at run time. Hexium's terms ban "concealed
+  payloads", Thunderstore's global rules ask packages not to hinder auditing, and Nexus Mods and Hexium scan every
+  upload with VirusTotal, where self-extracting loaders are likely to be flagged.
+- Hexium's packaging guide says "never copy another author's DLLs into your package". It is unclear whether that
+  covers general libraries such as libwebp; ask Hexium moderators before the first upload of the kit.
+- Native decoders parse untrusted files: pin versions, update them on security advisories, cap file size and
+  resolution before decoding, and decode server-provided images (section 4) only with an explicit opt-in.
+
+Not decided yet: JPEG encoder guidance (mozjpeg, jpegli) and recommended resolution and quality settings.
 
 ### 4. Smaller packages: images served on demand
 
@@ -206,7 +213,7 @@ reach a client just before they are needed.
 5. Wire into the in-game loading screen, the game start screen and the main menu; keep tips and the plain image
    folder as the final fallback.
 6. Reload command.
-7. WebP decoder, then AVIF and JPEG XL; background decoding.
+7. Background image loading and texture unloading (#16).
 8. Server-provided images: manifest, cache, prefetch, transport.
 9. In-game tests, README and CHANGELOG.
 
