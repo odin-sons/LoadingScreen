@@ -109,6 +109,26 @@ public class EntrySelectorTests {
     config.General.Entries[0].LayoutName = null;
     Assert.Equal("list-layout", new EntrySelector(config).Select(Situation.General).LayoutName);
   }
+  [Fact]
+  public void SequentialOrderFollowsConfigAndSkipsUnusable() {
+    ScreenConfig config = new() { General = List("general", "a.jpg", "b.jpg", "c.jpg"), Order = PickOrder.Sequential };
+    EntrySelector selector = new(config, entry => entry.Image != "b.jpg");
+
+    string[] picks = [.. Enumerable.Range(0, 4).Select(_ => selector.Select(Situation.General).Entry.Image)];
+
+    Assert.Equal(["a.jpg", "c.jpg", "a.jpg", "c.jpg"], picks);
+  }
+
+  [Fact]
+  public void ListOrderOverridesGlobalOrder() {
+    ScreenConfig config = Config();
+    config.Death["Fall"].Order = PickOrder.Sequential;
+
+    EntrySelector selector = new(config);
+    string[] picks = [.. Enumerable.Range(0, 3).Select(_ => selector.Select(Situation.Death("Fall")).Entry.Image)];
+
+    Assert.Equal(["f1.jpg", "f2.jpg", "f3.jpg"], picks);
+  }
 }
 
 public class DeathCausesTests {
@@ -117,6 +137,13 @@ public class DeathCausesTests {
     string[] keys = DeathCauses.Keys("EnemyHit", new Dictionary<string, float> { ["Slash"] = 10f, ["Frost"] = 30f });
 
     Assert.Equal(["Frost", "EnemyHit"], keys);
+  }
+
+  [Fact]
+  public void EnemyComesBeforeDamageTypeAndHitType() {
+    string[] keys = DeathCauses.Keys("EnemyHit", new Dictionary<string, float> { ["Frost"] = 30f }, "Dragon");
+
+    Assert.Equal(["enemy:Dragon", "Frost", "EnemyHit"], keys);
   }
 
   [Fact]

@@ -81,6 +81,13 @@ public sealed class ConfigParser {
           ParseLayouts(pair.Value);
           break;
 
+        case "order":
+          if (TryParseOrder(pair.Value, "order", out PickOrder order)) {
+            _result.Config.Order = order;
+          }
+
+          break;
+
         case "situations":
           ParseSituations(pair.Value);
           break;
@@ -382,6 +389,11 @@ public sealed class ConfigParser {
     foreach (KeyValuePair<YamlNode, YamlNode> pair in mapping.Children) {
       string name = Name(pair.Key);
 
+      if (situation == "death" && string.Equals(name, DeathCauses.EnemySection, StringComparison.OrdinalIgnoreCase)) {
+        ParseEnemyLists(pair.Value, target);
+        continue;
+      }
+
       if (knownNames != null) {
         string known = knownNames.FirstOrDefault(
             candidate => string.Equals(candidate, name, StringComparison.OrdinalIgnoreCase));
@@ -403,13 +415,61 @@ public sealed class ConfigParser {
     }
   }
 
+  bool TryParseOrder(YamlNode node, string where, out PickOrder order) {
+    string value = Scalar(node);
+
+    if (string.Equals(value, "random", StringComparison.OrdinalIgnoreCase)) {
+      order = PickOrder.Random;
+      return true;
+    }
+
+    if (string.Equals(value, "sequential", StringComparison.OrdinalIgnoreCase)) {
+      order = PickOrder.Sequential;
+      return true;
+    }
+
+    Warn(node, $"{where}: use 'random' or 'sequential', got '{value}'");
+    order = default;
+    return false;
+  }
+
+  void ParseEnemyLists(YamlNode node, Dictionary<string, EntryList> target) {
+    if (IsNull(node)) {
+      return;
+    }
+
+    if (node is not YamlMappingNode mapping) {
+      Warn(node, "'death.enemy' must be a mapping of creature prefab names to entries");
+      return;
+    }
+
+    foreach (KeyValuePair<YamlNode, YamlNode> pair in mapping.Children) {
+      string name = Name(pair.Key);
+      string key = DeathCauses.EnemyKey(name);
+
+      if (target.ContainsKey(key)) {
+        Warn(pair.Key, $"duplicate death.enemy name '{name}', ignored");
+        continue;
+      }
+
+      target[key] = ParseEntryList($"death.enemy.{name}", pair.Value);
+    }
+  }
+
   EntryList ParseEntryList(string name, YamlNode node) {
     EntryList list = new() { Name = name };
     YamlNode entriesNode = node;
 
     if (node is YamlMappingNode mapping) {
-      WarnUnknownKeys(mapping, ["layout", "entries"], name);
+      WarnUnknownKeys(mapping, ["layout", "order", "entries"], name);
       list.LayoutName = Scalar(Child(mapping, "layout"));
+
+      YamlNode orderNode = Child(mapping, "order");
+
+      if (orderNode != null && TryParseOrder(orderNode, $"'{name}' order", out PickOrder order)) {
+        list.Order = order;
+      }
+
       entriesNode = Child(mapping, "entries");
     }
 

@@ -55,14 +55,21 @@ public sealed class Entry {
   public List<Condition> Conditions { get; } = [];
 }
 
+public enum PickOrder {
+  Random,
+  Sequential
+}
+
 public sealed class EntryList {
   public string Name { get; set; }
   public string LayoutName { get; set; }
+  public PickOrder? Order { get; set; }
   public List<Entry> Entries { get; } = [];
 }
 
 public sealed class ScreenConfig {
   public Placement Defaults { get; set; } = new();
+  public PickOrder Order { get; set; } = PickOrder.Random;
   public Dictionary<string, Layout> Layouts { get; } = new(StringComparer.OrdinalIgnoreCase);
   public EntryList General { get; set; } = new() { Name = "general" };
   public Dictionary<string, EntryList> Teleport { get; } = new(StringComparer.OrdinalIgnoreCase);

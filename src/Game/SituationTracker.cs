@@ -44,7 +44,8 @@ public static class SituationTracker {
       ["Spirit"] = damage.m_spirit,
     };
 
-    Situation situation = Situation.Death(DeathCauses.Keys(lastHit.m_hitType.ToString(), damages));
+    Situation situation =
+        Situation.Death(DeathCauses.Keys(lastHit.m_hitType.ToString(), damages, AttackerPrefab(lastHit)));
     Set(situation);
     LoadingScreen.LogInfo($"Player died: {situation}.");
   }
@@ -71,6 +72,18 @@ public static class SituationTracker {
     if (_preselected?.Entry.Image != null) {
       CustomAssets.ReadLoadingImage(ScreenConfigLoader.ResolveImagePath(_preselected.Entry.Image));
     }
+  }
+
+  static string AttackerPrefab(HitData hit) {
+    Character attacker = hit.GetAttacker();
+
+    if (!attacker || attacker.IsPlayer()) {
+      return null;
+    }
+
+    string name = attacker.gameObject.name;
+    int clone = name.IndexOf('(');
+    return (clone > 0 ? name.Substring(0, clone) : name).Trim();
   }
 
   static string ResolveBiome(Vector3 position) {

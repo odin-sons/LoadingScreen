@@ -17,6 +17,9 @@ public static class ExampleConfigText {
       #   Catapult, CinderFire, AshlandsOcean, AshlandsLava, Incinerator, DrawBridge
       # Damage types (checked first for EnemyHit, PlayerHit, Turret, Catapult, Undefined): Blunt, Slash, Pierce,
       #   Chop, Pickaxe, Fire, Frost, Lightning, Poison, Spirit
+      # A kill by a creature tries death.enemy.<prefab name> first (death: { enemy: { Troll: [...] } }).
+      #
+      # Order: entries are picked at random; "order: sequential" (top level or on a list) uses config order.
       #
       # Conditions ("when" on an entry, all must hold; prefix with "not" to invert, e.g. notKnownItem):
       #   knownItem, hasItem, knownRecipe (item prefab name like Demister), knownBiome, globalKey, playerKey

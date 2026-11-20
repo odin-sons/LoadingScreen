@@ -76,6 +76,11 @@ Settings are in `BepInEx/config/Odin_Sons.LoadingScreen.cfg`.
 - For `EnemyHit`, `PlayerHit`, `Turret`, `Catapult` and `Undefined`, the dominant damage type of the killing hit is
   tried first: `Blunt`, `Slash`, `Pierce`, `Chop`, `Pickaxe`, `Fire`, `Frost`, `Lightning`, `Poison`, `Spirit`.
   Example: a frost drake kill uses `death.Frost` if it exists, then `death.EnemyHit`, then `general`.
+- A kill by a creature tries `death.enemy.<prefab name>` before everything else, for example `death.enemy.Troll`
+  or `death.enemy.Hatchling` (a drake; `Dragon` is Moder). The cause chain is a fallback, not a choice: each list is tried in turn until one has a
+  usable entry, so `death.EnemyHit` still catches every enemy kill whose damage type has no list.
+- Within a list an entry is picked at random, never the same one twice in a row. `order: sequential` at the top of
+  the file, or on one list next to `entries`, shows the usable entries in config order instead, wrapping around.
 - YAML anchors and aliases are not supported, and nesting is limited to 32 levels.
 - Names are case-insensitive. Unknown names, missing files and invalid values are reported in
   `BepInEx/LogOutput.log` with line numbers; the rest of the config still loads.
@@ -338,6 +343,13 @@ situations:
       - text: Bloodgold is the metal of the north.
         when: { notKnownItem: Gold }
   death:
+    enemy:
+      Hatchling:
+        - text: Drakes spit frost from above. Frost resistance and a bow help.
+      Troll:
+        - text: Trolls hit hard but slowly. Dodge, then strike from behind.
+      Deathsquito:
+        - text: Deathsquitos die to one arrow. Wear armor in the Plains.
     Freezing:
       - text: Frost resistance mead or a wolf cape keeps the cold away.
         when: { notKnownItem: [MeadFrostResist, CapeWolf] }
