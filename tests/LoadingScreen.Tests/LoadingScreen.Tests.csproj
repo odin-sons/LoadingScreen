@@ -7,7 +7,7 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <Compile Include="..\..\Core\Screens\**\*.cs" Link="Screens\%(RecursiveDir)%(Filename)%(Extension)" />
+    <Compile Include="..\..\src\Model\**\*.cs" Link="Model\%(RecursiveDir)%(Filename)%(Extension)" />
   </ItemGroup>
 
   <ItemGroup>
