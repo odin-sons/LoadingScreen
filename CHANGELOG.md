@@ -5,6 +5,11 @@
   * Entry conditions: `when` with `knownItem`, `hasItem`, `knownRecipe`, `knownBiome`, `globalKey` and `playerKey`,
     each also as `not...`; an entry is shown only when every condition holds.
   * Entries may have only a `text`; it is shown over a random plain image.
+  * Death screens per enemy: `death.enemy.<creature prefab>` is tried before the damage type and the hit type.
+  * `order: random | sequential`, for the whole file or one list.
+  * `separator: game` layer and the setting to keep or hide the built-in separator on layout screens.
+  * Settings renamed to plain names in numbered sections, each with a description. Old settings are not migrated.
+  * Fixed a white loading screen when no custom images exist.
 
 ### 0.2.0 (2026-11-20)
 

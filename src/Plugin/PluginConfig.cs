@@ -40,173 +40,173 @@ public static class PluginConfig {
   public static ConfigEntry<bool> ServeImagesToClients { get; private set; }
   public static ConfigEntry<bool> DownloadServerImages { get; private set; }
 
+  const string General = "1 - General";
+  const string Screens = "2 - Situations";
+  const string Image = "3 - Image";
+  const string Background = "4 - Background";
+  const string TipText = "5 - Tip text";
+  const string Separator = "6 - Separator line";
+  const string StartScreen = "7 - Game start screen";
+  const string Server = "8 - Server images";
+
   public static void BindConfig(ConfigFile config) {
     IsModEnabled =
-        config.BindInOrder(
-            "_Global", "isModEnabled", true, "Globally enable or disable this mod (restart required).");
+        config.BindInOrder(General, "Enabled", true, "Turn the whole mod on or off. Needs a game restart.");
 
-    SceneLoaderUseLoadingImages =
+    ShowLoadingScreenOnTeleport =
         config.BindInOrder(
-            "SceneLoader",
-            "useLoadingImages",
+            Screens,
+            "Loading screen on portal teleport",
             true,
-            "If set, will use custom loading images on the initial SceneLoader scene.");
+            "Show a loading screen instead of the game's portal swirl. Needed for the per-biome teleport screens.");
 
-    SceneLoaderShowProgressText =
+    ShowLoadingScreenImmediatelyOnDeath =
         config.BindInOrder(
-            "SceneLoader",
-            "showProgressText",
+            Screens,
+            "Loading screen right after death",
             true,
-            "If set, will show loading progress text on the initial SceneLoader scene.");
+            "Show the loading screen as soon as you die, instead of after the death camera.");
 
-    SceneLoaderCenterProgressIndicator =
+    CaptionUseTipWhenNoText =
         config.BindInOrder(
-            "SceneLoader",
-            "centerProgressIndicator",
+            Screens,
+            "Random tip when an entry has no text",
             true,
-            "If set, will center the loading progress indicator (instead of being on the lower-right).");
+            "When a screen from loadingscreen.yaml has no text of its own, show a random line from tips.txt. "
+                + "Off: show no text.");
 
-    SceneLoaderProgressIndicatorOffset =
-        config.BindInOrder(
-            "SceneLoader",
-            "progressIndicatorOffset",
-            new Vector2(0f, 200f),
-            "When centerProgressIndicator is true, this is used to offset from the bottom center.");
-
-    // LoadingImage.Image
     LoadingImageBaseColor =
         config.BindInOrder(
-            "LoadingImage.Image",
-            "baseColor",
+            Image,
+            "Image tint",
             Color.white,
-            "The base color to apply to the loading image.");
+            "Color multiplied over every loading image. White keeps the original colors; gray darkens them.");
 
     LoadingImageBaseColor.SettingChanged += OnLoadingImageConfigChanged;
 
-    // LoadingImage.ScaleLerp
     LoadingImageUseScaleLerp =
         config.BindInOrder(
-            "LoadingImage.ScaleLerp",
-            "useScaleLerp",
+            Image,
+            "Slow zoom",
             true,
-            "If true, performs a scale lerp animation on the loading image.");
+            "Slowly zoom into the loading image while it is shown. A layer's 'animate' in loadingscreen.yaml "
+                + "overrides this.");
 
     LoadingImageScaleLerpEndScale =
         config.BindInOrder(
-            "LoadingImage.ScaleLerp",
-            "lerpEndScale",
+            Image,
+            "Zoom amount",
             1.05f,
-            "Image.scale ending factor for the scale lerp animation.",
+            "How large the image gets by the end of the zoom. 1.05 means 5% larger.",
             new AcceptableValueRange<float>(0.5f, 1.5f));
 
     LoadingImageScaleLerpDuration =
         config.BindInOrder(
-            "LoadingImage.ScaleLerp",
-            "lerpDuration",
+            Image,
+            "Zoom duration (seconds)",
             15f,
-            "Duration for the scale lerp animation.");
+            "How long the zoom takes from start to end.");
 
-    // LoadingTip.Text
+    LoadingScreenBackgroundColor =
+        config.BindInOrder(
+            Background,
+            "Background color",
+            Color.black,
+            "Color behind the loading image, visible where the image does not fill the screen.");
+
+    LoadingScreenBackgroundColor.SettingChanged += OnLoadingBackgroundConfigChanged;
+
     LoadingTipTextPosition =
         config.BindInOrder(
-            "LoadingTip.Text",
-            "textPosition",
+            TipText,
+            "Position",
             new Vector2(0f, 90f),
-            "LoadingTip.Text.position value.");
+            "Where the tip line sits: x from the screen center, y up from the bottom edge, in pixels.");
 
     LoadingTipTextPosition.SettingChanged += OnLoadingTipConfigChanged;
 
     LoadingTipTextFontSize =
         config.BindInOrder(
-            "LoadingTip.Text",
-            "textFontSize",
+            TipText,
+            "Font size",
             24,
-            "LoadingTip.Text.fontSize value.",
+            "Size of the tip text.",
             new AcceptableValueRange<int>(0, 64));
 
     LoadingTipTextFontSize.SettingChanged += OnLoadingTipConfigChanged;
 
     LoadingTipTextColor =
-        config.BindInOrder(
-            "LoadingTip.Text",
-            "textColor",
-            Color.white,
-            "LoadingTip.Text.color value.");
+        config.BindInOrder(TipText, "Color", Color.white, "Color of the tip text.");
 
     LoadingTipTextColor.SettingChanged += OnLoadingTipConfigChanged;
 
-    // LoadingScreen.Background
-    LoadingScreenBackgroundColor =
-        config.BindInOrder(
-            "LoadingScreen.Background",
-            "backgroundColor",
-            Color.black,
-            "Color to use for the loading screen background.");
-
-    LoadingScreenBackgroundColor.SettingChanged += OnLoadingBackgroundConfigChanged;
-
-    // LoadingScreen.PanelSeparator
     LoadingScreenShowPanelSeparator =
         config.BindInOrder(
-            "LoadingScreen.PanelSeparator",
-            "showPanelSeparator",
+            Separator,
+            "Show separator line",
             true,
-            "Show the panel separator image on the loading screen.");
+            "Show the game's ornament line above the tip text.");
 
     LoadingScreenShowPanelSeparator.SettingChanged += OnPanelSeparatorConfigChanged;
 
     LoadingScreenPanelSeparatorPosition =
         config.BindInOrder(
-            "LoadingScreen.PanelSeparator",
-            "panelSeparatorPosition",
+            Separator,
+            "Position",
             new Vector2(0f, 150f),
-            "The position of the panel separator image on the loading screen.");
+            "Where the line sits: x from the screen center, y up from the bottom edge, in pixels.");
 
     LoadingScreenPanelSeparatorPosition.SettingChanged += OnPanelSeparatorConfigChanged;
 
     LoadingScreenPanelSeparatorWithLayouts =
         config.BindInOrder(
-            "LoadingScreen.PanelSeparator",
-            "showWithLayouts",
+            Separator,
+            "Keep on layout screens",
             true,
-            "Show the panel separator on screens drawn by a layout that has no 'separator' layer.");
+            "Keep the line on screens drawn by a layout from loadingscreen.yaml. A layout with its own "
+                + "'separator' layer always hides it. Off: only layouts that add the line show one.");
 
-    // Hud
-    ShowLoadingScreenImmediatelyOnDeath =
+    SceneLoaderUseLoadingImages =
         config.BindInOrder(
-            "Hud.LoadingScreen",
-            "showImmediatelyOnDeath",
+            StartScreen,
+            "Use loading images",
             true,
-            "If set, will show the loading screen immediately on death.");
+            "Show your loading images while the game itself starts, instead of the game's logos.");
 
-    ShowLoadingScreenOnTeleport =
+    SceneLoaderShowProgressText =
         config.BindInOrder(
-            "Hud.LoadingScreen",
-            "showOnTeleport",
+            StartScreen,
+            "Show progress",
             true,
-            "If set, will show loading screen instead of vanilla teleport animation. "
-                + "Required for teleport-biome screens.");
+            "Show the loading percentage and elapsed seconds while the game starts.");
 
-    CaptionUseTipWhenNoText =
+    SceneLoaderCenterProgressIndicator =
         config.BindInOrder(
-            "Situations",
-            "useTipWhenNoText",
+            StartScreen,
+            "Center the spinner",
             true,
-            "If set, a situational entry without text shows a random tip from tips.txt; otherwise no text.");
+            "Move the loading spinner from the lower-right corner to the bottom center.");
+
+    SceneLoaderProgressIndicatorOffset =
+        config.BindInOrder(
+            StartScreen,
+            "Spinner position",
+            new Vector2(0f, 200f),
+            "Offset of the centered spinner from the bottom center, in pixels.");
 
     ServeImagesToClients =
         config.BindInOrder(
-            "ServerImages",
-            "serveToClients",
+            Server,
+            "Share with players (server)",
             true,
-            "Server only: share loadingscreen.yaml and its images with clients that run this mod.");
+            "On a server: send loadingscreen.yaml and its images to players who have this mod.");
 
     DownloadServerImages =
         config.BindInOrder(
-            "ServerImages",
-            "downloadFromServer",
+            Server,
+            "Use the server's screens (player)",
             true,
-            "Client only: use the server's loading screens while connected and download their images in the "
+            "As a player: while connected, use the server's loading screens and download their images in the "
                 + "background into BepInEx/cache/LoadingScreen.");
   }
 
