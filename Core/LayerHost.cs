@@ -101,7 +101,7 @@ public sealed class LayerHost : MonoBehaviour {
       }
 
       string path = layer.FromEntry ? selection.Entry.Image : PickFromPool(layer);
-      Sprite sprite = path == null ? null : CustomAssets.ReadLoadingImage(ScreenConfigLoader.ResolveImagePath(path));
+      Sprite sprite = CustomAssets.ReadLoadingImage(ScreenConfigLoader.ResolveImagePath(path));
 
       if (!sprite) {
         continue;

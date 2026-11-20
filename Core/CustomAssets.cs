@@ -57,6 +57,10 @@ public static class CustomAssets {
   }
 
   public static Sprite ReadLoadingImage(string imageFile) {
+    if (string.IsNullOrEmpty(imageFile)) {
+      return null;
+    }
+
     if (_loadingImageCache.TryGetValue(imageFile, out Sprite sprite) && sprite) {
       TouchCachedImage(imageFile);
       return sprite;
