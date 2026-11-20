@@ -101,8 +101,14 @@ public sealed class LayerHost : MonoBehaviour {
         continue;
       }
 
-      string path = layer.FromEntry ? selection.Entry.Image : PickFromPool(layer);
-      Sprite sprite = CustomAssets.ReadLoadingImage(ScreenConfigLoader.ResolveImagePath(path));
+      Sprite sprite;
+
+      if (layer.FromEntry && selection.Entry.Image == null) {
+        CustomAssets.GetRandomLoadingImage(out sprite);
+      } else {
+        string path = layer.FromEntry ? selection.Entry.Image : PickFromPool(layer);
+        sprite = CustomAssets.ReadLoadingImage(ScreenConfigLoader.ResolveImagePath(path));
+      }
 
       if (!sprite) {
         continue;
@@ -117,12 +123,12 @@ public sealed class LayerHost : MonoBehaviour {
       drewEntryImage |= layer.FromEntry;
     }
 
-    if (!drewEntryImage && layout.ShowsEntryImage) {
+    if (!drewEntryImage && layout.ShowsEntryImage && selection.Entry.Image != null) {
       Hide();
       return false;
     }
 
-    if (_vanillaImage) {
+    if (_vanillaImage && _placed.Count > 0) {
       _vanillaImage.enabled = false;
     }
 

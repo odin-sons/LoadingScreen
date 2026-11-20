@@ -137,6 +137,9 @@ public static class ScreenConfigLoader {
   static void Activate(ScreenConfig config, Func<string, string> resolver) {
     _resolver = resolver;
     Current = config;
-    Selector = new(Current, entry => IsImageAvailable(entry.Image));
+    Selector = new(
+        Current,
+        entry => (entry.Image == null || IsImageAvailable(entry.Image))
+            && Conditions.AreMet(entry.Conditions, PlayerConditions.Instance));
   }
 }

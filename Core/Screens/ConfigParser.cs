@@ -24,7 +24,7 @@ public sealed class ConfigParser {
     "id", "color", "image", "images", "source", "text", "size", "align", "background", .. _placementKeys
   ];
   static readonly string[] _layoutKeys = ["layers", .. _placementKeys];
-  static readonly string[] _entryKeys = ["image", "text", "layout", "place"];
+  static readonly string[] _entryKeys = ["image", "text", "layout", "place", "when"];
 
   readonly Func<string, bool> _imageExists;
   readonly IEnumerable<string> _knownCauses;
@@ -419,24 +419,74 @@ public sealed class ConfigParser {
 
     YamlNode imageNode = Child(mapping, "image");
     string image = Scalar(imageNode);
+    string text = Scalar(Child(mapping, "text"));
 
-    if (imageNode == null) {
-      Warn(node, $"{listName}: an entry needs an 'image', ignored");
+    if (IsNull(imageNode) && string.IsNullOrEmpty(text)) {
+      Warn(node, $"{listName}: an entry needs an 'image' or a 'text', ignored");
       return null;
     }
 
-    if (!CheckImage(imageNode, image, listName)) {
+    if (!IsNull(imageNode) && !CheckImage(imageNode, image, listName)) {
       return null;
     }
 
     YamlNode place = Child(mapping, "place");
 
-    return new() {
-      Image = NormalizePath(image),
-      Text = Scalar(Child(mapping, "text")),
+    Entry entry = new() {
+      Image = IsNull(imageNode) ? null : NormalizePath(image),
+      Text = text,
       LayoutName = Scalar(Child(mapping, "layout")),
       Place = IsNull(place) ? new() : ParsePlacement(place, _placementKeys, $"{listName}: 'place'"),
     };
+
+    YamlNode when = Child(mapping, "when");
+
+    if (!IsNull(when) && !ParseConditions(when, entry.Conditions, $"{listName}: 'when'")) {
+      return null;
+    }
+
+    return entry;
+  }
+
+  bool ParseConditions(YamlNode node, List<Condition> conditions, string where) {
+    if (node is not YamlMappingNode mapping) {
+      Warn(node, $"{where}: expected a mapping, entry ignored");
+      return false;
+    }
+
+    foreach (KeyValuePair<YamlNode, YamlNode> pair in mapping.Children) {
+      if (!Conditions.TryParseKey(Name(pair.Key), out ConditionKind kind, out bool negated)) {
+        Warn(pair.Key, $"{where}: unknown condition '{Name(pair.Key)}', entry ignored");
+        return false;
+      }
+
+      IEnumerable<YamlNode> items = pair.Value is YamlSequenceNode sequence ? sequence.Children : [pair.Value];
+
+      foreach (YamlNode item in items) {
+        string name = Scalar(item)?.Trim();
+
+        if (string.IsNullOrEmpty(name)) {
+          Warn(item, $"{where}: '{Name(pair.Key)}' needs a name, entry ignored");
+          return false;
+        }
+
+        if (kind == ConditionKind.KnownBiome) {
+          string biome = KnownNames.Biomes.FirstOrDefault(
+              known => string.Equals(known, name, StringComparison.OrdinalIgnoreCase));
+
+          if (biome == null) {
+            Warn(item, $"{where}: unknown biome '{name}', entry ignored");
+            return false;
+          }
+
+          name = biome;
+        }
+
+        conditions.Add(new() { Kind = kind, Name = name, Negated = negated });
+      }
+    }
+
+    return true;
   }
 
   Placement ParsePlacement(YamlNode node, IReadOnlyCollection<string> allowedKeys, string where) {

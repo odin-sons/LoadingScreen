@@ -276,7 +276,7 @@ public class ExampleConfigTests {
 
     Assert.Empty(result.Warnings);
     Assert.Equal(2, result.Config.Layouts.Count);
-    Assert.Equal(5, result.Config.EntryCount);
+    Assert.Equal(6, result.Config.EntryCount);
   }
 }
 

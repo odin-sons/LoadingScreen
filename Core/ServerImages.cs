@@ -251,7 +251,9 @@ public static class ServerImages {
     IEnumerable<string> death = config.Death.Values.SelectMany(list => list.Entries).Select(entry => entry.Image);
     IEnumerable<string> teleport = config.Teleport.Values.SelectMany(list => list.Entries).Select(entry => entry.Image);
 
-    return layerImages.Concat(general).Concat(death).Concat(teleport).Distinct(StringComparer.OrdinalIgnoreCase);
+    return layerImages.Concat(general).Concat(death).Concat(teleport)
+        .Where(image => image != null)
+        .Distinct(StringComparer.OrdinalIgnoreCase);
   }
 
   static PeerLimits LimitsFor(ZRpc rpc) {
