@@ -12,7 +12,10 @@ public static class CustomAssets {
   public static List<string> LoadingTips { get; } = [];
   public static List<string> LoadingImageFiles { get; } = [];
 
+  const int MaxCachedImages = 16;
+
   static readonly Dictionary<string, Sprite> _loadingImageCache = [];
+  static readonly LinkedList<string> _loadingImageUsage = new();
 
   static readonly MethodInfo _loadImageMethod =
       AccessTools.Method(
@@ -54,7 +57,8 @@ public static class CustomAssets {
   }
 
   public static Sprite ReadLoadingImage(string imageFile) {
-    if (_loadingImageCache.TryGetValue(imageFile, out Sprite sprite)) {
+    if (_loadingImageCache.TryGetValue(imageFile, out Sprite sprite) && sprite) {
+      TouchCachedImage(imageFile);
       return sprite;
     }
 
@@ -67,14 +71,39 @@ public static class CustomAssets {
       name = $"intermission.texture-{Path.GetFileName(imageFile)}"
     };
 
+    System.Diagnostics.Stopwatch stopwatch = System.Diagnostics.Stopwatch.StartNew();
     _loadImageMethod.Invoke(obj: null, [texture, File.ReadAllBytes(imageFile)]);
+    LoadingScreen.LogInfo(
+        $"Loaded image {Path.GetFileName(imageFile)} ({texture.width}x{texture.height}) "
+            + $"in {stopwatch.ElapsedMilliseconds} ms.");
 
     sprite = Sprite.Create(texture, new(0, 0, texture.width, texture.height), Vector2.zero, 1);
     sprite.name = $"intermission.sprite-{Path.GetFileName(imageFile)}";
 
     _loadingImageCache[imageFile] = sprite;
+    TouchCachedImage(imageFile);
+    EvictCachedImages();
 
     return sprite;
+  }
+
+  static void TouchCachedImage(string imageFile) {
+    _loadingImageUsage.Remove(imageFile);
+    _loadingImageUsage.AddLast(imageFile);
+  }
+
+  static void EvictCachedImages() {
+    while (_loadingImageUsage.Count > MaxCachedImages) {
+      string oldest = _loadingImageUsage.First.Value;
+      _loadingImageUsage.RemoveFirst();
+
+      if (_loadingImageCache.TryGetValue(oldest, out Sprite sprite) && sprite) {
+        Object.Destroy(sprite.texture);
+        Object.Destroy(sprite);
+      }
+
+      _loadingImageCache.Remove(oldest);
+    }
   }
 
   public static void ClearImageCache() {
@@ -86,6 +115,7 @@ public static class CustomAssets {
     }
 
     _loadingImageCache.Clear();
+    _loadingImageUsage.Clear();
   }
 
   public static bool GetRandomLoadingTip(out string tipText) {

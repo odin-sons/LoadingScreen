@@ -22,14 +22,15 @@ public static class LoadingManager {
 
   public static string CurrentCaption { get; private set; }
 
-  public static bool ShowSituation(LayerHost host, Situation situation, TMP_Text tipText) {
+  public static bool ShowSituation(
+      LayerHost host, Situation situation, TMP_Text tipText, Selection preselected = null) {
     CurrentCaption = null;
 
     if (!host) {
       return false;
     }
 
-    Selection selection = ScreenConfigLoader.Selector.Select(situation);
+    Selection selection = preselected ?? ScreenConfigLoader.Selector.Select(situation);
 
     if (!host.Show(selection)) {
       return false;
