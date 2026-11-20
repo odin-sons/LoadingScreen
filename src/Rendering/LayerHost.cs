@@ -154,7 +154,7 @@ public sealed class LayerHost : MonoBehaviour {
         _placed
             .Select(placed => placed.Rect.GetComponent<Image>().sprite)
             .Where(sprite => sprite != LoadingManager.SeparatorSprite));
-    SetSeparatorVisible(!layout.ShowsSeparator);
+    SetSeparatorVisible(!layout.ShowsSeparator && LoadingScreenPanelSeparatorWithLayouts.Value);
     IsShowing = true;
     Relayout();
     StartAnimations();
