@@ -32,7 +32,7 @@ public static class ExampleConfigText {
       #   opacity: 0..1
       #   fade: { sides: [left, bottom], color: "#000000", size: 15%, curve: smooth | linear }
       #        (gradient from the color into the image; size is % of the image size or px)
-      #   animate: true | false   (slow zoom, uses the LoadingImage.ScaleLerp settings)
+      #   animate: true | false   (slow zoom, defaults to the Slow zoom setting)
       #
       # Layers: "color" (solid fill), "image" (one file), "images" (a random file per screen),
       # "source: entry" (the image of the chosen entry), "separator: game" (the game's ornament line,

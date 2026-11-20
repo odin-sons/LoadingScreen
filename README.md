@@ -67,7 +67,7 @@ Settings are in `BepInEx/config/Odin_Sons.LoadingScreen.cfg`.
 | Anything else, main menu, game start | `situations.general` | the plain images |
 
 - Biomes: `Meadows`, `BlackForest`, `Swamp`, `Mountain`, `Plains`, `Mistlands`, `AshLands`, `DeepNorth`, `Ocean`.
-  The biome is resolved from the destination position. Teleport screens need `[Hud.LoadingScreen] showOnTeleport`
+  The biome is resolved from the destination position. Teleport screens need `[2 - Situations] Loading screen on portal teleport`
   (on by default); without it the game shows its own portal animation.
 - Causes are the game's own hit types: `Undefined`, `EnemyHit`, `PlayerHit`, `Fall`, `Drowning`, `Burning`,
   `Freezing`, `Poisoned`, `Water`, `Smoke`, `EdgeOfWorld`, `Impact`, `Cart`, `Tree`, `Self`, `Structural`,
@@ -438,7 +438,7 @@ value wins: entry `place`, then layer, then layout, then `defaults`.
 | `position` | `{ anchor, x, y }`. Anchors: `center`, `left`, `right`, `top`, `bottom`, `top-left`, `top-right`, `bottom-left`, `bottom-right`. `x` moves right, `y` moves down, in `%` of the screen or `px`. A plain anchor name also works: `position: top`. |
 | `opacity` | `0` to `1` |
 | `fade` | `{ sides, color, size, curve }`: a gradient from the color to transparent drawn over the image edges. `sides`: any of `left`, `right`, `top`, `bottom`, or `all`. `size`: `%` of the image size or `px` (default 15%). `curve`: `smooth` (default) or `linear`. |
-| `animate` | `true` or `false`: the slow zoom from `[LoadingImage.ScaleLerp]`; defaults to that section's `useScaleLerp`. |
+| `animate` | `true` or `false`: the slow zoom; defaults to `[3 - Image] Slow zoom`. |
 
 A text layer accepts `position`, `opacity`, `fit: { width }` (the text box width, default 80% of the screen) and
 `size`, `color`, `align` (`left`, `center`, `right`), `background` (a color box behind the text). Without a text
@@ -446,20 +446,24 @@ layer, the caption goes to the usual tip line.
 
 A `separator: game` layer draws the game's ornament line as an image layer. It takes the placement options and an
 optional `color` tint; without placement it keeps its native size near the bottom. A layout with such a layer hides
-the built-in separator from `[LoadingScreen.PanelSeparator]`; set `showWithLayouts = false` there to hide it on every
-screen drawn by a layout. To use your own line, add it as an `image` layer and
-turn `showPanelSeparator` off.
+the built-in separator line; turn `[6 - Separator line] Keep on layout screens` off to hide it on every screen drawn
+by a layout. To use your own line, add it as an `image` layer and
+turn `Show separator line` off.
 
 ### Settings
 
-New settings in `Odin_Sons.LoadingScreen.cfg`, next to the Intermission ones:
+All settings in `Odin_Sons.LoadingScreen.cfg`; each has a description in the Configuration Manager tooltip.
 
-| Section | Setting | Default | Meaning |
-|---|---|---|---|
-| `LoadingScreen.PanelSeparator` | `showWithLayouts` | `true` | Keep the built-in separator on layout screens without a `separator` layer |
-| `Situations` | `useTipWhenNoText` | `true` | An entry without text shows a random tip; otherwise no text |
-| `ServerImages` | `serveToClients` | `true` | Server: share `loadingscreen.yaml` and its images with clients |
-| `ServerImages` | `downloadFromServer` | `true` | Client: use the server's screens and download their images |
+| Section | Settings |
+|---|---|
+| `1 - General` | Enabled |
+| `2 - Situations` | Loading screen on portal teleport, Loading screen right after death, Random tip when an entry has no text |
+| `3 - Image` | Image tint, Slow zoom, Zoom amount, Zoom duration (seconds) |
+| `4 - Background` | Background color |
+| `5 - Tip text` | Position, Font size, Color |
+| `6 - Separator line` | Show separator line, Position, Keep on layout screens |
+| `7 - Game start screen` | Use loading images, Show progress, Center the spinner, Spinner position |
+| `8 - Server images` | Share with players (server), Use the server's screens (player) |
 
 ### Console
 
@@ -530,10 +534,8 @@ Not decided yet: JPEG encoder guidance (mozjpeg, jpegli) and recommended resolut
 
 - Show custom images and tips on the loading screen.
 - Plain `.png` or `.jpg` files in `BepInEx/config/LoadingScreen/` and one loading tip per line in `tips.txt`.
-- `[Hud.LoadingScreen] showOnTeleport`: show the loading screen instead of the vanilla portal animation.
-- `[Hud.LoadingScreen] showImmediatelyOnDeath`: show the loading screen right when the player dies.
-- `[SceneLoader]`, `[LoadingImage.*]`, `[LoadingScreen.*]`, `[LoadingTip.*]`: game start screen, image tint and
-  zoom, background color, separator and tip text style.
+- The loading screen instead of the portal animation and right after death.
+- Game start screen, image tint and zoom, background color, separator line and tip text style settings.
 
 ## Building
 
