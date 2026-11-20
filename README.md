@@ -434,7 +434,8 @@ layer, the caption goes to the usual tip line.
 
 A `separator: game` layer draws the game's ornament line as an image layer. It takes the placement options and an
 optional `color` tint; without placement it keeps its native size near the bottom. A layout with such a layer hides
-the built-in separator from `[LoadingScreen.PanelSeparator]`. To use your own line, add it as an `image` layer and
+the built-in separator from `[LoadingScreen.PanelSeparator]`; set `showWithLayouts = false` there to hide it on every
+screen drawn by a layout. To use your own line, add it as an `image` layer and
 turn `showPanelSeparator` off.
 
 ### Settings
@@ -443,6 +444,7 @@ New settings in `Odin_Sons.LoadingScreen.cfg`, next to the Intermission ones:
 
 | Section | Setting | Default | Meaning |
 |---|---|---|---|
+| `LoadingScreen.PanelSeparator` | `showWithLayouts` | `true` | Keep the built-in separator on layout screens without a `separator` layer |
 | `Situations` | `useTipWhenNoText` | `true` | An entry without text shows a random tip; otherwise no text |
 | `ServerImages` | `serveToClients` | `true` | Server: share `loadingscreen.yaml` and its images with clients |
 | `ServerImages` | `downloadFromServer` | `true` | Client: use the server's screens and download their images |

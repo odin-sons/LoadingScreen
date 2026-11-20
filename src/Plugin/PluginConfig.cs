@@ -26,6 +26,7 @@ public static class PluginConfig {
 
   public static ConfigEntry<bool> LoadingScreenShowPanelSeparator { get; private set; }
   public static ConfigEntry<Vector2> LoadingScreenPanelSeparatorPosition { get; private set; }
+  public static ConfigEntry<bool> LoadingScreenPanelSeparatorWithLayouts { get; private set; }
 
   public static ConfigEntry<Vector2> LoadingTipTextPosition { get; private set; }
   public static ConfigEntry<int> LoadingTipTextFontSize { get; private set; }
@@ -162,6 +163,13 @@ public static class PluginConfig {
             "The position of the panel separator image on the loading screen.");
 
     LoadingScreenPanelSeparatorPosition.SettingChanged += OnPanelSeparatorConfigChanged;
+
+    LoadingScreenPanelSeparatorWithLayouts =
+        config.BindInOrder(
+            "LoadingScreen.PanelSeparator",
+            "showWithLayouts",
+            true,
+            "Show the panel separator on screens drawn by a layout that has no 'separator' layer.");
 
     // Hud
     ShowLoadingScreenImmediatelyOnDeath =
