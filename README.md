@@ -126,7 +126,7 @@ situations:
 |---|---|---|
 | `knownItem` | the player has ever picked up the item | item prefab name (`Demister`) or `$item_` token |
 | `hasItem` | the item is in the inventory now | same as above |
-| `knownRecipe` | the player knows the recipe for the item | same as above |
+| `knownRecipe` | the player knows the recipe for the item or build piece | same as above, or a piece token (`$ship_karve`) |
 | `knownBiome` | the player has discovered the biome | biome name from the list above |
 | `globalKey` | the world has the global key | key name (`defeated_bonemass`, `defeated_queen`, ...) |
 | `playerKey` | the player has the unique key | key name |
@@ -168,8 +168,53 @@ Materials that mark progress through the biomes:
 
 Key tools and gear: `Hammer`, `Hoe`, `Cultivator`, `PickaxeAntler`, `PickaxeBronze`, `PickaxeIron`,
 `PickaxeBlackMetal`, `Demister` (Wisplight), `Lantern`, `MeadFrostResist`, `MeadPoisonResist`, `CapeWolf`,
-`CapeLox`, `BeltStrength`. Any other item works by its prefab name; the
+`CapeLox`, `FishingRod`, `Scythe`. Any other item works by its prefab name; the
 [Jotunn item list](https://valheim-modding.github.io/Jotunn/data/objects/item-list.html) has all of them.
+
+Haldor, the Black Forest trader:
+
+| Goods | Prefab or key | Sold after |
+|---|---|---|
+| Megingjord | `BeltStrength` | always |
+| Dverger circlet | `HelmetDverger` | always |
+| Barrel hoops | `BarrelRings` | always |
+| Fishing rod, bait | `FishingRod`, `FishingBait` | always |
+| Thunder stone | `Thunderstone` | `defeated_gdking` |
+| Ymir flesh | `YmirRemains` | `defeated_gdking` |
+| Egg | `ChickenEgg` | `defeated_goblinking` |
+| Wider Pockets, +1 inventory row | player key `invrows 5` | `defeated_dragon` |
+| Deeper Pockets, +1 inventory row | player key `invrows 6` | `defeated_queen` |
+
+The pockets are not items: the game stores the number of inventory rows as the player key `invrows N`, starting at
+`invrows 4`. `playerKey: invrows 4` therefore means the player has not bought Wider Pockets yet.
+
+The Bog Witch, the Swamp trader:
+
+| Goods | Prefab | Sold after |
+|---|---|---|
+| Candle wick | `CandleWick` | always |
+| Cured squirrel hamstring | `CuredSquirrelHamstring` | always |
+| Fresh seaweed | `FreshSeaweed` | always |
+| Ivy seeds | `VineGreenSeeds` | always |
+| Love potion | `MeadTrollPheromones` | always |
+| Powdered dragon eggshells | `PowderedDragonEgg` | always |
+| Pungent pebbles | `PungentPebbles` | always |
+| Serving tray | `Feaster` | always |
+| Woodland herb blend | `SpiceForests` | `defeated_gdking` |
+| Fragrant bundle | `FragrantBundle` | `defeated_dragon` |
+| Mountain peak pepper powder | `SpiceMountains` | `defeated_dragon` |
+| Toadstool | `MushroomBzerker` | `defeated_dragon` |
+| Scythe handle | `ScytheHandle` | `defeated_dragon` |
+| Grasslands herbalist harvest | `SpicePlains` | `defeated_goblinking` |
+| Herbs of the hidden hills | `SpiceMistlands` | `defeated_queen` |
+| Fiery spice powder | `SpiceAshlands` | `defeated_fader` |
+| Seafarer's herbs | `SpiceOceans` | a killed serpent |
+
+Build pieces are known by their token, so use `knownRecipe` with it. Ships: `$ship_raft`, `$ship_karve`,
+`$ship_longship`, `$ship_longship_ashlands` (Drakkar). Stations: `$piece_workbench`, `$piece_forge`, `$piece_smelter`,
+`$piece_charcoalkiln`, `$piece_stonecutter`, `$piece_fermenter`, `$piece_cauldron`, `$piece_artisanstation`,
+`$piece_spinningwheel`, `$piece_windmill`, `$piece_blastfurnace`, `$piece_blackforge`, `$piece_eitrrefinery`,
+`$piece_sapcollector`, `$piece_preptable`, `$piece_meadcauldron`, `$piece_portal`.
 
 A tip for the next boss, shown on any loading screen while that boss is the next one:
 
@@ -192,6 +237,37 @@ situations:
       when: { globalKey: defeated_goblinking, notGlobalKey: defeated_queen }
     - text: Bell fragments in the Ashlands summon Fader.
       when: { globalKey: defeated_queen, notGlobalKey: defeated_fader }
+```
+
+What to do after each boss, until the player has done it:
+
+```yaml
+situations:
+  general:
+    - text: Eikthyr's hard antlers make a pickaxe. Copper and tin wait in the Black Forest.
+      when: { globalKey: defeated_eikthyr, notKnownItem: PickaxeAntler }
+    - text: Copper and tin smelt into bronze. A smelter needs surtling cores from the burial chambers.
+      when: { knownItem: PickaxeAntler, notKnownItem: Bronze }
+    - text: Wood, leather scraps and resin make a raft. Slow, but it floats.
+      when: { notKnownRecipe: $ship_raft }
+    - text: Bronze nails and fine wood build a karve, a real ship for the open sea.
+      when: { knownItem: Bronze, notKnownRecipe: $ship_karve }
+    - text: Iron scrap lies in the sunken crypts. Bring a bronze pickaxe and the Elder's key.
+      when: { globalKey: defeated_gdking, notKnownItem: IronScrap }
+    - text: Iron nails and ancient bark build a longship that carries much more cargo.
+      when: { knownItem: Iron, notKnownRecipe: $ship_longship }
+    - text: An iron pickaxe breaks silver ore. The Wishbone shows where it is buried.
+      when: { globalKey: defeated_bonemass, notKnownItem: PickaxeIron }
+    - text: Haldor now sells Wider Pockets, one more row in your inventory.
+      when: { globalKey: defeated_dragon, playerKey: invrows 4 }
+    - text: The Bog Witch now sells a scythe handle. A scythe cuts crops in a wide arc.
+      when: { globalKey: defeated_dragon, notKnownItem: Scythe }
+    - text: Black metal makes the strongest pickaxe yet.
+      when: { knownItem: BlackMetal, notKnownItem: PickaxeBlackMetal }
+    - text: Haldor now sells Deeper Pockets, one more row in your inventory.
+      when: { globalKey: defeated_queen, playerKey: invrows 5 }
+    - text: Take a Drakkar into the Ashlands seas.
+      when: { globalKey: defeated_queen, notKnownRecipe: $ship_longship_ashlands }
 ```
 
 Biome tips for players who have not found the key item yet:
