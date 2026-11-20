@@ -33,9 +33,10 @@ static class HudPatch {
   [HarmonyPatch(nameof(Hud.UpdateBlackScreen))]
   static void UpdateBlackScreenPostfix(Hud __instance) {
     if (!_loadingScreenState && __instance.m_loadingProgress.activeInHierarchy) {
-      Situation situation = SituationTracker.Consume();
+      Situation situation = SituationTracker.Consume(out Selection preselected);
 
-      if (!LoadingManager.ShowSituation(LoadingManager.HudHost, situation, __instance.m_loadingTip)) {
+      if (!LoadingManager.ShowSituation(
+              LoadingManager.HudHost, situation, __instance.m_loadingTip, preselected)) {
         LoadingManager.ShowFallback(LoadingManager.HudHost, __instance.m_loadingImage, __instance.m_loadingTip);
         __instance.ScaleLerpLoadingImage(__instance.m_loadingImage);
       }

@@ -20,6 +20,7 @@ public sealed class LayerHost : MonoBehaviour {
   static readonly Dictionary<Layer, string> _lastPoolPick = [];
 
   readonly List<PlacedImage> _placed = [];
+  readonly List<Transform> _animated = [];
   RectTransform _root;
   Graphic _vanillaImage;
   Vector2 _lastSize;
@@ -104,6 +105,7 @@ public sealed class LayerHost : MonoBehaviour {
 
     IsShowing = true;
     Relayout();
+    StartAnimations();
     return true;
   }
 
@@ -206,12 +208,32 @@ public sealed class LayerHost : MonoBehaviour {
     _placed.Add(placed);
 
     if (placement.Animate ?? LoadingImageUseScaleLerp.Value) {
-      StartCoroutine(
-          ImageScaleUtils.ScaleLerp(
-              image.transform,
-              Vector3.one,
-              Vector3.one * LoadingImageScaleLerpEndScale.Value,
-              LoadingImageScaleLerpDuration.Value));
+      _animated.Add(image.transform);
+    }
+  }
+
+  void OnEnable() {
+    if (IsShowing) {
+      StartAnimations();
+    }
+  }
+
+  void StartAnimations() {
+    StopAllCoroutines();
+
+    if (!isActiveAndEnabled) {
+      return;
+    }
+
+    foreach (Transform target in _animated) {
+      if (target) {
+        StartCoroutine(
+            ImageScaleUtils.ScaleLerp(
+                target,
+                Vector3.one,
+                Vector3.one * LoadingImageScaleLerpEndScale.Value,
+                LoadingImageScaleLerpDuration.Value));
+      }
     }
   }
 
@@ -253,6 +275,7 @@ public sealed class LayerHost : MonoBehaviour {
   void Clear() {
     StopAllCoroutines();
     _placed.Clear();
+    _animated.Clear();
 
     for (int i = _root.childCount - 1; i >= 0; i--) {
       Destroy(_root.GetChild(i).gameObject);

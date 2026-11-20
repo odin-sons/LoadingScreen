@@ -10,6 +10,7 @@ public static class SituationTracker {
   const float PendingLifetimeSeconds = 120f;
 
   static Situation? _pending;
+  static Selection _preselected;
   static float _pendingSince;
 
   public static void OnTeleport(Vector3 targetPosition) {
@@ -48,23 +49,28 @@ public static class SituationTracker {
     LoadingScreen.LogInfo($"Player died: {situation}.");
   }
 
-  public static Situation Consume() {
-    Situation situation =
-        _pending.HasValue && Time.realtimeSinceStartup - _pendingSince <= PendingLifetimeSeconds
-            ? _pending.Value
-            : Situation.General;
+  public static Situation Consume(out Selection preselected) {
+    bool isFresh = _pending.HasValue && Time.realtimeSinceStartup - _pendingSince <= PendingLifetimeSeconds;
+    Situation situation = isFresh ? _pending.Value : Situation.General;
+    preselected = isFresh ? _preselected : null;
 
-    _pending = null;
+    Clear();
     return situation;
   }
 
   public static void Clear() {
     _pending = null;
+    _preselected = null;
   }
 
   static void Set(Situation situation) {
     _pending = situation;
     _pendingSince = Time.realtimeSinceStartup;
+    _preselected = ScreenConfigLoader.Selector.Select(situation);
+
+    if (_preselected != null) {
+      CustomAssets.ReadLoadingImage(ScreenConfigLoader.ResolveImagePath(_preselected.Entry.Image));
+    }
   }
 
   static string ResolveBiome(Vector3 position) {
