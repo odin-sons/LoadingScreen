@@ -16,7 +16,7 @@ using static PluginConfig;
 public sealed class LoadingScreen : BaseUnityPlugin {
   public const string PluginGuid = "Odin_Sons.LoadingScreen";
   public const string PluginName = "LoadingScreen";
-  public const string PluginVersion = "0.1.0";
+  public const string PluginVersion = "0.2.0";
 
   static ManualLogSource _logger;
 

@@ -1,5 +1,24 @@
 ## Changelog
 
+### 0.2.0 (2026-11-20)
+
+  * Situational loading screens from `BepInEx/config/LoadingScreen/loadingscreen.yaml` (YamlDotNet, new dependency
+    `ValheimModding-YamlDotNet`):
+    * portal teleports pick entries by destination biome, respawns by cause of death (hit type, then the dominant
+      damage type for hits), everything else by the general list; random without immediate repeats;
+    * config problems are logged with line numbers and never stop the rest of the config from loading;
+    * a commented example config is created on first start.
+  * Layered layouts: color layers, fixed images, random image pools, the entry image and a caption text layer, each
+    with fit, anchor, offsets, opacity, gradient edges and the scale animation; placement falls back from the entry
+    to the layer, the layout and the global defaults.
+  * Entry captions replace the tip; new setting `[Situations] useTipWhenNoText`.
+  * Server images: a server running the mod shares its config and images; clients download them in the background
+    into `BepInEx/cache/LoadingScreen/` with size, path and hash checks. New settings `[ServerImages] serveToClients`
+    and `downloadFromServer`.
+  * Console command `loadingscreen reload|status`.
+  * The chosen image is decoded when the death or teleport happens; at most 16 decoded images are kept in memory.
+  * Not yet tested in the game.
+
 ### 0.1.0 (2026-11-20)
 
   * Modified fork of Intermission 1.10.0 by redseiko (ComfyMods, upstream commit `cc8647b`), changed by Odin_Sons.
