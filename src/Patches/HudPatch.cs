@@ -72,6 +72,7 @@ static class HudPatch {
     }
 
     if (!__instance.m_loadingProgress.activeInHierarchy) {
+      if (LoadingManager.Session.Stage == LoadingStage.Hud) LoadingManager.Session.Reset();
       return;
     }
 
@@ -79,11 +80,13 @@ static class HudPatch {
     if (newScreen) {
       Selection preselected = null;
       _currentSituation = sleeping ? Situation.Sleep : SituationTracker.Consume(out preselected);
-      _lastImageTime = now;
+      bool continueSession = LoadingManager.Session.CanContinue(LoadingStage.Hud, _currentSituation);
+      _lastImageTime = continueSession ? LoadingManager.Session.StartedAt : now;
       _lastTipTime = now;
 
       if (!LoadingManager.ShowSituation(
-              LoadingManager.HudHost, _currentSituation, __instance.m_loadingTip, preselected)) {
+              LoadingManager.HudHost, LoadingStage.Hud, _currentSituation, __instance.m_loadingTip,
+              preselected, continueSession)) {
         LoadingManager.ShowFallback(LoadingManager.HudHost, __instance.m_loadingImage, __instance.m_loadingTip);
         __instance.ScaleLerpLoadingImage(__instance.m_loadingImage);
       }
@@ -117,7 +120,7 @@ static class HudPatch {
 
     if (next == null
         || !LoadingManager.ShowSituation(
-            LoadingManager.HudHost, _currentSituation, __instance.m_loadingTip, next)) {
+            LoadingManager.HudHost, LoadingStage.Hud, _currentSituation, __instance.m_loadingTip, next)) {
       LoadingManager.ShowFallback(LoadingManager.HudHost, __instance.m_loadingImage, __instance.m_loadingTip);
       __instance.ScaleLerpLoadingImage(__instance.m_loadingImage);
     }

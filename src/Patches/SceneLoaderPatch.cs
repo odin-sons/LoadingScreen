@@ -67,7 +67,8 @@ static class SceneLoaderPatch {
     RefreshAppearance();
 
     _startTime = Time.time;
-    _lastImageTime = Time.realtimeSinceStartup;
+    _lastImageTime = LoadingManager.Session.Stage == LoadingStage.Scene
+        ? LoadingManager.Session.StartedAt : Time.realtimeSinceStartup;
   }
 
   internal static void RefreshAppearance() {
@@ -107,7 +108,12 @@ static class SceneLoaderPatch {
   }
 
   static void ShowNextImage(SceneLoader sceneLoader) {
-    if (!LoadingManager.ShowSituation(_host, Situation.General, tipText: null)) {
+    if (LoadingManager.FejdStartupHost && LoadingManager.FejdStartupHost.gameObject.activeInHierarchy) {
+      LoadingManager.Session.MarkVisible(Time.realtimeSinceStartup);
+    }
+    bool continueSession = LoadingManager.Session.CanContinue(LoadingStage.Scene, Situation.General);
+    if (!LoadingManager.ShowSituation(
+            _host, LoadingStage.Scene, Situation.General, tipText: null, continueSession: continueSession)) {
       if (_host) {
         _host.Hide();
       }

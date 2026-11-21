@@ -12,6 +12,7 @@ using UnityEngine.Networking;
 using static PluginConfig;
 
 public sealed class LoadingAudio : MonoBehaviour {
+  const float HandoverGraceSeconds = 3f;
   static LoadingAudio _instance;
 
   AudioSource _music;
@@ -24,20 +25,26 @@ public sealed class LoadingAudio : MonoBehaviour {
   string _musicPath;
   string _selectedMusic;
   string _selectedVoice;
+  Entry _selectedEntry;
+  bool _continuation;
   CanvasGroup[] _screenGroups = [];
   bool _visible;
   float _fade;
   float _appliedMute;
+  GameSounds _appliedSounds;
   float _mutedMusicVolume = -1f;
+  float _unmutedMusicVolume;
+  AudioSource _mutedMusicSource;
+  readonly AudioHandover _handover = new();
 
   public static void Initialize(GameObject owner) {
     _instance = owner.AddComponent<LoadingAudio>();
   }
 
-  public static void Play(LayerHost host, Selection selection, bool showsEntryText) {
+  public static void Play(LayerHost host, Selection selection, bool showsEntryText, bool continuation) {
     if (!_instance) return;
     _instance.Select(host, SoundSelection.MusicFor(selection, ScreenConfigLoader.Current),
-        SoundSelection.VoiceFor(selection, showsEntryText));
+        SoundSelection.VoiceFor(selection, showsEntryText), selection.Entry, continuation);
   }
 
   public static void Stop(LayerHost host) {
@@ -46,12 +53,16 @@ public sealed class LoadingAudio : MonoBehaviour {
 
   public static void StopAllSounds() {
     if (!_instance) return;
+    _instance.ApplyGameMute(0f);
     _instance._host = null;
     _instance._visible = false;
     _instance._selectedMusic = null;
     _instance._selectedVoice = null;
+    _instance._selectedEntry = null;
+    _instance._handover.Reset();
     _instance.StopVoice();
     _instance.StopMusic();
+    _instance._fade = 0f;
   }
 
   void Awake() {
@@ -68,16 +79,19 @@ public sealed class LoadingAudio : MonoBehaviour {
     _voice.bypassReverbZones = true;
   }
 
-  void Select(LayerHost host, string music, string voice) {
-    if (_host != host) {
-      StopVoice();
-      StopMusic();
-      _visible = false;
-    }
+  void Select(LayerHost host, string music, string voice, Entry entry, bool continuation) {
+    bool changedHost = _host != host;
+    string musicPath = ScreenConfigLoader.ResolveImagePath(music);
+    bool keepMusic = changedHost && AudioHandover.KeepMusic(
+        _musicPath, musicPath, _music.isPlaying || _musicLoad != null);
+    if (changedHost && continuation) _handover.Begin(_fade);
+    else if (changedHost) _handover.Reset();
 
     _host = host;
     _selectedMusic = music;
     _selectedVoice = voice;
+    _selectedEntry = entry;
+    _continuation = continuation;
     _screenGroups = host ? host.GetComponentsInParent<CanvasGroup>(true) : [];
     if (!PlayLoadingSounds.Value || !GameVolumeReady) {
       StopVoice();
@@ -88,9 +102,10 @@ public sealed class LoadingAudio : MonoBehaviour {
 
     if (host && host.gameObject.activeInHierarchy) {
       _visible = true;
-      StartMusic(music);
-      StartVoice(voice);
-    } else {
+      if (!keepMusic) StartMusic(music);
+      if (voice != null && _handover.ShouldPlayVoice(entry, continuation)) StartVoice(voice);
+      else if (!continuation) StopVoice();
+    } else if (!continuation || !_visible) {
       StopVoice();
       StopMusic();
       _visible = false;
@@ -108,22 +123,28 @@ public sealed class LoadingAudio : MonoBehaviour {
         _visible = false;
       }
       bool showing = _host && _host.IsShowing && _host.gameObject.activeInHierarchy;
-      ApplyGameMute(showing ? ScreenOpacity() : 0f);
+      bool ended = _handover.ShouldEnd(showing, Time.realtimeSinceStartup, HandoverGraceSeconds);
+      _fade = showing ? _handover.Opacity(ScreenOpacity()) : ended ? 0f : _fade;
+      ApplyGameMute(_fade);
       return;
     }
 
-    if (_host && _host.IsShowing && _host.gameObject.activeInHierarchy) {
+    bool hostShowing = _host && _host.IsShowing && _host.gameObject.activeInHierarchy;
+    bool handoverExpired = _handover.ShouldEnd(hostShowing, Time.realtimeSinceStartup, HandoverGraceSeconds);
+    if (hostShowing) {
       if (!_visible) {
         _visible = true;
         StartMusic(_selectedMusic);
-        StartVoice(_selectedVoice);
+        if (_selectedVoice != null && _handover.ShouldPlayVoice(_selectedEntry, _continuation)) {
+          StartVoice(_selectedVoice);
+        }
       }
-    } else if (_visible) {
+    } else if (_visible && handoverExpired) {
       EndScreen();
     }
 
     if (_visible) {
-      _fade = ScreenOpacity();
+      _fade = hostShowing ? _handover.Opacity(ScreenOpacity()) : _fade;
     }
 
     if (_music) _music.volume = MusicVolume();
@@ -134,7 +155,9 @@ public sealed class LoadingAudio : MonoBehaviour {
   void LateUpdate() {
     if (_appliedMute <= 0f || !MusicMan.instance || !Mutes(GameSounds.Music)) return;
     AudioSource music = MusicMan.instance.m_musicSource;
-    if (!music || Mathf.Approximately(music.volume, _mutedMusicVolume)) return;
+    if (!music || (music == _mutedMusicSource && Mathf.Approximately(music.volume, _mutedMusicVolume))) return;
+    _unmutedMusicVolume = music.volume;
+    _mutedMusicSource = music;
     _mutedMusicVolume = music.volume * (1f - _appliedMute);
     music.volume = _mutedMusicVolume;
   }
@@ -142,10 +165,18 @@ public sealed class LoadingAudio : MonoBehaviour {
   static bool Mutes(GameSounds sounds) => (MuteGameSounds.Value & sounds) != 0;
 
   void ApplyGameMute(float mute) {
-    if (MuteGameSounds.Value == GameSounds.None) mute = 0f;
-    if (Mathf.Approximately(mute, _appliedMute) || !AudioMan.instance) return;
+    GameSounds sounds = MuteGameSounds.Value;
+    if (sounds == GameSounds.None) mute = 0f;
+    if (Mathf.Approximately(mute, _appliedMute) && sounds == _appliedSounds) return;
+    if (_mutedMusicSource && Mathf.Approximately(_mutedMusicSource.volume, _mutedMusicVolume)) {
+      _mutedMusicSource.volume = _unmutedMusicVolume;
+    }
+    _mutedMusicSource = null;
+    _mutedMusicVolume = -1f;
     _appliedMute = mute;
-    if (!Mutes(GameSounds.Effects)) mute = 0f;
+    _appliedSounds = sounds;
+    if (!AudioMan.instance) return;
+    if ((sounds & GameSounds.Effects) == 0) mute = 0f;
     float effects = PlatformPrefs.GetFloat("MasterVolume", 1f) * PlatformPrefs.GetFloat("SfxVolume", 1f);
     AudioMan.SetSFXVolume(mute >= 0.999f ? 0f : effects * (1f - mute));
   }
@@ -163,7 +194,8 @@ public sealed class LoadingAudio : MonoBehaviour {
   float MusicVolume() => _fade * MusicVolumePercent.Value / 100f * MusicMan.m_masterMusicVolume;
 
   // The game's effects slider is applied as power, not amplitude.
-  float VoiceVolume() => _fade * VoiceVolumePercent.Value / 100f * Mathf.Sqrt(AudioMan.GetSFXVolume());
+  float VoiceVolume() => _fade * VoiceVolumePercent.Value / 100f * Mathf.Sqrt(
+      PlatformPrefs.GetFloat("MasterVolume", 1f) * PlatformPrefs.GetFloat("SfxVolume", 1f));
 
   void EndScreen() {
     ApplyGameMute(0f);
@@ -171,14 +203,16 @@ public sealed class LoadingAudio : MonoBehaviour {
     _visible = false;
     _selectedMusic = null;
     _selectedVoice = null;
+    _selectedEntry = null;
+    _handover.Reset();
     StopVoice();
     StopMusic();
+    _fade = 0f;
   }
 
   void StartMusic(string relativePath) {
     string path = ScreenConfigLoader.ResolveImagePath(relativePath);
     if (path == _musicPath && (_music.isPlaying || _musicLoad != null)) {
-      _fade = 1f;
       return;
     }
 
@@ -210,6 +244,11 @@ public sealed class LoadingAudio : MonoBehaviour {
       yield break;
     }
 
+    while (_host && !_host.gameObject.activeInHierarchy
+        && !_handover.ShouldEnd(false, Time.realtimeSinceStartup, HandoverGraceSeconds)) {
+      yield return null;
+    }
+
     if (!_host || !_host.gameObject.activeInHierarchy || !PlayLoadingSounds.Value) {
       if (music) _musicLoad = null;
       else _voiceLoad = null;
@@ -223,14 +262,13 @@ public sealed class LoadingAudio : MonoBehaviour {
       else _voiceLoad = null;
       yield break;
     }
-    _fade = ScreenOpacity();
+    _fade = _handover.Opacity(ScreenOpacity());
     source.volume = music ? MusicVolume() : VoiceVolume();
     source.clip = clip;
     source.Play();
     if (music) {
       _musicClip = clip;
       _musicLoad = null;
-      _fade = 1f;
     } else {
       _voiceClip = clip;
       _voiceLoad = null;
@@ -247,7 +285,6 @@ public sealed class LoadingAudio : MonoBehaviour {
     if (_musicClip) Destroy(_musicClip);
     _musicClip = null;
     _musicPath = null;
-    _fade = 0f;
   }
 
   void StopVoice() {
