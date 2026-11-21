@@ -15,11 +15,13 @@ public readonly struct Situation {
   public SituationKind Kind { get; }
   public IReadOnlyList<string> Keys { get; }
   public string AttackerPrefab { get; }
+  public int? BiomeValue { get; }
 
-  Situation(SituationKind kind, IReadOnlyList<string> keys, string attackerPrefab = null) {
+  Situation(SituationKind kind, IReadOnlyList<string> keys, string attackerPrefab = null, int? biomeValue = null) {
     Kind = kind;
     Keys = keys ?? [];
     AttackerPrefab = attackerPrefab;
+    BiomeValue = biomeValue;
   }
 
   public static Situation General => new(SituationKind.General, []);
@@ -27,6 +29,8 @@ public readonly struct Situation {
   public static Situation Sleep => new(SituationKind.Sleep, []);
 
   public static Situation Teleport(string biome) => new(SituationKind.Teleport, biome == null ? [] : [biome]);
+
+  public static Situation Teleport(int biome) => new(SituationKind.Teleport, [], biomeValue: biome);
 
   public static Situation Death(params string[] causes) => new(SituationKind.Death, causes);
 
@@ -52,14 +56,16 @@ public sealed class EntrySelector {
   readonly ScreenConfig _config;
   readonly Func<Entry, bool> _isUsable;
   readonly Random _random;
+  readonly IBiomeResolver _biomes;
   readonly Action<string> _debug;
   readonly Dictionary<EntryList, Entry> _lastPicked = [];
 
   public EntrySelector(ScreenConfig config, Func<Entry, bool> isUsable = null, Random random = null,
-      Action<string> debug = null) {
+      IBiomeResolver biomes = null, Action<string> debug = null) {
     _config = config ?? new ScreenConfig();
     _isUsable = isUsable ?? (_ => true);
     _random = random ?? new Random();
+    _biomes = biomes;
     _debug = debug;
   }
 
@@ -117,6 +123,15 @@ public sealed class EntrySelector {
         if (_config.Death.TryGetValue(key, out EntryList list)) yield return (list, $"death cause {key}");
         else _debug?.Invoke($"No death list for cause {key}.");
       }
+    }
+
+    if (situation.Kind == SituationKind.Teleport && situation.BiomeValue.HasValue && _biomes != null) {
+      int biome = situation.BiomeValue.Value;
+      foreach (EntryList list in MatchingBiomeLists(biome)) yield return (list, $"biome {biome}");
+      int baseBiome = _biomes.GetBaseBiome(biome);
+      if (baseBiome != biome) {
+        foreach (EntryList list in MatchingBiomeLists(baseBiome)) yield return (list, $"base biome {baseBiome}");
+      }
     } else if (situation.Kind == SituationKind.Teleport) {
       foreach (string key in situation.Keys) {
         if (key == null) continue;
@@ -126,6 +141,12 @@ public sealed class EntrySelector {
     }
 
     yield return (_config.General, $"general fallback for {situation}");
+  }
+
+  IEnumerable<EntryList> MatchingBiomeLists(int biome) {
+    foreach (KeyValuePair<string, EntryList> pair in _config.Teleport) {
+      if (_biomes.TryResolve(pair.Key, out int value) && value == biome) yield return pair.Value;
+    }
   }
 
   Entry Pick(EntryList list) {

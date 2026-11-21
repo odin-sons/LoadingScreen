@@ -16,6 +16,7 @@ using static PluginConfig;
 
 [BepInPlugin(PluginGuid, PluginName, PluginVersion)]
 [BepInDependency(ConditionalConfigSyncAPI.ConfigSync.PluginGuid, BepInDependency.DependencyFlags.SoftDependency)]
+[BepInDependency("expand_world_data", BepInDependency.DependencyFlags.SoftDependency)]
 public sealed class LoadingScreen : BaseUnityPlugin {
   public const string PluginGuid = "Odin_Sons.LoadingScreen";
   public const string PluginName = "LoadingScreen";
@@ -50,6 +51,7 @@ public sealed class LoadingScreen : BaseUnityPlugin {
   void Update() {
     if (!IsModEnabled.Value) return;
     ServerImages.Tick();
+    ScreenConfigLoader.TickBiomeWarnings();
   }
 
   public static void LogInfo(object obj) {

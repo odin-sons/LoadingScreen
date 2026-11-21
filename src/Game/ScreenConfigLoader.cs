@@ -1,6 +1,7 @@
 namespace LoadingScreen;
 
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Runtime.CompilerServices;
@@ -19,6 +20,27 @@ public static class ScreenConfigLoader {
 
   static Func<string, string> _resolver = LocalImagePath;
   static int _lastWarningCount;
+  static bool _biomeWarningsChecked;
+  static readonly HashSet<string> ReportedUnknownBiomes = new(StringComparer.OrdinalIgnoreCase);
+
+  public static void TickBiomeWarnings() {
+    if (_biomeWarningsChecked || !BiomeResolver.Instance.IsReady) return;
+    if (BiomeResolver.Instance.IsInstalled && !Player.m_localPlayer) return;
+
+    IEnumerable<string> names = Current.Teleport.Keys.Concat(
+        Current.AllLists.SelectMany(list => list.Entries)
+            .SelectMany(entry => entry.Conditions)
+            .Where(condition => condition.Kind == ConditionKind.KnownBiome)
+            .Select(condition => condition.Name));
+
+    foreach (string name in names.Distinct(StringComparer.OrdinalIgnoreCase)) {
+      if (!BiomeResolver.Instance.TryResolve(name, out _) && ReportedUnknownBiomes.Add(name)) {
+        LoadingScreen.LogWarning($"Unknown biome '{name}' in {ConfigFileName}; use a vanilla biome or the EWD biome: identifier.");
+      }
+    }
+
+    _biomeWarningsChecked = true;
+  }
 
   public static string ResolveImagePath(string relativePath) {
     return relativePath == null ? null : _resolver(relativePath);
@@ -168,10 +190,13 @@ public static class ScreenConfigLoader {
     LoadingManager.Session.Reset();
     _resolver = resolver;
     Current = config;
+    _biomeWarningsChecked = false;
     Selector = new(
         Current,
         IsEntryUsable,
+        biomes: BiomeResolver.Instance,
         debug: LoadingScreen.LogDebug);
+    TickBiomeWarnings();
     LoadingManager.RefreshAppearance();
     ImageScaleUtils.RefreshAppearance();
     SceneLoaderPatch.RefreshAppearance();

@@ -376,10 +376,10 @@ public class ConfigParserTests {
 
     ConfigLoadResult result = Parse(yaml, ["Fall", "Drowning"]);
 
-    Assert.Empty(result.Config.Teleport);
+    Assert.True(result.Config.Teleport.ContainsKey("Narnia"));
     Assert.Equal(["Fall"], result.Config.Death.Keys);
     Assert.Contains(result.Warnings, warning => warning.Contains("'colour'"));
-    Assert.Contains(result.Warnings, warning => warning.Contains("'Narnia'"));
+    Assert.DoesNotContain(result.Warnings, warning => warning.Contains("'Narnia'"));
     Assert.Contains(result.Warnings, warning => warning.Contains("'Boredom'"));
     Assert.Contains(result.Warnings, warning => warning.Contains("'weather'"));
     Assert.All(result.Warnings, warning => Assert.StartsWith("line ", warning));

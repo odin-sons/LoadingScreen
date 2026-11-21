@@ -60,7 +60,6 @@ public class ConditionsTests {
 
   [Theory]
   [InlineData("when: { knowsEverything: Demister }", "unknown condition")]
-  [InlineData("when: { knownBiome: Moon }", "unknown biome")]
   [InlineData("when: { knownItem: '' }", "needs a name")]
   [InlineData("when: [ knownItem ]", "expected a mapping")]
   public void RejectsEntriesWithInvalidConditions(string when, string warning) {
@@ -68,6 +67,14 @@ public class ConditionsTests {
 
     Assert.Empty(result.Config.General.Entries);
     Assert.Contains(result.Warnings, message => message.Contains(warning));
+  }
+
+  [Fact]
+  public void AcceptsCustomKnownBiomeName() {
+    ConfigLoadResult result = Parse("when: { general: [ { text: Tip, when: { knownBiome: Moon } } ] }");
+
+    Assert.Empty(result.Warnings);
+    Assert.Equal("Moon", result.Config.General.Entries.Single().Conditions.Single().Name);
   }
 
   [Fact]

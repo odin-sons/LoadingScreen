@@ -18,9 +18,9 @@ public static class SituationTracker {
       return;
     }
 
-    string biome = ResolveBiome(targetPosition);
-    Set(Situation.Teleport(biome));
-    LoadingScreen.LogInfo($"Portal teleport to {targetPosition}, destination biome: {biome ?? "unknown"}.");
+    int? biome = ResolveBiome(targetPosition);
+    Set(biome.HasValue ? Situation.Teleport(biome.Value) : Situation.Teleport((string)null));
+    LoadingScreen.LogInfo($"Portal teleport to {targetPosition}, destination biome: {biome?.ToString() ?? "unknown"}.");
   }
 
   public static void OnDeath(HitData lastHit) {
@@ -86,10 +86,10 @@ public static class SituationTracker {
     return (clone > 0 ? name.Substring(0, clone) : name).Trim();
   }
 
-  static string ResolveBiome(Vector3 position) {
+  static int? ResolveBiome(Vector3 position) {
     Heightmap.Biome biome =
         WorldGenerator.instance != null ? WorldGenerator.instance.GetBiome(position) : Heightmap.FindBiome(position);
 
-    return biome == Heightmap.Biome.None ? null : biome.ToString();
+    return biome == Heightmap.Biome.None ? null : (int)biome;
   }
 }
