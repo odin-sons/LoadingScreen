@@ -17,6 +17,8 @@ public static class PluginConfig {
   public static ConfigEntry<bool> ShowLoadingScreenImmediatelyOnDeath { get; private set; }
   public static ConfigEntry<bool> ShowLoadingScreenOnTeleport { get; private set; }
   public static ConfigEntry<bool> ShowLoadingScreenWhileSleeping { get; private set; }
+  public static ConfigEntry<bool> HoldLoadingScreen { get; private set; }
+  public static ConfigEntry<int> MaximumHoldSeconds { get; private set; }
   public static ConfigEntry<bool> CaptionUseTipWhenNoText { get; private set; }
 
   public static ConfigEntry<bool> ServeImagesToClients { get; private set; }
@@ -75,6 +77,21 @@ public static class PluginConfig {
             "Loading screen while sleeping",
             false,
             "Show a loading image and tip while sleeping. Uses the sleep situation, then general; keeps the game's sleep text and spinner unless the selected layout hides them.");
+
+    HoldLoadingScreen =
+        config.BindInOrder(
+            Screens,
+            "Hold loading screen until a key is pressed",
+            false,
+            "After loading finishes, keep the screen and tip visible until a key is pressed or the mouse is clicked. Never holds during cinematics or on a dedicated server.");
+
+    MaximumHoldSeconds =
+        config.BindInOrder(
+            Screens,
+            "Maximum hold time in seconds",
+            30,
+            "Close a held loading screen automatically after this many seconds, even without input.",
+            new AcceptableValueRange<int>(1, 300));
 
     ShowLoadingScreenImmediatelyOnDeath =
         config.BindInOrder(

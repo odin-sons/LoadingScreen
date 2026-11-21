@@ -58,6 +58,7 @@ public static class ExampleConfigText {
       #   mask: { color: "#000000", opacity: 0.25 }
       #   zoom: { enabled: true, amount: 1.05, seconds: 15 }
       #   tip: { x: 0, bottom: 90, size: 24, color: "#FFFFFF" }
+      #   continuePrompt: { x: 0, bottom: 30, size: 20, color: "#FFFFFF" }
       #   separator: { show: true, x: 0, bottom: 150, onLayouts: true }
       #   spinner: { center: true, x: 0, bottom: 200 }
 

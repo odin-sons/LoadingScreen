@@ -87,6 +87,13 @@ public sealed class TipDefaults {
   public ColorValue Color { get; set; } = new(255, 255, 255);
 }
 
+public sealed class ContinuePromptDefaults {
+  public float X { get; set; }
+  public float Bottom { get; set; } = 30f;
+  public int Size { get; set; } = 20;
+  public ColorValue Color { get; set; } = new(255, 255, 255);
+}
+
 public sealed class SeparatorDefaults {
   public bool Show { get; set; } = true;
   public float X { get; set; }
@@ -107,6 +114,7 @@ public sealed class ScreenDefaults : Placement {
   public MaskSettings Mask { get; set; }
   public ZoomDefaults Zoom { get; } = new();
   public TipDefaults Tip { get; } = new();
+  public ContinuePromptDefaults ContinuePrompt { get; } = new();
   public SeparatorDefaults Separator { get; } = new();
   public SpinnerDefaults Spinner { get; } = new();
 }
