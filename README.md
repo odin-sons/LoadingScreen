@@ -91,6 +91,12 @@ Set `[2 - Situations] Loading screen while sleeping` to `true` to show an image 
 The game's sleep text and spinner stay visible above the image. A sleep-specific layout can hide them with
 `showSleepUi: false` and use its own layers instead. Image slideshows and tip rotation also apply while sleeping.
 
+Set `[2 - Situations] Hold loading screen until a key is pressed` to `true` to keep the HUD loading screen and tip
+visible after loading finishes (default: off). A separate "Press any key to continue" line appears; any key or mouse
+click dismisses it. `[2 - Situations] Maximum hold time in seconds` closes it automatically after 30 seconds by
+default (allowed: 1 to 300). The hold never runs on dedicated servers or during cinematics. Style the prompt with
+`defaults.continuePrompt` in `loadingscreen.yaml`.
+
 ### Selection
 
 | Loading screen | First choice | Then |
@@ -497,6 +503,7 @@ defaults:
   mask: { color: "#000000", opacity: 0.25 }
   zoom: { enabled: true, amount: 1.05, seconds: 15 }
   tip: { x: 0, bottom: 90, size: 24, color: "#FFFFFF" }
+  continuePrompt: { x: 0, bottom: 30, size: 20, color: "#FFFFFF" }
   separator: { show: true, x: 0, bottom: 150, onLayouts: true }
   spinner: { center: true, x: 0, bottom: 200 }
 ```
@@ -509,6 +516,8 @@ built-ins; a layout can override individual values from `defaults`. Set `strengt
 layout to disable an inherited effect there. Color alpha also affects the final opacity. Effects cover
 layered screens and plain-image fallbacks.
 
+`continuePrompt` positions and styles the line shown when the optional loading hold is active; its `size` accepts
+`0` to `64`.
 `separator.onLayouts` keeps the built-in line on layout screens unless a layout has its own `separator: game`
 layer. `spinner` applies to the game start screen. A layer's `animate` overrides `zoom.enabled`.
 
@@ -532,7 +541,7 @@ Behavior switches in `Odin_Sons.LoadingScreen.cfg`; each has a description in th
 | Section | Settings |
 |---|---|
 | `1 - General` | Enabled, Image folder |
-| `2 - Situations` | Loading screen on portal teleport, Loading screen while sleeping, Loading screen right after death, Random tip when an entry has no text |
+| `2 - Situations` | Loading screen on portal teleport, Loading screen while sleeping, Hold loading screen until a key is pressed, Maximum hold time in seconds, Loading screen right after death, Random tip when an entry has no text |
 | `3 - Game start screen` | Use loading images, Show progress |
 | `4 - Server images` | Share with players (server), Use the server's screens (player) |
 | `5 - Config synchronization` | Lock synced settings |

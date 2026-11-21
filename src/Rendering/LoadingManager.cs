@@ -20,6 +20,7 @@ public static class LoadingManager {
   static readonly Dictionary<Image, VanillaLook> _vanillaLooks = [];
 
   static TMP_Text _cachedTipText;
+  static TMP_Text _continuePrompt;
   static Image _cachedLoadingImage;
   static Image _cachedLoadingBackground;
   static Transform _cachedPanelSeparator;
@@ -35,6 +36,7 @@ public static class LoadingManager {
   public static void RefreshAppearance() {
     if (_cachedLoadingImage) SetupLoadingImage();
     if (_cachedTipText) SetupTipText();
+    if (_continuePrompt) SetupContinuePromptAppearance();
     if (_cachedLoadingBackground) SetupLoadingBackground();
     if (_cachedPanelSeparator) SetupPanelSeparator();
     if (HudHost) HudHost.RefreshAppearance();
@@ -240,6 +242,34 @@ public static class LoadingManager {
         .SetAnchorMax(Vector2.right)
         .SetPosition(new(defaults.X, defaults.Bottom))
         .SetSizeDelta(new(-50f, 78f));
+  }
+
+  public static void ShowContinuePrompt(Hud hud, bool show) {
+    if (show && !_continuePrompt) {
+      _continuePrompt = Object.Instantiate(hud.m_loadingTip, hud.m_loadingProgress.transform);
+      _continuePrompt.name = "ContinuePrompt";
+      _continuePrompt.SetText("Press any key to continue");
+      SetupContinuePromptAppearance();
+    }
+
+    if (_continuePrompt) {
+      _continuePrompt.gameObject.SetActive(show);
+    }
+  }
+
+  static void SetupContinuePromptAppearance() {
+    ContinuePromptDefaults defaults = ScreenConfigLoader.Current.Defaults.ContinuePrompt;
+    _continuePrompt
+        .SetAlignment(TextAlignmentOptions.Center)
+        .SetTextWrappingMode(TextWrappingModes.Normal)
+        .SetFontSize(defaults.Size)
+        .SetColor(ToColor(defaults.Color));
+
+    _continuePrompt.GetComponent<RectTransform>()
+        .SetAnchorMin(Vector2.zero)
+        .SetAnchorMax(Vector2.right)
+        .SetPosition(new(defaults.X, defaults.Bottom))
+        .SetSizeDelta(new(-50f, 40f));
   }
 
   internal static Color ToColor(ColorValue value) {

@@ -21,7 +21,7 @@ public sealed class ConfigParser {
 
   static readonly string[] _placementKeys = ["fit", "position", "opacity", "fade", "animate"];
   static readonly string[] _defaultKeys = [
-    .. _placementKeys, "background", "tint", "vignette", "mask", "zoom", "tip", "separator", "spinner"
+    .. _placementKeys, "background", "tint", "vignette", "mask", "zoom", "tip", "continueprompt", "separator", "spinner"
   ];
   static readonly string[] _layerKeys = [
     "id", "color", "image", "images", "source", "separator", "text", "size", "align", "background", .. _placementKeys
@@ -621,6 +621,13 @@ public sealed class ConfigParser {
       defaults.Tip.Bottom = ParseDefaultFloat(Child(tip, "bottom"), "tip.bottom", defaults.Tip.Bottom);
       defaults.Tip.Size = ParseDefaultInt(Child(tip, "size"), "tip.size", defaults.Tip.Size, 0, 64);
       defaults.Tip.Color = ParseDefaultColor(Child(tip, "color"), "tip.color", defaults.Tip.Color);
+    }
+
+    if (DefaultMap(Child(mapping, "continueprompt"), "continuePrompt", ["x", "bottom", "size", "color"]) is { } prompt) {
+      defaults.ContinuePrompt.X = ParseDefaultFloat(Child(prompt, "x"), "continuePrompt.x", defaults.ContinuePrompt.X);
+      defaults.ContinuePrompt.Bottom = ParseDefaultFloat(Child(prompt, "bottom"), "continuePrompt.bottom", defaults.ContinuePrompt.Bottom);
+      defaults.ContinuePrompt.Size = ParseDefaultInt(Child(prompt, "size"), "continuePrompt.size", defaults.ContinuePrompt.Size, 0, 64);
+      defaults.ContinuePrompt.Color = ParseDefaultColor(Child(prompt, "color"), "continuePrompt.color", defaults.ContinuePrompt.Color);
     }
 
     if (DefaultMap(Child(mapping, "separator"), "separator", ["show", "x", "bottom", "onlayouts"]) is { } separator) {

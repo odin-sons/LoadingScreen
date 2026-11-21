@@ -117,6 +117,7 @@ public class ConfigParserTests {
           tint: "#ABCDEF"
           zoom: { enabled: false, amount: 1.25, seconds: 8.5 }
           tip: { x: -12, bottom: 75, size: 32, color: "#112233" }
+          continuePrompt: { x: 8, bottom: 45, size: 18, color: "#445566" }
           separator: { show: false, x: 14, bottom: 120, onLayouts: false }
           spinner: { center: false, x: -5, bottom: 180 }
         """;
@@ -134,6 +135,10 @@ public class ConfigParserTests {
     Assert.Equal(75f, defaults.Tip.Bottom);
     Assert.Equal(32, defaults.Tip.Size);
     Assert.Equal(new ColorValue(0x11, 0x22, 0x33), defaults.Tip.Color);
+    Assert.Equal(8f, defaults.ContinuePrompt.X);
+    Assert.Equal(45f, defaults.ContinuePrompt.Bottom);
+    Assert.Equal(18, defaults.ContinuePrompt.Size);
+    Assert.Equal(new ColorValue(0x44, 0x55, 0x66), defaults.ContinuePrompt.Color);
     Assert.False(defaults.Separator.Show);
     Assert.Equal(14f, defaults.Separator.X);
     Assert.Equal(120f, defaults.Separator.Bottom);
@@ -193,6 +198,18 @@ public class ConfigParserTests {
     Assert.All(result.Warnings, warning => Assert.Contains("line ", warning));
   }
 
+  [Fact]
+  public void InvalidContinuePromptValuesUseBuiltIns() {
+    ConfigLoadResult result = Parse("defaults:\n  continuePrompt: { x: nope, bottom: .nan, size: 65, color: bad, extra: true }\n");
+
+    Assert.Equal(0f, result.Config.Defaults.ContinuePrompt.X);
+    Assert.Equal(30f, result.Config.Defaults.ContinuePrompt.Bottom);
+    Assert.Equal(20, result.Config.Defaults.ContinuePrompt.Size);
+    Assert.Equal(new ColorValue(255, 255, 255), result.Config.Defaults.ContinuePrompt.Color);
+    Assert.Equal(5, result.Warnings.Count);
+    Assert.Contains(result.Warnings, warning => warning.Contains("continuePrompt: unknown key 'extra'"));
+  }
+
   static void AssertBuiltInAppearance(ScreenDefaults defaults) {
     Assert.Equal(new ColorValue(0, 0, 0), defaults.Background);
     Assert.Equal(new ColorValue(255, 255, 255), defaults.Tint);
@@ -202,6 +219,10 @@ public class ConfigParserTests {
     Assert.Equal(90f, defaults.Tip.Bottom);
     Assert.Equal(24, defaults.Tip.Size);
     Assert.Equal(new ColorValue(255, 255, 255), defaults.Tip.Color);
+    Assert.Equal(0f, defaults.ContinuePrompt.X);
+    Assert.Equal(30f, defaults.ContinuePrompt.Bottom);
+    Assert.Equal(20, defaults.ContinuePrompt.Size);
+    Assert.Equal(new ColorValue(255, 255, 255), defaults.ContinuePrompt.Color);
     Assert.True(defaults.Separator.Show);
     Assert.Equal(0f, defaults.Separator.X);
     Assert.Equal(150f, defaults.Separator.Bottom);
