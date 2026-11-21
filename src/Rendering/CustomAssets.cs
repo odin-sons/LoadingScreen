@@ -14,6 +14,7 @@ using UnityEngine;
 public static class CustomAssets {
   public static List<string> LoadingTips { get; } = [];
   public static List<string> LoadingImageFiles { get; } = [];
+  static int _lastTipIndex = -1;
 
   const int MaxCachedImages = 16;
 
@@ -30,6 +31,7 @@ public static class CustomAssets {
   public static void Initialize(string pluginDir) {
     LoadingTips.Clear();
     LoadingTips.AddRange(ReadLoadingTips(Path.Combine(pluginDir, "tips.txt")));
+    _lastTipIndex = -1;
 
     LoadingImageFiles.Clear();
     LoadingImageFiles.AddRange(ReadLoadingImageFiles(pluginDir, ".png"));
@@ -176,7 +178,9 @@ public static class CustomAssets {
 
   public static bool GetRandomLoadingTip(out string tipText) {
     if (LoadingTips.Count > 0) {
-      tipText = LoadingTips[Random.Range(0, LoadingTips.Count)];
+      int choiceCount = LoadingTips.Count - (TipSelection.HasPrevious(LoadingTips.Count, _lastTipIndex) ? 1 : 0);
+      _lastTipIndex = TipSelection.NextIndex(LoadingTips.Count, _lastTipIndex, Random.Range(0, choiceCount));
+      tipText = LoadingTips[_lastTipIndex];
       return true;
     }
 

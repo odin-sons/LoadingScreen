@@ -9,6 +9,7 @@ public static class PluginConfig {
   public static ConfigEntry<bool> IsModEnabled { get; private set; }
   public static ConfigEntry<string> ImageFolder { get; private set; }
   public static ConfigEntry<int> ChangeImageEverySeconds { get; private set; }
+  public static ConfigEntry<int> ChangeTipEverySeconds { get; private set; }
 
   public static ConfigEntry<bool> SceneLoaderUseLoadingImages { get; private set; }
   public static ConfigEntry<bool> SceneLoaderShowProgressText { get; private set; }
@@ -51,6 +52,14 @@ public static class PluginConfig {
             0,
             "Change the image while a loading screen stays visible. 0 turns the slideshow off. "
                 + "Applies to in-game and game start loading screens.");
+
+    ChangeTipEverySeconds =
+        config.BindInOrder(
+            General,
+            "Change tip every N seconds",
+            0,
+            "Show another tip from tips.txt while a loading screen stays visible. 0 turns tip rotation off. "
+                + "Entry text stays fixed.");
 
     ShowLoadingScreenOnTeleport =
         config.BindInOrder(
