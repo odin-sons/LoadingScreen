@@ -19,12 +19,17 @@ public static class PluginConfig {
   public static ConfigEntry<bool> ServeImagesToClients { get; private set; }
   public static ConfigEntry<bool> DownloadServerImages { get; private set; }
   public static ConfigEntry<bool> LockSyncedSettings { get; private set; }
+  public static ConfigEntry<bool> PlayLoadingSounds { get; private set; }
+  public static ConfigEntry<int> MusicVolumePercent { get; private set; }
+  public static ConfigEntry<int> VoiceVolumePercent { get; private set; }
+  public static ConfigEntry<GameSounds> MuteGameSounds { get; private set; }
 
   const string General = "1 - General";
   const string Screens = "2 - Situations";
   const string StartScreen = "3 - Game start screen";
   const string Server = "4 - Server images";
   const string Synchronization = "5 - Config synchronization";
+  const string Sound = "6 - Sound";
 
   internal static void BindConfig(ConfigFile config, ConfigSynchronization sync) {
     IsModEnabled =
@@ -96,6 +101,21 @@ public static class PluginConfig {
             true,
             "Allow only server admins to change synchronized settings while connected.");
 
+    PlayLoadingSounds =
+        config.BindInOrder(Sound, "Play loading screen sounds", true,
+            "Play music and voiced tips from loadingscreen.yaml while their loading screen is visible.");
+    MusicVolumePercent =
+        config.BindInOrder(Sound, "Music volume percent", 100,
+            "Volume of loading screen music, from 0 to 100 percent. Also follows the game's master and music volume.",
+            new AcceptableValueRange<int>(0, 100));
+    VoiceVolumePercent =
+        config.BindInOrder(Sound, "Voice volume percent", 100,
+            "Volume of voiced tips, from 0 to 100 percent. Also follows the game's master and effects volume.",
+            new AcceptableValueRange<int>(0, 100));
+    MuteGameSounds =
+        config.BindInOrder(Sound, "Mute game sounds on loading screens", GameSounds.None,
+            "Game sounds to fade out while a loading screen is visible: None, or Effects (such as the portal hum), Music, or both separated by a comma.");
+
     sync.Register(ShowLoadingScreenOnTeleport);
     sync.Register(ShowLoadingScreenImmediatelyOnDeath);
     sync.Register(CaptionUseTipWhenNoText);
@@ -107,5 +127,9 @@ public static class PluginConfig {
     sync.Register(SceneLoaderShowProgressText, clientControlled: true);
     sync.Register(ServeImagesToClients, clientControlled: true);
     sync.Register(DownloadServerImages, clientControlled: true);
+    sync.Register(PlayLoadingSounds, clientControlled: true);
+    sync.Register(MusicVolumePercent, clientControlled: true);
+    sync.Register(VoiceVolumePercent, clientControlled: true);
+    sync.Register(MuteGameSounds, clientControlled: true);
   }
 }

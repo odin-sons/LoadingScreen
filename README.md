@@ -35,6 +35,7 @@ on Unity, but **the mod has not been tested in the game yet**. See the
   entry's image, the caption), each sized and positioned on its own, with gradient edges and an optional slow zoom.
   Two presets are included in the example config.
 - **Captions.** An entry can carry its own text; without it, a tip from `tips.txt` is shown.
+- **Loading sounds.** Loop music for a layout, list or entry; play an entry's voiced tip once when its text appears.
 - **Conditions.** An entry can be limited to players who, for example, have never held a Wisplight or have not
   defeated a boss yet, so a tip only reaches the players who need it.
 - **Server images.** A server that runs the mod can share its config and images; clients download the images in the
@@ -59,13 +60,21 @@ By default, these files live in `BepInEx/config/LoadingScreen/`:
 | `loadingscreen.yaml` | Situations, layouts, placement and appearance (below) |
 | `tips.txt` | One tip per line |
 | `*.png`, `*.jpg` at the top level | Plain images, used when no situational entry applies |
+| `.ogg`, `.wav` in the config folder | Optional music and voiced tips referenced from `loadingscreen.yaml` |
 
 Set `[1 - General] Image folder` in `BepInEx/config/Odin_Sons.LoadingScreen.cfg` to use another folder. The
 default is `config/LoadingScreen`. Relative paths start at the BepInEx folder, so `plugins/MyPack/screens` means
 `BepInEx/plugins/MyPack/screens`; absolute paths also work. Restart the game after changing this setting. The chosen
-folder holds `loadingscreen.yaml`, `tips.txt`, and the plain and situational images.
+folder holds `loadingscreen.yaml`, `tips.txt`, images and audio clips.
 
 Behavior switches are in `BepInEx/config/Odin_Sons.LoadingScreen.cfg`; appearance is in the YAML `defaults` section.
+
+`[6 - Sound] Play loading screen sounds` turns configured music and voices on or off (on by default). `Music volume
+percent` and `Voice volume percent` each range from 0 to 100 and default to 100. Music also follows Valheim's master
+and music sliders; voices follow its master and effects sliders. Music follows the loading screen's fade and stops
+as soon as the screen closes. `Mute game sounds on loading screens` (`None` by default) fades out the game's
+`Effects` (such as the portal hum), `Music`, or both (`Effects, Music`) while a loading screen is visible, and restores them when it closes. Audio paths are relative to the config folder, with `.ogg` and `.wav` supported. Each
+clip is limited to 8 MiB.
 
 ### Selection
 
@@ -103,6 +112,8 @@ situations:
     entries:
       - image: general/valheim.jpg
         text: Skol!
+        sound: music/forest.ogg
+        voice: voice/welcome.ogg
       - general/another.jpg    # an image without text
   teleport:
     Mistlands:
@@ -120,6 +131,10 @@ uses a single layer that shows its image with the `defaults` placement (`contain
 
 An entry may have only a `text`; it is shown over a random plain image from the config folder, or over the game's
 own image if there is none.
+
+Add `sound: music/forest.ogg` to a layout, entry list or entry. The entry's sound takes priority over the list's,
+then the layout's; it loops while that screen is visible. Add `voice: voice/welcome.wav` to an entry with `text` to
+play it once when the entry's text appears. A voice is not played for a random tip substituted for missing entry text.
 
 ### Conditions
 
@@ -497,6 +512,7 @@ Behavior switches in `Odin_Sons.LoadingScreen.cfg`; each has a description in th
 | `3 - Game start screen` | Use loading images, Show progress |
 | `4 - Server images` | Share with players (server), Use the server's screens (player) |
 | `5 - Config synchronization` | Lock synced settings |
+| `6 - Sound` | Play loading screen sounds, Music volume percent, Voice volume percent, Mute game sounds on loading screens |
 
 ### Config synchronization
 
@@ -510,7 +526,7 @@ The following cfg settings are server controlled by default with ServerSync, or 
 admin can choose ownership in `ConditionalConfigSync.SyncPolicy.cfg`:
 `Change image every N seconds`, `Change tip every N seconds`, and all settings in `2 - Situations`.
 The remaining settings are client controlled, including `Enabled`, `Image folder`, `Text language`, both game
-start settings, `Share with players (server)`, and `Use the server's screens (player)`. The server's
+start settings, sound settings, `Share with players (server)`, and `Use the server's screens (player)`. The server's
 `loadingscreen.yaml` already carries appearance defaults (tint, zoom, tip style, separator, background) through
 the existing screen transfer; they are not cfg settings.
 
@@ -528,30 +544,30 @@ Settings marked as requiring a restart remain local.
 
 ## Server images
 
-A dedicated server, or a player hosting a world, that runs this mod shares its `loadingscreen.yaml` and the images
+A dedicated server, or a player hosting a world, that runs this mod shares its `loadingscreen.yaml`, images and audio
 it uses. A client with the mod then:
 
-1. receives the config and a manifest (path, size, SHA-256 of every image) when its character spawns;
+1. receives the config and a manifest (path, size, SHA-256 of every file) when its character spawns;
 2. uses the server's screens while connected, and its own local config again after disconnecting;
-3. downloads the images in the background, one 32 KiB piece at a time over the game connection, in this order:
-   layer images, general, death, teleport;
-4. stores them in `BepInEx/cache/LoadingScreen/` named by hash, so an image is downloaded only once, also across
+3. downloads the files in the background, one 32 KiB piece at a time over the game connection, in this order:
+   layer images, general, death, teleport, then audio;
+4. stores them in `BepInEx/cache/LoadingScreen/` named by hash, so a file is downloaded only once, also across
    servers. The folder can be deleted at any time.
 
-An image that is not downloaded yet is skipped, so a download never delays a loading screen. PNG files are
+An image or audio clip that is not downloaded yet is skipped, so a download never delays a loading screen. PNG files are
 gzip-compressed for the transfer; JPEG files are sent as they are.
 
 The transfer runs over the direct connection between the client and the server, so other players cannot inject
 data. Everything from the server is treated as untrusted:
 
-- limits: 16 MiB per image, 512 MiB and 2000 images per server, 256 KiB of YAML, 1 GiB of cache on disk (the oldest
+- limits: 16 MiB per image, 8 MiB per audio clip, 512 MiB and 2000 files per server, 256 KiB of YAML, 1 GiB of cache on disk (the oldest
   files of other servers are removed first);
-- every file is checked against its size and SHA-256 hash and must be a PNG or JPEG within the image size limit
-  below; paths must stay inside the folder; decompression is bounded;
+- every file is checked against its size and SHA-256 hash and must have a supported image or audio header; paths must
+  stay inside the folder; decompression is bounded;
 - server captions are cut to 500 characters and rich-text tags are removed;
 - the server answers each client at a limited rate, and a client gives up on a piece after a few timeouts.
 
-The game start screen can only use local images, because no server is connected yet.
+The game start screen can only use local files, because no server is connected yet.
 
 ## Image formats
 

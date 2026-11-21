@@ -66,6 +66,8 @@ public static class LoadingManager {
       return false;
     }
 
+    LoadingAudio.Play(host, selection, hasEntryText && tipText);
+
     LoadingScreen.LogInfo($"Loading screen for {situation}: {selection.List.Name} -> {selection.Entry.Image}");
 
     CurrentCaption = hasEntryText ? selection.Entry.Text : CaptionUseTipWhenNoText.Value ? null : string.Empty;
@@ -79,6 +81,7 @@ public static class LoadingManager {
 
   public static void ShowFallback(LayerHost host, Image loadingImage, TMP_Text tipText) {
     CurrentCaption = null;
+    LoadingAudio.Stop(host);
 
     if (host) {
       host.Hide();
