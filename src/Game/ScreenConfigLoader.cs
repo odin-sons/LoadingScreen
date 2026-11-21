@@ -135,6 +135,7 @@ public static class ScreenConfigLoader {
   }
 
   static void Activate(ScreenConfig config, Func<string, string> resolver) {
+    LoadingAudio.StopAllSounds();
     _resolver = resolver;
     Current = config;
     Selector = new(

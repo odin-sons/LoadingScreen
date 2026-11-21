@@ -26,6 +26,7 @@ public sealed class LoadingScreen : BaseUnityPlugin {
   void Awake() {
     _logger = Logger;
     BindConfig(Config, new ConfigSynchronization(Logger));
+    LoadingAudio.Initialize(gameObject);
 
     if (IsModEnabled.Value) {
       try {

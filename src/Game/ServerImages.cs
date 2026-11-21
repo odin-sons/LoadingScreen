@@ -163,7 +163,7 @@ public static class ServerImages {
 
   public static string Status() {
     int pending = _downloadQueue.Count + (_downloading != null ? 1 : 0);
-    return $"Server images: {_listedByPath.Count} listed, {_downloadedCount} downloaded this session, "
+    return $"Server files: {_listedByPath.Count} listed, {_downloadedCount} downloaded this session, "
         + $"{pending} pending, {_failedCount} failed.";
   }
 
@@ -190,7 +190,7 @@ public static class ServerImages {
 
     long total = 0;
 
-    foreach (string relativePath in ImagesByPriority(config)) {
+    foreach (string relativePath in AssetsByPriority(config)) {
       if (_servedByPath.Count >= MaxFiles) {
         break;
       }
@@ -202,9 +202,16 @@ public static class ServerImages {
           continue;
         }
 
+        bool audio = KnownNames.AudioExtensions.Contains(Path.GetExtension(relativePath).ToLowerInvariant());
+        long limit = audio ? AudioFile.MaxBytes : MaxFileSize;
+        if (new FileInfo(fullPath).Length > limit) {
+          LoadingScreen.LogWarning($"Not sharing {relativePath}: over the size limit.");
+          continue;
+        }
         byte[] data = File.ReadAllBytes(fullPath);
 
-        if (data.LongLength == 0 || data.LongLength > MaxFileSize || total + data.LongLength > MaxTotalSize) {
+        if (data.LongLength == 0 || data.LongLength > limit || total + data.LongLength > MaxTotalSize
+            || (audio && !AudioFile.IsValid(relativePath, data))) {
           LoadingScreen.LogWarning($"Not sharing {relativePath}: empty or over the size limit.");
           continue;
         }
@@ -241,17 +248,17 @@ public static class ServerImages {
     }
 
     _manifestData = Utils.Compress(manifest.GetArray());
-    LoadingScreen.LogInfo($"Sharing {_servedByPath.Count} loading screen images ({total / 1024} KiB) with clients.");
+    LoadingScreen.LogInfo($"Sharing {_servedByPath.Count} loading screen files ({total / 1024} KiB) with clients.");
   }
 
-  static IEnumerable<string> ImagesByPriority(ScreenConfig config) {
+  static IEnumerable<string> AssetsByPriority(ScreenConfig config) {
     IEnumerable<string> layerImages = config.Layouts.Values.SelectMany(layout => layout.Layers)
         .SelectMany(layer => layer.Images);
     IEnumerable<string> general = config.General.Entries.Select(entry => entry.Image);
     IEnumerable<string> death = config.Death.Values.SelectMany(list => list.Entries).Select(entry => entry.Image);
     IEnumerable<string> teleport = config.Teleport.Values.SelectMany(list => list.Entries).Select(entry => entry.Image);
 
-    return layerImages.Concat(general).Concat(death).Concat(teleport)
+    return layerImages.Concat(general).Concat(death).Concat(teleport).Concat(AudioFile.Paths(config))
         .Where(image => image != null)
         .Distinct(StringComparer.OrdinalIgnoreCase);
   }
@@ -352,8 +359,8 @@ public static class ServerImages {
 
       bool valid =
           IsHash(file.Hash)
-          && file.Size > 0 && file.Size <= MaxFileSize
-          && file.TransferSize > 0 && file.TransferSize <= MaxFileSize
+          && file.Size > 0 && file.Size <= FileLimit(file.Path)
+          && file.TransferSize > 0 && file.TransferSize <= FileLimit(file.Path)
           && file.ChunkCount == (int) ((file.TransferSize + ChunkSize - 1) / ChunkSize)
           && CacheExtension(file.Path) != null;
 
@@ -389,7 +396,7 @@ public static class ServerImages {
 
     _downloadQueue.Clear();
 
-    foreach (string path in ImagesByPriority(result.Config)) {
+    foreach (string path in AssetsByPriority(result.Config)) {
       if (_listedByPath.TryGetValue(path, out ListedFile file) && !File.Exists(CacheFile(file))
           && !_downloadQueue.Contains(file)) {
         _downloadQueue.Add(file);
@@ -601,9 +608,11 @@ public static class ServerImages {
         return;
       }
 
-      if (!ImageHeader.TryRead(data, out int width, out int height) || !ImageHeader.IsAllowed(width, height)) {
+      bool audio = KnownNames.AudioExtensions.Contains(CacheExtension(file.Path));
+      if (audio ? !AudioFile.IsValid(file.Path, data)
+          : !ImageHeader.TryRead(data, out int width, out int height) || !ImageHeader.IsAllowed(width, height)) {
         _failedCount++;
-        LoadingScreen.LogWarning($"Server image {file.Path} is not a valid image or too large; discarded.");
+        LoadingScreen.LogWarning($"Server file {file.Path} is invalid or too large; discarded.");
         return;
       }
 
@@ -637,7 +646,12 @@ public static class ServerImages {
       return null;
     }
 
-    return KnownNames.ImageExtensions.Contains(extension) ? extension : null;
+    return KnownNames.ImageExtensions.Contains(extension) || KnownNames.AudioExtensions.Contains(extension)
+        ? extension : null;
+  }
+
+  static long FileLimit(string path) {
+    return KnownNames.AudioExtensions.Contains(CacheExtension(path)) ? AudioFile.MaxBytes : MaxFileSize;
   }
 
   static bool IsHash(string hash) {

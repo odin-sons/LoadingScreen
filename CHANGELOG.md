@@ -2,6 +2,10 @@
 
 ### Unreleased
 
+  * Optional looped music on layouts, lists and entries, plus one-shot voiced entry text (`sound` and `voice` in YAML).
+    Audio follows the game's volume sliders; client cfg controls playback and music/voice volume. Servers can share
+    bounded `.ogg` and `.wav` files with the screens.
+
 ### 0.4.0
 
   * Optional config synchronization: Conditional Config Sync 1.0.10+ takes priority when installed; otherwise

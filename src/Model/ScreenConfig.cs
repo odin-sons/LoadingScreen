@@ -37,6 +37,7 @@ public sealed class Layer {
 
 public sealed class Layout {
   public string Name { get; set; }
+  public string Sound { get; set; }
   public VignetteSettings Vignette { get; set; }
   public MaskSettings Mask { get; set; }
   public List<Layer> Layers { get; } = [];
@@ -51,6 +52,8 @@ public sealed class Layout {
 
 public sealed class Entry {
   public string Image { get; set; }
+  public string Sound { get; set; }
+  public string Voice { get; set; }
   public string Text { get; set; }
   public string LayoutName { get; set; }
   public Placement Place { get; set; } = new();
@@ -64,6 +67,7 @@ public enum PickOrder {
 
 public sealed class EntryList {
   public string Name { get; set; }
+  public string Sound { get; set; }
   public string LayoutName { get; set; }
   public PickOrder? Order { get; set; }
   public List<Entry> Entries { get; } = [];
@@ -127,4 +131,5 @@ public static class KnownNames {
   ];
 
   public static readonly IReadOnlyList<string> ImageExtensions = [".png", ".jpg", ".jpeg"];
+  public static readonly IReadOnlyList<string> AudioExtensions = [".ogg", ".wav"];
 }
