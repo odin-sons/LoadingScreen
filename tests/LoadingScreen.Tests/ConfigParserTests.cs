@@ -9,7 +9,7 @@ using Xunit;
 
 public class ConfigParserTests {
   static readonly HashSet<string> _files = [
-    "general/a.jpg", "general/b.png", "mistlands/fog.jpg", "death/fall.jpg", "common/logo.png", "common/bg.jpeg",
+    "general/a.jpg", "general/b.png", "sleep/night.jpg", "mistlands/fog.jpg", "death/fall.jpg", "common/logo.png", "common/bg.jpeg",
     "music/forest.ogg", "music/list.wav", "music/entry.ogg", "voice/tip.wav"
   ];
 
@@ -76,6 +76,37 @@ public class ConfigParserTests {
     Assert.True(result.Config.IsEmpty);
     Assert.Empty(result.Warnings);
     AssertBuiltInAppearance(result.Config.Defaults);
+  }
+
+  [Fact]
+  public void ParsesSleepListAndLayoutUiChoice() {
+    const string yaml = """
+        layouts:
+          dream:
+            showSleepUi: false
+            layers:
+              - source: entry
+              - text: caption
+        situations:
+          sleep:
+            layout: dream
+            entries: [ sleep/night.jpg ]
+        """;
+
+    ConfigLoadResult result = Parse(yaml);
+
+    Assert.Empty(result.Warnings);
+    Assert.Equal("sleep/night.jpg", result.Config.Sleep.Entries.Single().Image);
+    Assert.False(result.Config.Layouts["dream"].ShowSleepUi);
+    Assert.Equal(1, result.Config.EntryCount);
+  }
+
+  [Fact]
+  public void InvalidSleepUiKeepsGameUiVisible() {
+    ConfigLoadResult result = Parse("layouts: { dream: { showSleepUi: maybe, layers: [ { source: entry } ] } }");
+
+    Assert.True(result.Config.Layouts["dream"].ShowSleepUi);
+    Assert.Contains(result.Warnings, warning => warning.Contains("'showSleepUi' must be true or false"));
   }
 
   [Fact]
@@ -509,7 +540,7 @@ public class ExampleConfigTests {
 
     Assert.Empty(result.Warnings);
     Assert.Equal(2, result.Config.Layouts.Count);
-    Assert.Equal(6, result.Config.EntryCount);
+    Assert.Equal(7, result.Config.EntryCount);
   }
 }
 

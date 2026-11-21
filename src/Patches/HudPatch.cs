@@ -22,6 +22,7 @@ static class HudPatch {
   }
 
   static bool _loadingScreenState;
+  static bool _wasSleeping;
   static float _lastImageTime;
   static float _lastTipTime;
   static Situation _currentSituation;
@@ -29,19 +30,36 @@ static class HudPatch {
   [HarmonyPrefix]
   [HarmonyPatch(nameof(Hud.UpdateBlackScreen))]
   static void UpdateBlackScreenPrefix(Hud __instance) {
+    bool stillSleeping = ShowLoadingScreenWhileSleeping.Value && Player.m_localPlayer && Player.m_localPlayer.IsSleeping();
+    if (_wasSleeping && !stillSleeping) {
+      __instance.m_loadingProgress.SetActive(false);
+    }
+
     _loadingScreenState = __instance.m_loadingProgress.activeInHierarchy;
   }
 
   [HarmonyPostfix]
   [HarmonyPatch(nameof(Hud.UpdateBlackScreen))]
   static void UpdateBlackScreenPostfix(Hud __instance) {
+    bool sleeping = ShowLoadingScreenWhileSleeping.Value && Player.m_localPlayer && Player.m_localPlayer.IsSleeping();
+    bool newScreen = !_loadingScreenState || sleeping != _wasSleeping;
+    _wasSleeping = sleeping;
+
+    if (sleeping) {
+      __instance.m_loadingProgress.SetActive(true);
+      if (newScreen) {
+        __instance.m_sleepingProgress.transform.SetAsLastSibling();
+      }
+    }
+
     if (!__instance.m_loadingProgress.activeInHierarchy) {
       return;
     }
 
     float now = Time.realtimeSinceStartup;
-    if (!_loadingScreenState) {
-      _currentSituation = SituationTracker.Consume(out Selection preselected);
+    if (newScreen) {
+      Selection preselected = null;
+      _currentSituation = sleeping ? Situation.Sleep : SituationTracker.Consume(out preselected);
       _lastImageTime = now;
       _lastTipTime = now;
 
@@ -51,7 +69,15 @@ static class HudPatch {
         __instance.ScaleLerpLoadingImage(__instance.m_loadingImage);
       }
 
+      if (sleeping) {
+        __instance.m_sleepingProgress.SetActive(LoadingManager.HudHost.ShowSleepUi);
+      }
+
       return;
+    }
+
+    if (sleeping) {
+      __instance.m_sleepingProgress.SetActive(LoadingManager.HudHost.ShowSleepUi);
     }
 
     if (!SlideshowTiming.IsDue(now, _lastImageTime, ChangeImageEverySeconds.Value)) {
@@ -75,6 +101,10 @@ static class HudPatch {
             LoadingManager.HudHost, _currentSituation, __instance.m_loadingTip, next)) {
       LoadingManager.ShowFallback(LoadingManager.HudHost, __instance.m_loadingImage, __instance.m_loadingTip);
       __instance.ScaleLerpLoadingImage(__instance.m_loadingImage);
+    }
+
+    if (sleeping) {
+      __instance.m_sleepingProgress.SetActive(LoadingManager.HudHost.ShowSleepUi);
     }
   }
 

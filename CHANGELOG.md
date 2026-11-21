@@ -2,6 +2,8 @@
 
 ### Unreleased
 
+  * Optional loading image and tip while sleeping, with a `situations.sleep` list that falls back to `general`.
+    Layouts can hide the game's sleep text and spinner with `showSleepUi: false`.
   * Optional tip rotation on HUD and main-menu loading screens: `[1 - General] Change tip every N seconds` (default
     0, off). Tips from `tips.txt` advance without repeating the previous tip when possible; entry text stays fixed.
   * Optional slideshow on HUD and game start loading screens: `[1 - General] Change image every N seconds` (default

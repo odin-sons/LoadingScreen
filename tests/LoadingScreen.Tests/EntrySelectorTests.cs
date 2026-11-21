@@ -17,6 +17,7 @@ public class EntrySelectorTests {
 
   static ScreenConfig Config() {
     ScreenConfig config = new() { General = List("general", "g1.jpg", "g2.jpg") };
+    config.Sleep = List("sleep", "s1.jpg");
     config.Teleport["Mistlands"] = List("teleport.Mistlands", "m1.jpg");
     config.Death["Fall"] = List("death.Fall", "f1.jpg", "f2.jpg", "f3.jpg");
     return config;
@@ -35,6 +36,22 @@ public class EntrySelectorTests {
     Selection selection = new EntrySelector(Config()).Select(Situation.Death("Fall"));
 
     Assert.StartsWith("f", selection.Entry.Image);
+  }
+
+  [Fact]
+  public void SleepPrefersItsOwnListAndFallsBackToGeneral() {
+    ScreenConfig config = Config();
+    Assert.Equal("s1.jpg", new EntrySelector(config).Select(Situation.Sleep).Entry.Image);
+
+    config.Sleep.Entries.Clear();
+    Assert.Equal("general", new EntrySelector(config).Select(Situation.Sleep).List.Name);
+  }
+
+  [Fact]
+  public void SleepFallsBackWhenItsEntriesAreUnusable() {
+    EntrySelector selector = new(Config(), entry => entry.Image != "s1.jpg");
+
+    Assert.Equal("general", selector.Select(Situation.Sleep).List.Name);
   }
 
   [Fact]

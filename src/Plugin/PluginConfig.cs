@@ -16,6 +16,7 @@ public static class PluginConfig {
 
   public static ConfigEntry<bool> ShowLoadingScreenImmediatelyOnDeath { get; private set; }
   public static ConfigEntry<bool> ShowLoadingScreenOnTeleport { get; private set; }
+  public static ConfigEntry<bool> ShowLoadingScreenWhileSleeping { get; private set; }
   public static ConfigEntry<bool> CaptionUseTipWhenNoText { get; private set; }
 
   public static ConfigEntry<bool> ServeImagesToClients { get; private set; }
@@ -67,6 +68,13 @@ public static class PluginConfig {
             "Loading screen on portal teleport",
             true,
             "Show a loading screen instead of the game's portal swirl. Needed for the per-biome teleport screens.");
+
+    ShowLoadingScreenWhileSleeping =
+        config.BindInOrder(
+            Screens,
+            "Loading screen while sleeping",
+            false,
+            "Show a loading image and tip while sleeping. Uses the sleep situation, then general; keeps the game's sleep text and spinner unless the selected layout hides them.");
 
     ShowLoadingScreenImmediatelyOnDeath =
         config.BindInOrder(

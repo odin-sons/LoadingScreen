@@ -6,6 +6,7 @@ using System.Linq;
 
 public enum SituationKind {
   General,
+  Sleep,
   Teleport,
   Death
 }
@@ -20,6 +21,8 @@ public readonly struct Situation {
   }
 
   public static Situation General => new(SituationKind.General, []);
+
+  public static Situation Sleep => new(SituationKind.Sleep, []);
 
   public static Situation Teleport(string biome) => new(SituationKind.Teleport, biome == null ? [] : [biome]);
 
@@ -81,6 +84,10 @@ public sealed class EntrySelector {
   }
 
   IEnumerable<EntryList> Candidates(Situation situation) {
+    if (situation.Kind == SituationKind.Sleep) {
+      yield return _config.Sleep;
+    }
+
     Dictionary<string, EntryList> specific = situation.Kind switch {
       SituationKind.Teleport => _config.Teleport,
       SituationKind.Death => _config.Death,

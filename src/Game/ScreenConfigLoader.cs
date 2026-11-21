@@ -60,6 +60,7 @@ public static class ScreenConfigLoader {
 
   public static string Summary() {
     return $"{(IsUsingServerConfig ? "server config" : ConfigFileName)}: {Current.General.Entries.Count} general, "
+        + $"{Current.Sleep.Entries.Count} sleep, "
         + $"{Current.Teleport.Values.Sum(list => list.Entries.Count)} teleport "
         + $"({string.Join(", ", Current.Teleport.Keys)}), "
         + $"{Current.Death.Values.Sum(list => list.Entries.Count)} death entries "
