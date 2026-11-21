@@ -26,7 +26,7 @@ public sealed class ConfigParser {
   static readonly string[] _layerKeys = [
     "id", "color", "image", "images", "source", "separator", "text", "size", "align", "background", .. _placementKeys
   ];
-  static readonly string[] _layoutKeys = ["layers", "sound", "vignette", "mask", .. _placementKeys];
+  static readonly string[] _layoutKeys = ["layers", "sound", "showsleepui", "vignette", "mask", .. _placementKeys];
   static readonly string[] _entryKeys = ["image", "sound", "voice", "text", "layout", "place", "when"];
 
   readonly Func<string, bool> _assetExists;
@@ -166,6 +166,14 @@ public sealed class ConfigParser {
       layout.Vignette = ParseVignette(Child(mapping, "vignette"), $"layout '{name}'.vignette");
       layout.Mask = ParseMask(Child(mapping, "mask"), $"layout '{name}'.mask");
       layout.Sound = ParseAudio(Child(mapping, "sound"), $"layout '{name}'", "sound");
+      YamlNode showSleepUi = Child(mapping, "showsleepui");
+      if (!IsNull(showSleepUi)) {
+        if (bool.TryParse(Scalar(showSleepUi), out bool show)) {
+          layout.ShowSleepUi = show;
+        } else {
+          Warn(showSleepUi, $"layout '{name}': 'showSleepUi' must be true or false");
+        }
+      }
     }
 
     if (layersNode is not YamlSequenceNode layers) {
@@ -366,6 +374,10 @@ public sealed class ConfigParser {
           _result.Config.General = ParseEntryList("general", pair.Value);
           break;
 
+        case "sleep":
+          _result.Config.Sleep = ParseEntryList("sleep", pair.Value);
+          break;
+
         case "teleport":
           ParseNamedLists(pair.Value, "teleport", _result.Config.Teleport, KnownNames.Biomes);
           break;
@@ -375,7 +387,7 @@ public sealed class ConfigParser {
           break;
 
         default:
-          Warn(pair.Key, $"unknown situation '{Name(pair.Key)}', use 'general', 'teleport' or 'death'");
+          Warn(pair.Key, $"unknown situation '{Name(pair.Key)}', use 'general', 'sleep', 'teleport' or 'death'");
           break;
       }
     }

@@ -42,6 +42,7 @@ public sealed class LayerHost : MonoBehaviour {
   bool _layoutShowsSeparator;
 
   public bool IsShowing { get; private set; }
+  public bool ShowSleepUi { get; private set; } = true;
   public Selection CurrentSelection { get; private set; }
 
   public Transform Separator { get; set; }
@@ -164,6 +165,7 @@ public sealed class LayerHost : MonoBehaviour {
             .Select(placed => placed.Rect.GetComponent<Image>().sprite)
             .Where(sprite => sprite != LoadingManager.SeparatorSprite));
     _layoutShowsSeparator = layout.ShowsSeparator;
+    ShowSleepUi = layout.ShowSleepUi;
     SetSeparatorVisible(!_layoutShowsSeparator && config.Defaults.Separator.OnLayouts);
     CurrentSelection = selection;
     IsShowing = true;
@@ -177,6 +179,7 @@ public sealed class LayerHost : MonoBehaviour {
     Clear();
     IsShowing = false;
     CurrentSelection = null;
+    ShowSleepUi = true;
     gameObject.SetActive(false);
     SetSeparatorVisible(true);
 

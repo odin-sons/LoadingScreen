@@ -10,8 +10,8 @@ public static class ExampleConfigText {
       # An entry can set voice: voice/tip.ogg; it plays once when that entry's own text is shown.
       # Reload in game with the console command: loadingscreen reload
       #
-      # Selection: a portal teleport uses situations.teleport.<destination biome>, a respawn uses
-      # situations.death.<cause>; if that list is missing or empty, situations.general is used; if that is
+      # Selection: sleep uses situations.sleep, a portal teleport uses situations.teleport.<destination biome>,
+      # and a respawn uses situations.death.<cause>; if that list is missing or empty, situations.general is used; if that is
       # empty too, the plain images in this folder are shown.
       #
       # Biomes: Meadows, BlackForest, Swamp, Mountain, Plains, Mistlands, AshLands, DeepNorth, Ocean
@@ -47,6 +47,7 @@ public static class ExampleConfigText {
       # takes placement and a "color" tint, replaces the built-in separator) and "text: caption" (the entry text or a tip).
       # A text layer takes position, opacity, "fit: { width }" and: size, color, align (left | center | right),
       # background (a color box behind the text). Without a text layer the usual tip line is used.
+      # A sleep layout can set showSleepUi: false to hide the game's sleep text and spinner and use its own layers.
 
       # defaults:
       #   fit: contain
@@ -74,6 +75,7 @@ public static class ExampleConfigText {
       #         fade: { sides: [left, right], color: "#000000", size: 10% }
       #
       #   logo-over-backdrops:
+      #     showSleepUi: false
       #     vignette: { strength: 0.7 }
       #     layers:
       #       - id: backdrop
@@ -98,6 +100,11 @@ public static class ExampleConfigText {
       #         text: Skol!
       #         voice: voice/welcome.ogg
       #       - general/another.jpg
+      #   sleep:
+      #     layout: logo-over-backdrops
+      #     entries:
+      #       - image: sleep/night.jpg
+      #         text: Rest until morning.
       #   teleport:
       #     Mistlands:
       #       - image: mistlands/fog.jpg

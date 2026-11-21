@@ -38,6 +38,7 @@ public sealed class Layer {
 public sealed class Layout {
   public string Name { get; set; }
   public string Sound { get; set; }
+  public bool ShowSleepUi { get; set; } = true;
   public VignetteSettings Vignette { get; set; }
   public MaskSettings Mask { get; set; }
   public List<Layer> Layers { get; } = [];
@@ -115,10 +116,11 @@ public sealed class ScreenConfig {
   public PickOrder Order { get; set; } = PickOrder.Random;
   public Dictionary<string, Layout> Layouts { get; } = new(StringComparer.OrdinalIgnoreCase);
   public EntryList General { get; set; } = new() { Name = "general" };
+  public EntryList Sleep { get; set; } = new() { Name = "sleep" };
   public Dictionary<string, EntryList> Teleport { get; } = new(StringComparer.OrdinalIgnoreCase);
   public Dictionary<string, EntryList> Death { get; } = new(StringComparer.OrdinalIgnoreCase);
 
-  public IEnumerable<EntryList> AllLists => new[] { General }.Concat(Teleport.Values).Concat(Death.Values);
+  public IEnumerable<EntryList> AllLists => new[] { General, Sleep }.Concat(Teleport.Values).Concat(Death.Values);
 
   public int EntryCount => AllLists.Sum(list => list.Entries.Count);
 

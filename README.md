@@ -87,12 +87,17 @@ entries without text rotate tips when `[2 - Situations] Random tip when an entry
 works with a layout's `text: caption` layer. The game's arrow keys still advance tips manually. With more than one
 tip, the next pick differs from the previous one.
 
+Set `[2 - Situations] Loading screen while sleeping` to `true` to show an image and tip during sleep (default: off).
+The game's sleep text and spinner stay visible above the image. A sleep-specific layout can hide them with
+`showSleepUi: false` and use its own layers instead. Image slideshows and tip rotation also apply while sleeping.
+
 ### Selection
 
 | Loading screen | First choice | Then |
 |---|---|---|
 | Portal teleport | `situations.teleport.<destination biome>` | `situations.general`, then the plain images |
 | Respawn | `situations.death.<cause>` | `situations.general`, then the plain images |
+| Sleep (when enabled) | `situations.sleep` | `situations.general`, then the plain images |
 | Anything else, main menu, game start | `situations.general` | the plain images |
 
 - Biomes: `Meadows`, `BlackForest`, `Swamp`, `Mountain`, `Plains`, `Mistlands`, `AshLands`, `DeepNorth`, `Ocean`.
@@ -126,6 +131,9 @@ situations:
         sound: music/forest.ogg
         voice: voice/welcome.ogg
       - general/another.jpg    # an image without text
+  sleep:
+    - image: sleep/night.jpg
+      text: Rest until morning.
   teleport:
     Mistlands:
       - image: mistlands/fog.jpg
@@ -442,6 +450,7 @@ situations:
 ```yaml
 layouts:
   logo-over-backdrops:
+    showSleepUi: false         # only during sleep: hide the game's sleep text and spinner
     vignette: { strength: 0.7 } # override one default effect value on this layout
     layers:                    # drawn in order, the first is at the back
       - color: "#000000"       # solid fill
@@ -507,6 +516,10 @@ A text layer accepts `position`, `opacity`, `fit: { width }` (the text box width
 `size`, `color`, `align` (`left`, `center`, `right`), `background` (a color box behind the text). Without a text
 layer, the caption goes to the usual tip line.
 
+Layouts show the game's sleep text and spinner by default. Set `showSleepUi: false` on the layout selected by a
+`sleep` entry to hide both; add a `text: caption` layer to display the entry text or a tip in their place. Other
+image and text layers can supply a fully custom sleep screen. This key has no effect outside sleep.
+
 A `separator: game` layer draws the game's ornament line as an image layer. It takes the placement options and an
 optional `color` tint; without placement it keeps its native size near the bottom. A layout with such a layer hides
 the built-in separator line; set `defaults.separator.onLayouts: false` to hide it on every screen drawn by a layout.
@@ -519,7 +532,7 @@ Behavior switches in `Odin_Sons.LoadingScreen.cfg`; each has a description in th
 | Section | Settings |
 |---|---|
 | `1 - General` | Enabled, Image folder |
-| `2 - Situations` | Loading screen on portal teleport, Loading screen right after death, Random tip when an entry has no text |
+| `2 - Situations` | Loading screen on portal teleport, Loading screen while sleeping, Loading screen right after death, Random tip when an entry has no text |
 | `3 - Game start screen` | Use loading images, Show progress |
 | `4 - Server images` | Share with players (server), Use the server's screens (player) |
 | `5 - Config synchronization` | Lock synced settings |
