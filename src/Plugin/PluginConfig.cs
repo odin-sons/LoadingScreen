@@ -141,7 +141,7 @@ public static class PluginConfig {
     DownloadServerImages =
         config.BindInOrder(
             Server,
-            "Use the server's screens (player)",
+            "Use screens from the server (player)",
             true,
             "As a player: while connected, use the server's loading screens and download their images in the "
                 + "background into BepInEx/cache/LoadingScreen.");
