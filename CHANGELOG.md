@@ -2,6 +2,8 @@
 
 ### Unreleased
 
+### 0.6.0
+
   * Simplified YAML layer content to `image`, `text` or `color`; `image` accepts a path, path list, `entry` or `separator`.
     Enemy prefab lists now live under `situations.enemy`, and placement at every scope uses `place`.
   * A server join keeps the same loading image, caption and zoom across the menu, scene loader and HUD. Music and
