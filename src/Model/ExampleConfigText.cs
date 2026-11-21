@@ -4,6 +4,7 @@ public static class ExampleConfigText {
   public const string Text = """
       # LoadingScreen situational config. Everything is commented out, so the mod behaves like Intermission
       # (random images from this folder and tips.txt) until you uncomment and edit the parts you need.
+      # Optional tips.<code>.txt (for example tips.ru.txt) is used before tips.txt for that language.
       # Image paths are relative to this folder. Supported: .png, .jpg, .jpeg.
       # Audio paths are also relative to this folder. Supported: .ogg and .wav, up to 8 MiB per clip.
       # A layout, list or entry can set sound: music/forest.ogg; the entry wins over the list, then the layout.
@@ -26,6 +27,8 @@ public static class ExampleConfigText {
       #
       # Conditions ("when" on an entry, all must hold; prefix with "not" to invert, e.g. notKnownItem):
       #   knownItem, hasItem, knownRecipe (item prefab name like Demister), knownBiome, globalKey, playerKey
+      # Entry text can be a plain string or { en: English text, ru: Russian text }.
+      # Missing translations use en, then the first available translation.
       #
       # Placement options (defaults, layouts, layers and an entry's "place"; the most specific one wins):
       #   fit: cover | contain | stretch | none | { width: 40%, height: 300px }
@@ -98,7 +101,7 @@ public static class ExampleConfigText {
       #     sound: music/forest.ogg
       #     entries:
       #       - image: general/valheim.jpg
-      #         text: Skol!
+      #         text: { en: Skol!, ru: Скол! }
       #         voice: voice/welcome.ogg
       #       - general/another.jpg
       #   sleep:

@@ -8,6 +8,7 @@ using global::LoadingScreen.Model;
 public static class PluginConfig {
   public static ConfigEntry<bool> IsModEnabled { get; private set; }
   public static ConfigEntry<string> ImageFolder { get; private set; }
+  public static ConfigEntry<string> TextLanguage { get; private set; }
   public static ConfigEntry<int> ChangeImageEverySeconds { get; private set; }
   public static ConfigEntry<int> ChangeTipEverySeconds { get; private set; }
 
@@ -47,6 +48,14 @@ public static class PluginConfig {
             ImageFolderPath.DefaultFolder,
             "Folder with loadingscreen.yaml, tips.txt, and images. Relative paths start at the BepInEx folder. "
                 + "Needs a game restart.");
+
+    TextLanguage =
+        config.BindInOrder(
+            General,
+            "Text language",
+            "Game",
+            "Language for tips and entry text. Game follows Valheim's language; enter an ISO language code "
+                + "such as ru or pt-BR to override it. Unknown codes use the game language.");
 
     ChangeImageEverySeconds =
         config.BindInOrder(

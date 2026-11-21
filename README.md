@@ -34,7 +34,7 @@ on Unity, but **the mod has not been tested in the game yet**. See the
 - **Layered layouts.** A screen is a stack of layers (solid colors, fixed images, random image pools, the chosen
   entry's image, the caption), each sized and positioned on its own, with gradient edges and an optional slow zoom.
   Two presets are included in the example config.
-- **Captions.** An entry can carry its own text; without it, a tip from `tips.txt` is shown.
+- **Captions.** An entry can carry plain or translated text; without it, a tip from the selected language's tip file is shown.
 - **Loading sounds.** Loop music for a layout, list or entry; play an entry's voiced tip once when its text appears.
 - **Conditions.** An entry can be limited to players who, for example, have never held a Wisplight or have not
   defeated a boss yet, so a tip only reaches the players who need it.
@@ -58,14 +58,15 @@ By default, these files live in `BepInEx/config/LoadingScreen/`:
 | File | Purpose |
 |---|---|
 | `loadingscreen.yaml` | Situations, layouts, placement and appearance (below) |
-| `tips.txt` | One tip per line |
+| `tips.txt` | One tip per line; fallback when a language-specific file is absent |
+| `tips.<code>.txt` | Optional translated tips, for example `tips.ru.txt` |
 | `*.png`, `*.jpg` at the top level | Plain images, used when no situational entry applies |
 | `.ogg`, `.wav` in the config folder | Optional music and voiced tips referenced from `loadingscreen.yaml` |
 
 Set `[1 - General] Image folder` in `BepInEx/config/Odin_Sons.LoadingScreen.cfg` to use another folder. The
 default is `config/LoadingScreen`. Relative paths start at the BepInEx folder, so `plugins/MyPack/screens` means
 `BepInEx/plugins/MyPack/screens`; absolute paths also work. Restart the game after changing this setting. The chosen
-folder holds `loadingscreen.yaml`, `tips.txt`, images and audio clips.
+folder holds `loadingscreen.yaml`, tip files, images and audio clips.
 
 Behavior switches are in `BepInEx/config/Odin_Sons.LoadingScreen.cfg`; appearance is in the YAML `defaults` section.
 
@@ -75,6 +76,12 @@ and music sliders; voices follow its master and effects sliders. Music follows t
 as soon as the screen closes. `Mute game sounds on loading screens` (`None` by default) fades out the game's
 `Effects` (such as the portal hum), `Music`, or both (`Effects, Music`) while a loading screen is visible, and restores them when it closes. Audio paths are relative to the config folder, with `.ogg` and `.wav` supported. Each
 clip is limited to 8 MiB.
+
+`[1 - General] Text language` defaults to `Game`, following Valheim's selected language. Set an ISO language code,
+such as `ru` or `pt-BR`, to force a language for tips and entry text. Unknown codes use the game language. The mod
+looks for `tips.<code>.txt` first, then `tips.txt`. Each file has one tip per line; a missing plain file is created
+empty. Language changes take effect on the next tip or screen selection. The game's `Chinese` and `Chinese_Trad`
+use `zh-CN` and `zh-TW`; `Portuguese_European` and `Portuguese_Brazilian` use `pt` and `pt-BR`.
 
 Set `[1 - General] Change image every N seconds` to a positive number to change images while the HUD or game start
 loading screen stays visible. The default `0` turns the slideshow off. When a situational entry is showing, each
@@ -133,7 +140,7 @@ situations:
     layout: logo-over-backdrops
     entries:
       - image: general/valheim.jpg
-        text: Skol!
+        text: { en: Skol!, ru: Скол! }
         sound: music/forest.ogg
         voice: voice/welcome.ogg
       - general/another.jpg    # an image without text
@@ -160,6 +167,10 @@ own image if there is none.
 Add `sound: music/forest.ogg` to a layout, entry list or entry. The entry's sound takes priority over the list's,
 then the layout's; it loops while that screen is visible. Add `voice: voice/welcome.wav` to an entry with `text` to
 play it once when the entry's text appears. A voice is not played for a random tip substituted for missing entry text.
+
+Entry `text` can be a plain string or a mapping of ISO language codes to strings, such as
+`text: { en: Welcome, ru: Добро пожаловать }`. For a missing translation, `en` is used, then the first available
+translation. A plain string is shown in every language. This also applies to text-only entries and layout captions.
 
 ### Conditions
 
@@ -540,7 +551,7 @@ Behavior switches in `Odin_Sons.LoadingScreen.cfg`; each has a description in th
 
 | Section | Settings |
 |---|---|
-| `1 - General` | Enabled, Image folder |
+| `1 - General` | Enabled, Image folder, Text language, Change image every N seconds, Change tip every N seconds |
 | `2 - Situations` | Loading screen on portal teleport, Loading screen while sleeping, Hold loading screen until a key is pressed, Maximum hold time in seconds, Loading screen right after death, Random tip when an entry has no text |
 | `3 - Game start screen` | Use loading images, Show progress |
 | `4 - Server images` | Share with players (server), Use the server's screens (player) |
@@ -573,7 +584,7 @@ Settings marked as requiring a restart remain local.
 ### Console
 
 `loadingscreen status` shows what is loaded; `loadingscreen reload` re-reads `loadingscreen.yaml`, the images and
-`tips.txt`. A broken YAML file keeps the previously loaded config.
+the selected tip file. A broken YAML file keeps the previously loaded config.
 
 ## Server images
 

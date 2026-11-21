@@ -2,6 +2,8 @@
 
 ### Unreleased
 
+  * Tips and entry captions follow Valheim's language or the `[1 - General] Text language` override. Localized
+    `tips.<code>.txt` files take precedence over `tips.txt`; entry `text` also accepts ISO-keyed translations.
   * Optional hold after HUD loading finishes, dismissed by a key or mouse click and capped at 30 seconds by default.
     Disabled on dedicated servers and during cinematics; `defaults.continuePrompt` styles the prompt line.
   * Optional loading image and tip while sleeping, with a `situations.sleep` list that falls back to `general`.

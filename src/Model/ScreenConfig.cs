@@ -56,9 +56,16 @@ public sealed class Entry {
   public string Sound { get; set; }
   public string Voice { get; set; }
   public string Text { get; set; }
+  public Dictionary<string, string> Translations { get; } = new(StringComparer.OrdinalIgnoreCase);
   public string LayoutName { get; set; }
   public Placement Place { get; set; } = new();
   public List<Condition> Conditions { get; } = [];
+
+  public string GetText(string code) {
+    if (code != null && Translations.TryGetValue(code, out string localized)) return localized;
+    if (Translations.TryGetValue("en", out string english)) return english;
+    return Text ?? Translations.Values.FirstOrDefault();
+  }
 }
 
 public enum PickOrder {

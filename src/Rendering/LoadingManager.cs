@@ -58,8 +58,9 @@ public static class LoadingManager {
       return false;
     }
 
-    bool hasEntryText = !string.IsNullOrEmpty(selection.Entry.Text);
-    string caption = hasEntryText ? selection.Entry.Text : null;
+    string entryText = selection.Entry.GetText(CustomAssets.CurrentLanguageCode);
+    bool hasEntryText = !string.IsNullOrEmpty(entryText);
+    string caption = hasEntryText ? entryText : null;
 
     if (!hasEntryText && CaptionUseTipWhenNoText.Value && CustomAssets.GetRandomLoadingTip(out string tip)) {
       caption = tip;
@@ -73,7 +74,7 @@ public static class LoadingManager {
 
     LoadingScreen.LogInfo($"Loading screen for {situation}: {selection.List.Name} -> {selection.Entry.Image}");
 
-    CurrentCaption = hasEntryText ? selection.Entry.Text : CaptionUseTipWhenNoText.Value ? null : string.Empty;
+    CurrentCaption = hasEntryText ? entryText : CaptionUseTipWhenNoText.Value ? null : string.Empty;
 
     if (tipText && !host.ShowsOwnText) {
       tipText.SetText(caption ?? string.Empty);
