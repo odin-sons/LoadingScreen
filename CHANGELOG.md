@@ -2,6 +2,10 @@
 
 ### Unreleased
 
+  * Optional config synchronization: Conditional Config Sync 1.0.10+ takes priority when installed; otherwise
+    ServerSync is merged into the plugin. Slideshow timing and situation settings can follow the server, with a
+    server lock; machine, language, game start, and server-screen preference settings remain local.
+
 ### 0.3.0
 
   * Optional full-screen vignette and color mask in YAML `defaults`, with per-layout overrides.

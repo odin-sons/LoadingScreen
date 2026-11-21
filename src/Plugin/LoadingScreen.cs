@@ -15,6 +15,7 @@ using global::LoadingScreen.Model;
 using static PluginConfig;
 
 [BepInPlugin(PluginGuid, PluginName, PluginVersion)]
+[BepInDependency(ConditionalConfigSyncAPI.ConfigSync.PluginGuid, BepInDependency.DependencyFlags.SoftDependency)]
 public sealed class LoadingScreen : BaseUnityPlugin {
   public const string PluginGuid = "Odin_Sons.LoadingScreen";
   public const string PluginName = "LoadingScreen";
@@ -24,7 +25,7 @@ public sealed class LoadingScreen : BaseUnityPlugin {
 
   void Awake() {
     _logger = Logger;
-    BindConfig(Config);
+    BindConfig(Config, new ConfigSynchronization(Logger));
 
     if (IsModEnabled.Value) {
       try {
