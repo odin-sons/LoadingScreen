@@ -33,6 +33,11 @@ public static class ExampleConfigText {
       #   fade: { sides: [left, bottom], color: "#000000", size: 15%, curve: smooth | linear }
       #        (gradient from the color into the image; size is % of the image size or px)
       #   animate: true | false   (slow zoom, defaults to defaults.zoom.enabled)
+      # Screen effects cover the whole loading screen. Set them in defaults or override individual values
+      # on a layout. Omit a block to leave that effect off unless defaults enables it.
+      #   vignette: { color: "#000000", size: 25%, strength: 0.5 }
+      #        (size is the outer 0%..100% from center to screen edge; strength is 0..1)
+      #   mask: { color: "#000000", opacity: 0.25 }  (a full-screen color tint; opacity is 0..1)
       #
       # Layers: "color" (solid fill), "image" (one file), "images" (a random file per screen),
       # "source: entry" (the image of the chosen entry), "separator: game" (the game's ornament line,
@@ -45,6 +50,8 @@ public static class ExampleConfigText {
       #   position: { anchor: center }
       #   background: "#000000"
       #   tint: "#FFFFFF"
+      #   vignette: { color: "#000000", size: 25%, strength: 0.5 }
+      #   mask: { color: "#000000", opacity: 0.25 }
       #   zoom: { enabled: true, amount: 1.05, seconds: 15 }
       #   tip: { x: 0, bottom: 90, size: 24, color: "#FFFFFF" }
       #   separator: { show: true, x: 0, bottom: 150, onLayouts: true }
@@ -63,6 +70,7 @@ public static class ExampleConfigText {
       #         fade: { sides: [left, right], color: "#000000", size: 10% }
       #
       #   logo-over-backdrops:
+      #     vignette: { strength: 0.7 }
       #     layers:
       #       - id: backdrop
       #         source: entry
