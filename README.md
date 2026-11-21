@@ -76,6 +76,11 @@ as soon as the screen closes. `Mute game sounds on loading screens` (`None` by d
 `Effects` (such as the portal hum), `Music`, or both (`Effects, Music`) while a loading screen is visible, and restores them when it closes. Audio paths are relative to the config folder, with `.ogg` and `.wav` supported. Each
 clip is limited to 8 MiB.
 
+Set `[1 - General] Change image every N seconds` to a positive number to change images while the HUD or game start
+loading screen stays visible. The default `0` turns the slideshow off. When a situational entry is showing, each
+change picks another usable entry from that same list and follows its `order` setting. The image zoom starts again
+on each change.
+
 ### Selection
 
 | Loading screen | First choice | Then |

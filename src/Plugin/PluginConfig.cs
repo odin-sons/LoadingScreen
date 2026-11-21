@@ -8,6 +8,7 @@ using global::LoadingScreen.Model;
 public static class PluginConfig {
   public static ConfigEntry<bool> IsModEnabled { get; private set; }
   public static ConfigEntry<string> ImageFolder { get; private set; }
+  public static ConfigEntry<int> ChangeImageEverySeconds { get; private set; }
 
   public static ConfigEntry<bool> SceneLoaderUseLoadingImages { get; private set; }
   public static ConfigEntry<bool> SceneLoaderShowProgressText { get; private set; }
@@ -42,6 +43,14 @@ public static class PluginConfig {
             ImageFolderPath.DefaultFolder,
             "Folder with loadingscreen.yaml, tips.txt, and images. Relative paths start at the BepInEx folder. "
                 + "Needs a game restart.");
+
+    ChangeImageEverySeconds =
+        config.BindInOrder(
+            General,
+            "Change image every N seconds",
+            0,
+            "Change the image while a loading screen stays visible. 0 turns the slideshow off. "
+                + "Applies to in-game and game start loading screens.");
 
     ShowLoadingScreenOnTeleport =
         config.BindInOrder(
