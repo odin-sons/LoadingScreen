@@ -81,6 +81,12 @@ loading screen stays visible. The default `0` turns the slideshow off. When a si
 change picks another usable entry from that same list and follows its `order` setting. The image zoom starts again
 on each change.
 
+Set `[1 - General] Change tip every N seconds` to a positive number to show another line from `tips.txt` while a HUD
+or main-menu loading screen stays visible. The default `0` turns tip rotation off. An entry's own text stays fixed;
+entries without text rotate tips when `[2 - Situations] Random tip when an entry has no text` is on. Tip rotation also
+works with a layout's `text: caption` layer. The game's arrow keys still advance tips manually. With more than one
+tip, the next pick differs from the previous one.
+
 ### Selection
 
 | Loading screen | First choice | Then |

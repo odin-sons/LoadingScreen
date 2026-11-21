@@ -23,6 +23,7 @@ static class HudPatch {
 
   static bool _loadingScreenState;
   static float _lastImageTime;
+  static float _lastTipTime;
   static Situation _currentSituation;
 
   [HarmonyPrefix]
@@ -42,6 +43,7 @@ static class HudPatch {
     if (!_loadingScreenState) {
       _currentSituation = SituationTracker.Consume(out Selection preselected);
       _lastImageTime = now;
+      _lastTipTime = now;
 
       if (!LoadingManager.ShowSituation(
               LoadingManager.HudHost, _currentSituation, __instance.m_loadingTip, preselected)) {
@@ -53,10 +55,18 @@ static class HudPatch {
     }
 
     if (!SlideshowTiming.IsDue(now, _lastImageTime, ChangeImageEverySeconds.Value)) {
+      if (TipRotation.IsDue(
+              now, _lastTipTime, ChangeTipEverySeconds.Value, LoadingManager.CurrentCaption,
+              CustomAssets.LoadingTips.Count)) {
+        _lastTipTime = now;
+        LoadingManager.RotateTip(LoadingManager.HudHost, __instance.m_loadingTip);
+      }
+
       return;
     }
 
     _lastImageTime = now;
+    _lastTipTime = now;
     Selection current = LoadingManager.HudHost ? LoadingManager.HudHost.CurrentSelection : null;
     Selection next = ScreenConfigLoader.Selector.SelectNext(current, _currentSituation);
 
@@ -162,9 +172,14 @@ static class HudPatch {
     }
 
     if (CustomAssets.GetRandomLoadingTip(out string loadingTip)) {
-      return loadingTip;
+      text = loadingTip;
     }
 
+    if (LoadingManager.HudHost) {
+      LoadingManager.HudHost.SetCaption(text);
+    }
+
+    _lastTipTime = Time.realtimeSinceStartup;
     return text;
   }
 }

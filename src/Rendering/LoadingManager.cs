@@ -26,6 +26,7 @@ public static class LoadingManager {
 
   public static LayerHost HudHost { get; private set; }
   public static LayerHost FejdStartupHost { get; private set; }
+  public static TMP_Text FejdStartupTipText { get; private set; }
 
   public static string CurrentCaption { get; private set; }
 
@@ -109,6 +110,15 @@ public static class LoadingManager {
     if (tipText && CustomAssets.GetRandomLoadingTip(out string loadingTipText)) {
       tipText.SetText(loadingTipText);
     }
+  }
+
+  public static void RotateTip(LayerHost host, TMP_Text tipText) {
+    if (!CustomAssets.GetRandomLoadingTip(out string tip)) {
+      return;
+    }
+
+    if (tipText) tipText.SetText(tip);
+    if (host) host.SetCaption(tip);
   }
 
   public static void SetupLoadingImage(Image loadingImage = default) {
@@ -242,6 +252,7 @@ public static class LoadingManager {
     // FejdStartup.m_menuAnimator locks the vanilla TMP_Text UI state, so work-around is to clone it to a new object.
     TMP_Text sourceLoadingText = fejdStartup.m_loading.transform.Find("Text").GetComponent<TMP_Text>();
     TMP_Text loadingText = Object.Instantiate(sourceLoadingText, fejdStartup.m_loading.transform);
+    FejdStartupTipText = loadingText;
     loadingText.name = sourceLoadingText.name;
     Object.Destroy(sourceLoadingText.gameObject);
 

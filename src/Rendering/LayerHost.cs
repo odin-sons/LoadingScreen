@@ -272,6 +272,16 @@ public sealed class LayerHost : MonoBehaviour {
 
   public bool ShowsOwnText => _texts.Count > 0;
 
+  public void SetCaption(string caption) {
+    foreach (PlacedText placed in _texts) {
+      placed.Text.SetText(caption);
+    }
+
+    if (_texts.Count > 0) {
+      Relayout();
+    }
+  }
+
   void AddTextLayer(Layer layer, Placement placement, string caption, TMP_Text template) {
     RectTransform container = CreateChild<RectTransform>($"Text-{layer.Id}", _root);
     TextStyle style = layer.Text ?? new();
