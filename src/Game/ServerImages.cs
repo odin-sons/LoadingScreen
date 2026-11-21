@@ -389,6 +389,9 @@ public static class ServerImages {
 
     foreach (Entry entry in result.Config.AllLists.SelectMany(list => list.Entries)) {
       entry.Text = SanitizeCaption(entry.Text);
+      foreach (string code in entry.Translations.Keys.ToList()) {
+        entry.Translations[code] = SanitizeCaption(entry.Translations[code]);
+      }
     }
 
     Directory.CreateDirectory(CacheDir);

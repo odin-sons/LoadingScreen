@@ -518,9 +518,25 @@ public sealed class ConfigParser {
 
     YamlNode imageNode = Child(mapping, "image");
     string image = Scalar(imageNode);
-    string text = Scalar(Child(mapping, "text"));
+    YamlNode textNode = Child(mapping, "text");
+    string text = Scalar(textNode);
+    Dictionary<string, string> translations = new(StringComparer.OrdinalIgnoreCase);
 
-    if (IsNull(imageNode) && string.IsNullOrEmpty(text)) {
+    if (textNode is YamlMappingNode textMapping) {
+      foreach (KeyValuePair<YamlNode, YamlNode> pair in textMapping.Children) {
+        if (!LanguageText.TryCode(Name(pair.Key), out string code)) {
+          Warn(pair.Key, $"{listName}: unknown text language '{Name(pair.Key)}'");
+        } else if (string.IsNullOrWhiteSpace(Scalar(pair.Value))) {
+          Warn(pair.Value, $"{listName}: text for '{code}' must be a non-empty string");
+        } else {
+          translations[code] = Scalar(pair.Value);
+        }
+      }
+    } else if (!IsNull(textNode) && textNode is not YamlScalarNode) {
+      Warn(textNode, $"{listName}: 'text' must be a string or a language mapping");
+    }
+
+    if (IsNull(imageNode) && string.IsNullOrEmpty(text) && translations.Count == 0) {
       Warn(node, $"{listName}: an entry needs an 'image' or a 'text', ignored");
       return null;
     }
@@ -539,6 +555,9 @@ public sealed class ConfigParser {
       LayoutName = Scalar(Child(mapping, "layout")),
       Place = IsNull(place) ? new() : ParsePlacement(place, _placementKeys, $"{listName}: 'place'"),
     };
+    foreach (KeyValuePair<string, string> translation in translations) {
+      entry.Translations[translation.Key] = translation.Value;
+    }
 
     YamlNode when = Child(mapping, "when");
 

@@ -15,6 +15,11 @@ public static class CustomAssets {
   public static List<string> LoadingTips { get; } = [];
   public static List<string> LoadingImageFiles { get; } = [];
   static int _lastTipIndex = -1;
+  static string _tipFolder;
+  static string _loadedLanguageCode;
+
+  public static string CurrentLanguageCode =>
+      LanguageText.Code(PluginConfig.TextLanguage?.Value, Localization.instance?.GetSelectedLanguage());
 
   const int MaxCachedImages = 16;
 
@@ -29,13 +34,24 @@ public static class CustomAssets {
           [typeof(Texture2D), typeof(byte[]), typeof(bool)]);
 
   public static void Initialize(string pluginDir) {
-    LoadingTips.Clear();
-    LoadingTips.AddRange(ReadLoadingTips(Path.Combine(pluginDir, "tips.txt")));
-    _lastTipIndex = -1;
+    _tipFolder = pluginDir;
+    _loadedLanguageCode = null;
+    RefreshTips();
 
     LoadingImageFiles.Clear();
     LoadingImageFiles.AddRange(ReadLoadingImageFiles(pluginDir, ".png"));
     LoadingImageFiles.AddRange(ReadLoadingImageFiles(pluginDir, ".jpg"));
+  }
+
+  static void RefreshTips() {
+    string code = CurrentLanguageCode;
+    if (_tipFolder == null || _loadedLanguageCode == code) return;
+
+    LoadingTips.Clear();
+    string fileName = LanguageText.TipFileName(code, name => File.Exists(Path.Combine(_tipFolder, name)));
+    LoadingTips.AddRange(ReadLoadingTips(Path.Combine(_tipFolder, fileName)));
+    _lastTipIndex = -1;
+    _loadedLanguageCode = code;
   }
 
   public static IEnumerable<string> ReadLoadingTips(string path) {
@@ -177,6 +193,7 @@ public static class CustomAssets {
   }
 
   public static bool GetRandomLoadingTip(out string tipText) {
+    RefreshTips();
     if (LoadingTips.Count > 0) {
       int choiceCount = LoadingTips.Count - (TipSelection.HasPrevious(LoadingTips.Count, _lastTipIndex) ? 1 : 0);
       _lastTipIndex = TipSelection.NextIndex(LoadingTips.Count, _lastTipIndex, Random.Range(0, choiceCount));
