@@ -36,11 +36,13 @@ public sealed class LayerHost : MonoBehaviour {
   readonly List<PlacedImage> _placed = [];
   readonly List<Transform> _animated = [];
   RectTransform _root;
+  ScreenEffectOverlay _effects;
   Graphic _vanillaImage;
   Vector2 _lastSize;
   bool _layoutShowsSeparator;
 
   public bool IsShowing { get; private set; }
+  public Selection CurrentSelection { get; private set; }
 
   public Transform Separator { get; set; }
 
@@ -78,6 +80,7 @@ public sealed class LayerHost : MonoBehaviour {
 
     LayerHost host = root.AddComponent<LayerHost>();
     host._root = rect;
+    host._effects = new ScreenEffectOverlay(parent);
     host._vanillaImage = vanillaImage;
     root.SetActive(false);
 
@@ -162,24 +165,34 @@ public sealed class LayerHost : MonoBehaviour {
             .Where(sprite => sprite != LoadingManager.SeparatorSprite));
     _layoutShowsSeparator = layout.ShowsSeparator;
     SetSeparatorVisible(!_layoutShowsSeparator && config.Defaults.Separator.OnLayouts);
+    CurrentSelection = selection;
     IsShowing = true;
     Relayout();
     StartAnimations();
+    _effects.Apply(config.Defaults, layout);
     return true;
   }
 
   public void Hide() {
     Clear();
     IsShowing = false;
+    CurrentSelection = null;
     gameObject.SetActive(false);
     SetSeparatorVisible(true);
 
     if (_vanillaImage) {
       _vanillaImage.enabled = true;
     }
+
+    _effects.Apply(ScreenConfigLoader.Current.Defaults, null);
   }
 
   public void RefreshAppearance() {
+    ScreenConfig config = ScreenConfigLoader.Current;
+    Layout layout = CurrentSelection?.LayoutName != null
+        && config.Layouts.TryGetValue(CurrentSelection.LayoutName, out Layout named) ? named : null;
+    _effects.Apply(config.Defaults, layout);
+
     if (Separator) {
       LoadingManager.SetupPanelSeparator(Separator);
       SetSeparatorVisible(!IsShowing || (!_layoutShowsSeparator && ScreenConfigLoader.Current.Defaults.Separator.OnLayouts));
@@ -358,6 +371,7 @@ public sealed class LayerHost : MonoBehaviour {
 
   void OnDestroy() {
     CustomAssets.Pin(this, []);
+    _effects?.Destroy();
   }
 
   void OnEnable() {

@@ -70,6 +70,7 @@ static class SceneLoaderPatch {
   }
 
   internal static void RefreshAppearance() {
+    if (_host) _host.RefreshAppearance();
     if (!_indicator) return;
 
     RectTransform rectTransform = _indicator.transform.GetComponent<RectTransform>();

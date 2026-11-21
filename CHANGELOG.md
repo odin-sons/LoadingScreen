@@ -2,6 +2,7 @@
 
 ### Unreleased
 
+  * Optional full-screen vignette and color mask in YAML `defaults`, with per-layout overrides.
 ### 0.2.0 (2026-11-20)
 
   * Configurable image folder for `loadingscreen.yaml`, `tips.txt` and images; relative paths start at BepInEx.
