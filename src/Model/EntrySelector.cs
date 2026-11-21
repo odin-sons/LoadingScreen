@@ -50,14 +50,30 @@ public sealed class EntrySelector {
 
   public Selection Select(Situation situation) {
     foreach (EntryList list in Candidates(situation)) {
-      Entry entry = Pick(list);
-
-      if (entry != null) {
-        return new() { Entry = entry, List = list, LayoutName = entry.LayoutName ?? list.LayoutName };
+      Selection selection = SelectFromList(list);
+      if (selection != null) {
+        return selection;
       }
     }
 
     return null;
+  }
+
+  public Selection SelectNext(Selection current, Situation situation) {
+    if (current != null && Candidates(situation).Any(list => ReferenceEquals(list, current.List))) {
+      return SelectFromList(current.List);
+    }
+
+    return Select(situation);
+  }
+
+  public Selection SelectFromList(EntryList list) {
+    if (list == null) {
+      return null;
+    }
+
+    Entry entry = Pick(list);
+    return entry == null ? null : new() { Entry = entry, List = list, LayoutName = entry.LayoutName ?? list.LayoutName };
   }
 
   public void Reset() {

@@ -34,6 +34,7 @@ static class SceneLoaderPatch {
 
   static void SetupSceneLoader(SceneLoader sceneLoader) {
     _loadingImage = sceneLoader.gameLogo.transform.parent.Find("Bkg").GetComponent<Image>();
+    _host = null;
 
     if (SceneLoaderUseLoadingImages.Value && HasImages()) {
       sceneLoader._showLogos = false;
@@ -66,7 +67,7 @@ static class SceneLoaderPatch {
     RefreshAppearance();
 
     _startTime = Time.time;
-    _lastImageTime = _startTime;
+    _lastImageTime = Time.realtimeSinceStartup;
   }
 
   internal static void RefreshAppearance() {
@@ -87,13 +88,13 @@ static class SceneLoaderPatch {
   static void UpdatePostfix(SceneLoader __instance) {
     float time = Time.time;
 
+    float now = Time.realtimeSinceStartup;
     if (SceneLoaderUseLoadingImages.Value
-        && CustomAssets.LoadingImageFiles.Count > 0
-        && time - _lastImageTime >= 10f) {
-      _lastImageTime = time;
-
-      LoadingManager.SetLoadingImage(_loadingImage);
-      __instance.ScaleLerpLoadingImage(_loadingImage);
+        && _host
+        && HasImages()
+        && SlideshowTiming.IsDue(now, _lastImageTime, ChangeImageEverySeconds.Value)) {
+      _lastImageTime = now;
+      ShowNextImage(__instance);
     }
 
     if (SceneLoaderShowProgressText.Value && _loadingText) {

@@ -22,6 +22,8 @@ static class HudPatch {
   }
 
   static bool _loadingScreenState;
+  static float _lastImageTime;
+  static Situation _currentSituation;
 
   [HarmonyPrefix]
   [HarmonyPatch(nameof(Hud.UpdateBlackScreen))]
@@ -32,14 +34,37 @@ static class HudPatch {
   [HarmonyPostfix]
   [HarmonyPatch(nameof(Hud.UpdateBlackScreen))]
   static void UpdateBlackScreenPostfix(Hud __instance) {
-    if (!_loadingScreenState && __instance.m_loadingProgress.activeInHierarchy) {
-      Situation situation = SituationTracker.Consume(out Selection preselected);
+    if (!__instance.m_loadingProgress.activeInHierarchy) {
+      return;
+    }
+
+    float now = Time.realtimeSinceStartup;
+    if (!_loadingScreenState) {
+      _currentSituation = SituationTracker.Consume(out Selection preselected);
+      _lastImageTime = now;
 
       if (!LoadingManager.ShowSituation(
-              LoadingManager.HudHost, situation, __instance.m_loadingTip, preselected)) {
+              LoadingManager.HudHost, _currentSituation, __instance.m_loadingTip, preselected)) {
         LoadingManager.ShowFallback(LoadingManager.HudHost, __instance.m_loadingImage, __instance.m_loadingTip);
         __instance.ScaleLerpLoadingImage(__instance.m_loadingImage);
       }
+
+      return;
+    }
+
+    if (!SlideshowTiming.IsDue(now, _lastImageTime, ChangeImageEverySeconds.Value)) {
+      return;
+    }
+
+    _lastImageTime = now;
+    Selection current = LoadingManager.HudHost ? LoadingManager.HudHost.CurrentSelection : null;
+    Selection next = ScreenConfigLoader.Selector.SelectNext(current, _currentSituation);
+
+    if (next == null
+        || !LoadingManager.ShowSituation(
+            LoadingManager.HudHost, _currentSituation, __instance.m_loadingTip, next)) {
+      LoadingManager.ShowFallback(LoadingManager.HudHost, __instance.m_loadingImage, __instance.m_loadingTip);
+      __instance.ScaleLerpLoadingImage(__instance.m_loadingImage);
     }
   }
 

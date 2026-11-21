@@ -2,6 +2,9 @@
 
 ### Unreleased
 
+  * Optional slideshow on HUD and game start loading screens: `[1 - General] Change image every N seconds` (default
+    0, off). Situational entries cycle within their selected list and respect `order`; zoom restarts per image.
+
 ### 0.5.0
 
   * Optional looped music on layouts, lists and entries, plus one-shot voiced entry text (`sound` and `voice` in YAML).

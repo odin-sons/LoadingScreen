@@ -129,6 +129,61 @@ public class EntrySelectorTests {
 
     Assert.Equal(["f1.jpg", "f2.jpg", "f3.jpg"], picks);
   }
+
+  [Fact]
+  public void NextSelectionStaysInTheOriginalSituationalList() {
+    ScreenConfig config = Config();
+    config.Teleport["Mistlands"] = List("teleport.Mistlands", "m1.jpg", "m2.jpg");
+    config.Teleport["Mistlands"].Order = PickOrder.Sequential;
+    EntrySelector selector = new(config);
+    Selection first = selector.Select(Situation.Teleport("Mistlands"));
+
+    Selection second = selector.SelectNext(first, Situation.Teleport("Mistlands"));
+    Selection third = selector.SelectNext(second, Situation.Teleport("Mistlands"));
+
+    Assert.Same(first.List, second.List);
+    Assert.Equal(["m1.jpg", "m2.jpg", "m1.jpg"], new[] { first.Entry.Image, second.Entry.Image, third.Entry.Image });
+  }
+
+  [Fact]
+  public void NextSelectionRespectsRandomOrderWithoutRepeats() {
+    ScreenConfig config = Config();
+    config.Death["Fall"].Order = PickOrder.Random;
+    EntrySelector selector = new(config, random: new Random(7));
+    Selection current = selector.Select(Situation.Death("Fall"));
+
+    for (int i = 0; i < 100; i++) {
+      Selection next = selector.SelectNext(current, Situation.Death("Fall"));
+      Assert.Same(current.List, next.List);
+      Assert.NotEqual(current.Entry, next.Entry);
+      current = next;
+    }
+  }
+
+  [Fact]
+  public void NextSelectionDoesNotFallBackWhenItsListBecomesUnusable() {
+    ScreenConfig config = Config();
+    bool usable = true;
+    EntrySelector selector = new(config, entry => entry.Image != "m1.jpg" || usable);
+    Selection current = selector.Select(Situation.Teleport("Mistlands"));
+    usable = false;
+
+    Assert.Null(selector.SelectFromList(current.List));
+  }
+
+  [Fact]
+  public void NextSelectionUsesTheNewConfigAfterReload() {
+    ScreenConfig previousConfig = Config();
+    Selection previous = new EntrySelector(previousConfig).Select(Situation.Teleport("Mistlands"));
+    ScreenConfig currentConfig = Config();
+    currentConfig.Teleport["Mistlands"] = List("teleport.Mistlands", "new.jpg");
+    EntrySelector selector = new(currentConfig);
+
+    Selection next = selector.SelectNext(previous, Situation.Teleport("Mistlands"));
+
+    Assert.Same(currentConfig.Teleport["Mistlands"], next.List);
+    Assert.Equal("new.jpg", next.Entry.Image);
+  }
 }
 
 public class DeathCausesTests {
