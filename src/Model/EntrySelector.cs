@@ -6,6 +6,7 @@ using System.Linq;
 
 public enum SituationKind {
   General,
+  Sleep,
   Teleport,
   Death
 }
@@ -13,19 +14,30 @@ public enum SituationKind {
 public readonly struct Situation {
   public SituationKind Kind { get; }
   public IReadOnlyList<string> Keys { get; }
+  public string AttackerPrefab { get; }
 
-  Situation(SituationKind kind, IReadOnlyList<string> keys) {
+  Situation(SituationKind kind, IReadOnlyList<string> keys, string attackerPrefab = null) {
     Kind = kind;
     Keys = keys ?? [];
+    AttackerPrefab = attackerPrefab;
   }
 
   public static Situation General => new(SituationKind.General, []);
+
+  public static Situation Sleep => new(SituationKind.Sleep, []);
 
   public static Situation Teleport(string biome) => new(SituationKind.Teleport, biome == null ? [] : [biome]);
 
   public static Situation Death(params string[] causes) => new(SituationKind.Death, causes);
 
+  public static Situation Death(IReadOnlyList<string> causes, string attackerPrefab) =>
+      new(SituationKind.Death, causes, attackerPrefab);
+
   public override string ToString() {
+    if (Kind == SituationKind.Death && AttackerPrefab != null) {
+      return $"{Kind}({AttackerPrefab}, {string.Join(", ", Keys)})";
+    }
+
     return Keys.Count == 0 ? Kind.ToString() : $"{Kind}({string.Join(", ", Keys)})";
   }
 }
@@ -50,14 +62,30 @@ public sealed class EntrySelector {
 
   public Selection Select(Situation situation) {
     foreach (EntryList list in Candidates(situation)) {
-      Entry entry = Pick(list);
-
-      if (entry != null) {
-        return new() { Entry = entry, List = list, LayoutName = entry.LayoutName ?? list.LayoutName };
+      Selection selection = SelectFromList(list);
+      if (selection != null) {
+        return selection;
       }
     }
 
     return null;
+  }
+
+  public Selection SelectNext(Selection current, Situation situation) {
+    if (current != null && Candidates(situation).Any(list => ReferenceEquals(list, current.List))) {
+      return SelectFromList(current.List);
+    }
+
+    return Select(situation);
+  }
+
+  public Selection SelectFromList(EntryList list) {
+    if (list == null) {
+      return null;
+    }
+
+    Entry entry = Pick(list);
+    return entry == null ? null : new() { Entry = entry, List = list, LayoutName = entry.LayoutName ?? list.LayoutName };
   }
 
   public void Reset() {
@@ -65,6 +93,15 @@ public sealed class EntrySelector {
   }
 
   IEnumerable<EntryList> Candidates(Situation situation) {
+    if (situation.Kind == SituationKind.Sleep) {
+      yield return _config.Sleep;
+    }
+
+    if (situation.Kind == SituationKind.Death && situation.AttackerPrefab != null
+        && _config.Enemy.TryGetValue(situation.AttackerPrefab, out EntryList enemy)) {
+      yield return enemy;
+    }
+
     Dictionary<string, EntryList> specific = situation.Kind switch {
       SituationKind.Teleport => _config.Teleport,
       SituationKind.Death => _config.Death,

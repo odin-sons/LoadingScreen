@@ -18,14 +18,20 @@ public static class LoadingManager {
   sealed record VanillaLook(Sprite Sprite, Color Color, Image.Type Type, bool PreserveAspect);
 
   static readonly Dictionary<Image, VanillaLook> _vanillaLooks = [];
+  public static LoadingSession Session { get; } = new();
 
   static TMP_Text _cachedTipText;
+  static TMP_FontAsset _tipFont;
+  static Material _tipMaterial;
+  static FontStyles _tipStyle;
+  static TMP_Text _continuePrompt;
   static Image _cachedLoadingImage;
   static Image _cachedLoadingBackground;
   static Transform _cachedPanelSeparator;
 
   public static LayerHost HudHost { get; private set; }
   public static LayerHost FejdStartupHost { get; private set; }
+  public static TMP_Text FejdStartupTipText { get; private set; }
 
   public static string CurrentCaption { get; private set; }
 
@@ -34,6 +40,7 @@ public static class LoadingManager {
   public static void RefreshAppearance() {
     if (_cachedLoadingImage) SetupLoadingImage();
     if (_cachedTipText) SetupTipText();
+    if (_continuePrompt) SetupContinuePromptAppearance();
     if (_cachedLoadingBackground) SetupLoadingBackground();
     if (_cachedPanelSeparator) SetupPanelSeparator();
     if (HudHost) HudHost.RefreshAppearance();
@@ -41,36 +48,44 @@ public static class LoadingManager {
   }
 
   public static bool ShowSituation(
-      LayerHost host, Situation situation, TMP_Text tipText, Selection preselected = null) {
-    CurrentCaption = null;
+      LayerHost host, LoadingStage stage, Situation situation, TMP_Text tipText,
+      Selection preselected = null, bool continueSession = false) {
+    if (!continueSession) CurrentCaption = null;
 
     if (!host) {
       return false;
     }
 
-    Selection selection = preselected ?? ScreenConfigLoader.Selector.Select(situation);
+    Selection selection = continueSession ? Session.Selection : preselected ?? ScreenConfigLoader.Selector.Select(situation);
 
     if (selection == null) {
       host.Hide();
       return false;
     }
 
-    bool hasEntryText = !string.IsNullOrEmpty(selection.Entry.Text);
-    string caption = hasEntryText ? selection.Entry.Text : null;
+    string entryText = selection.Entry.GetText(CustomAssets.CurrentLanguageCode);
+    bool hasEntryText = !string.IsNullOrEmpty(entryText);
+    string caption = continueSession ? Session.Caption : hasEntryText ? entryText : null;
 
-    if (!hasEntryText && CaptionUseTipWhenNoText.Value && CustomAssets.GetRandomLoadingTip(out string tip)) {
+    if (!continueSession && !hasEntryText && CaptionUseTipWhenNoText.Value
+        && CustomAssets.GetRandomLoadingTip(out string tip)) {
       caption = tip;
     }
 
-    if (!host.Show(selection, caption, tipText)) {
+    float startedAt = continueSession ? Session.StartedAt : Time.realtimeSinceStartup;
+    if (!continueSession) Session.ResetImages();
+    if (!host.Show(selection, caption, tipText, continueSession ? Session.AnimationElapsed : 0f)) {
       return false;
     }
 
-    LoadingAudio.Play(host, selection, hasEntryText && tipText);
+    LoadingAudio.Play(host, selection, hasEntryText && tipText, continueSession);
 
     LoadingScreen.LogInfo($"Loading screen for {situation}: {selection.List.Name} -> {selection.Entry.Image}");
 
-    CurrentCaption = hasEntryText ? selection.Entry.Text : CaptionUseTipWhenNoText.Value ? null : string.Empty;
+    CurrentCaption = continueSession ? Session.CurrentCaption
+        : hasEntryText ? entryText : CaptionUseTipWhenNoText.Value ? null : string.Empty;
+    if (continueSession) Session.Continue(stage);
+    else Session.Record(stage, selection, caption, CurrentCaption, startedAt);
 
     if (tipText && !host.ShowsOwnText) {
       tipText.SetText(caption ?? string.Empty);
@@ -109,6 +124,16 @@ public static class LoadingManager {
     if (tipText && CustomAssets.GetRandomLoadingTip(out string loadingTipText)) {
       tipText.SetText(loadingTipText);
     }
+  }
+
+  public static void RotateTip(LayerHost host, TMP_Text tipText) {
+    if (!CustomAssets.GetRandomLoadingTip(out string tip)) {
+      return;
+    }
+
+    if (tipText) tipText.SetText(tip);
+    if (host) host.SetCaption(tip);
+    if (Session.Stage == LoadingStage.Menu) Session.SetCaption(tip);
   }
 
   public static void SetupLoadingImage(Image loadingImage = default) {
@@ -209,6 +234,21 @@ public static class LoadingManager {
         .SetPosition(new(defaults.X, defaults.Bottom));
   }
 
+  public static void MatchTipFont(TMP_Text text) {
+    if (!text) return;
+    if (!_tipFont) {
+      _tipFont = text.font;
+      _tipMaterial = text.fontSharedMaterial;
+      _tipStyle = text.fontStyle;
+      return;
+    }
+    if (text.font != _tipFont) {
+      text.font = _tipFont;
+      text.fontSharedMaterial = _tipMaterial;
+    }
+    text.fontStyle = _tipStyle;
+  }
+
   public static void SetupTipText(TMP_Text tipText = default) {
     if (tipText) {
       _cachedTipText = tipText;
@@ -218,6 +258,7 @@ public static class LoadingManager {
       LoadingScreen.LogError($"Could not find a TipText to setup!");
     }
 
+    MatchTipFont(tipText);
     TipDefaults defaults = ScreenConfigLoader.Current.Defaults.Tip;
     tipText
         .SetAlignment(TextAlignmentOptions.Top)
@@ -232,6 +273,34 @@ public static class LoadingManager {
         .SetSizeDelta(new(-50f, 78f));
   }
 
+  public static void ShowContinuePrompt(Hud hud, bool show) {
+    if (show && !_continuePrompt) {
+      _continuePrompt = Object.Instantiate(hud.m_loadingTip, hud.m_loadingProgress.transform);
+      _continuePrompt.name = "ContinuePrompt";
+      _continuePrompt.SetText("Press any key to continue");
+      SetupContinuePromptAppearance();
+    }
+
+    if (_continuePrompt) {
+      _continuePrompt.gameObject.SetActive(show);
+    }
+  }
+
+  static void SetupContinuePromptAppearance() {
+    ContinuePromptDefaults defaults = ScreenConfigLoader.Current.Defaults.ContinuePrompt;
+    _continuePrompt
+        .SetAlignment(TextAlignmentOptions.Center)
+        .SetTextWrappingMode(TextWrappingModes.Normal)
+        .SetFontSize(defaults.Size)
+        .SetColor(ToColor(defaults.Color));
+
+    _continuePrompt.GetComponent<RectTransform>()
+        .SetAnchorMin(Vector2.zero)
+        .SetAnchorMax(Vector2.right)
+        .SetPosition(new(defaults.X, defaults.Bottom))
+        .SetSizeDelta(new(-50f, 40f));
+  }
+
   internal static Color ToColor(ColorValue value) {
     return new Color32(value.R, value.G, value.B, value.A);
   }
@@ -242,6 +311,7 @@ public static class LoadingManager {
     // FejdStartup.m_menuAnimator locks the vanilla TMP_Text UI state, so work-around is to clone it to a new object.
     TMP_Text sourceLoadingText = fejdStartup.m_loading.transform.Find("Text").GetComponent<TMP_Text>();
     TMP_Text loadingText = Object.Instantiate(sourceLoadingText, fejdStartup.m_loading.transform);
+    FejdStartupTipText = loadingText;
     loadingText.name = sourceLoadingText.name;
     Object.Destroy(sourceLoadingText.gameObject);
 
@@ -257,7 +327,7 @@ public static class LoadingManager {
     FejdStartupHost = LayerHost.Attach(loadingImage);
     FejdStartupHost.Separator = panelSeparator;
 
-    if (!ShowSituation(FejdStartupHost, Situation.General, loadingText)) {
+    if (!ShowSituation(FejdStartupHost, LoadingStage.Menu, Situation.General, loadingText)) {
       ShowFallback(FejdStartupHost, loadingImage, loadingText);
     }
   }

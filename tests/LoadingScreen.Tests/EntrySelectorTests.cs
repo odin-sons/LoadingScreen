@@ -17,6 +17,7 @@ public class EntrySelectorTests {
 
   static ScreenConfig Config() {
     ScreenConfig config = new() { General = List("general", "g1.jpg", "g2.jpg") };
+    config.Sleep = List("sleep", "s1.jpg");
     config.Teleport["Mistlands"] = List("teleport.Mistlands", "m1.jpg");
     config.Death["Fall"] = List("death.Fall", "f1.jpg", "f2.jpg", "f3.jpg");
     return config;
@@ -35,6 +36,22 @@ public class EntrySelectorTests {
     Selection selection = new EntrySelector(Config()).Select(Situation.Death("Fall"));
 
     Assert.StartsWith("f", selection.Entry.Image);
+  }
+
+  [Fact]
+  public void SleepPrefersItsOwnListAndFallsBackToGeneral() {
+    ScreenConfig config = Config();
+    Assert.Equal("s1.jpg", new EntrySelector(config).Select(Situation.Sleep).Entry.Image);
+
+    config.Sleep.Entries.Clear();
+    Assert.Equal("general", new EntrySelector(config).Select(Situation.Sleep).List.Name);
+  }
+
+  [Fact]
+  public void SleepFallsBackWhenItsEntriesAreUnusable() {
+    EntrySelector selector = new(Config(), entry => entry.Image != "s1.jpg");
+
+    Assert.Equal("general", selector.Select(Situation.Sleep).List.Name);
   }
 
   [Fact]
@@ -129,9 +146,70 @@ public class EntrySelectorTests {
 
     Assert.Equal(["f1.jpg", "f2.jpg", "f3.jpg"], picks);
   }
+
+  [Fact]
+  public void NextSelectionStaysInTheOriginalSituationalList() {
+    ScreenConfig config = Config();
+    config.Teleport["Mistlands"] = List("teleport.Mistlands", "m1.jpg", "m2.jpg");
+    config.Teleport["Mistlands"].Order = PickOrder.Sequential;
+    EntrySelector selector = new(config);
+    Selection first = selector.Select(Situation.Teleport("Mistlands"));
+
+    Selection second = selector.SelectNext(first, Situation.Teleport("Mistlands"));
+    Selection third = selector.SelectNext(second, Situation.Teleport("Mistlands"));
+
+    Assert.Same(first.List, second.List);
+    Assert.Equal(["m1.jpg", "m2.jpg", "m1.jpg"], new[] { first.Entry.Image, second.Entry.Image, third.Entry.Image });
+  }
+
+  [Fact]
+  public void NextSelectionRespectsRandomOrderWithoutRepeats() {
+    ScreenConfig config = Config();
+    config.Death["Fall"].Order = PickOrder.Random;
+    EntrySelector selector = new(config, random: new Random(7));
+    Selection current = selector.Select(Situation.Death("Fall"));
+
+    for (int i = 0; i < 100; i++) {
+      Selection next = selector.SelectNext(current, Situation.Death("Fall"));
+      Assert.Same(current.List, next.List);
+      Assert.NotEqual(current.Entry, next.Entry);
+      current = next;
+    }
+  }
+
+  [Fact]
+  public void NextSelectionDoesNotFallBackWhenItsListBecomesUnusable() {
+    ScreenConfig config = Config();
+    bool usable = true;
+    EntrySelector selector = new(config, entry => entry.Image != "m1.jpg" || usable);
+    Selection current = selector.Select(Situation.Teleport("Mistlands"));
+    usable = false;
+
+    Assert.Null(selector.SelectFromList(current.List));
+  }
+
+  [Fact]
+  public void NextSelectionUsesTheNewConfigAfterReload() {
+    ScreenConfig previousConfig = Config();
+    Selection previous = new EntrySelector(previousConfig).Select(Situation.Teleport("Mistlands"));
+    ScreenConfig currentConfig = Config();
+    currentConfig.Teleport["Mistlands"] = List("teleport.Mistlands", "new.jpg");
+    EntrySelector selector = new(currentConfig);
+
+    Selection next = selector.SelectNext(previous, Situation.Teleport("Mistlands"));
+
+    Assert.Same(currentConfig.Teleport["Mistlands"], next.List);
+    Assert.Equal("new.jpg", next.Entry.Image);
+  }
 }
 
 public class DeathCausesTests {
+  static EntryList List(string name, string image) {
+    EntryList list = new() { Name = name };
+    list.Entries.Add(new Entry { Image = image });
+    return list;
+  }
+
   [Fact]
   public void EnemyHitPrefersDominantDamageType() {
     string[] keys = DeathCauses.Keys("EnemyHit", new Dictionary<string, float> { ["Slash"] = 10f, ["Frost"] = 30f });
@@ -140,10 +218,12 @@ public class DeathCausesTests {
   }
 
   [Fact]
-  public void EnemyComesBeforeDamageTypeAndHitType() {
-    string[] keys = DeathCauses.Keys("EnemyHit", new Dictionary<string, float> { ["Frost"] = 30f }, "Dragon");
+  public void EnemyIsCarriedSeparatelyFromDamageAndHitType() {
+    string[] keys = DeathCauses.Keys("EnemyHit", new Dictionary<string, float> { ["Frost"] = 30f });
+    Situation situation = Situation.Death(keys, "Dragon");
 
-    Assert.Equal(["enemy:Dragon", "Frost", "EnemyHit"], keys);
+    Assert.Equal(["Frost", "EnemyHit"], situation.Keys);
+    Assert.Equal("Dragon", situation.AttackerPrefab);
   }
 
   [Fact]
@@ -164,5 +244,20 @@ public class DeathCausesTests {
     Assert.Equal("frost.jpg", selector.Select(Situation.Death("Frost", "EnemyHit")).Entry.Image);
     Assert.Equal("enemy.jpg", selector.Select(Situation.Death("Slash", "EnemyHit")).Entry.Image);
     Assert.Equal("g.jpg", selector.Select(Situation.Death("Fall")).Entry.Image);
+  }
+
+  [Fact]
+  public void EnemyListPrecedesDamageAndHitTypeAndFallsBackWhenUnusable() {
+    ScreenConfig config = new();
+    config.General.Entries.Add(new Entry { Image = "general.jpg" });
+    config.Enemy["Dragon"] = List("enemy.Dragon", "dragon.jpg");
+    config.Death["Frost"] = List("death.Frost", "frost.jpg");
+    config.Death["EnemyHit"] = List("death.EnemyHit", "hit.jpg");
+    Situation death = Situation.Death(["Frost", "EnemyHit"], "dragon");
+
+    Assert.Equal("dragon.jpg", new EntrySelector(config).Select(death).Entry.Image);
+    Assert.Equal("frost.jpg", new EntrySelector(config, entry => entry.Image != "dragon.jpg").Select(death).Entry.Image);
+    Assert.Equal("hit.jpg", new EntrySelector(config, entry => entry.Image != "dragon.jpg" && entry.Image != "frost.jpg").Select(death).Entry.Image);
+    Assert.Equal("general.jpg", new EntrySelector(config, entry => entry.Image == "general.jpg").Select(death).Entry.Image);
   }
 }

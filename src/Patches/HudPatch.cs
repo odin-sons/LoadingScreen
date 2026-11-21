@@ -18,28 +18,115 @@ static class HudPatch {
   [HarmonyPostfix]
   [HarmonyPatch(nameof(Hud.Awake))]
   static void AwakePostfix(Hud __instance) {
+    _holdState.Reset();
     LoadingManager.SetupHud(__instance);
   }
 
   static bool _loadingScreenState;
+  static bool _wasSleeping;
+  static float _lastImageTime;
+  static float _lastTipTime;
+  static Situation _currentSituation;
+  static readonly LoadingHoldState _holdState = new();
 
   [HarmonyPrefix]
   [HarmonyPatch(nameof(Hud.UpdateBlackScreen))]
-  static void UpdateBlackScreenPrefix(Hud __instance) {
+  static bool UpdateBlackScreenPrefix(Hud __instance, Player player) {
+    bool stillSleeping = ShowLoadingScreenWhileSleeping.Value && Player.m_localPlayer && Player.m_localPlayer.IsSleeping();
+    if (_wasSleeping && !stillSleeping) {
+      __instance.m_loadingProgress.SetActive(false);
+    }
+
     _loadingScreenState = __instance.m_loadingProgress.activeInHierarchy;
+    bool ready = player && !player.IsDead() && !player.IsTeleporting() && !player.IsSleeping()
+        && Game.instance && !Game.instance.IsShuttingDown();
+    bool allowed = HoldLoadingScreen.Value && !Application.isBatchMode && !CinematicsManager.IsPlaying()
+        && !stillSleeping;
+    bool dismissed = Input.anyKeyDown || ZInput.GetMouseButtonDown(0) || ZInput.GetMouseButtonDown(1)
+        || ZInput.GetMouseButtonDown(2);
+    bool holding = _holdState.Update(
+        _loadingScreenState, ready, allowed, dismissed, Time.realtimeSinceStartup, MaximumHoldSeconds.Value);
+    LoadingManager.ShowContinuePrompt(__instance, holding);
+
+    if (holding) {
+      __instance.m_loadingScreen.gameObject.SetActive(true);
+      __instance.m_loadingScreen.alpha = 1f;
+      __instance.m_loadingProgress.SetActive(true);
+    }
+
+    return !holding;
   }
 
   [HarmonyPostfix]
   [HarmonyPatch(nameof(Hud.UpdateBlackScreen))]
   static void UpdateBlackScreenPostfix(Hud __instance) {
-    if (!_loadingScreenState && __instance.m_loadingProgress.activeInHierarchy) {
-      Situation situation = SituationTracker.Consume(out Selection preselected);
+    bool sleeping = ShowLoadingScreenWhileSleeping.Value && Player.m_localPlayer && Player.m_localPlayer.IsSleeping();
+    bool newScreen = !_loadingScreenState || sleeping != _wasSleeping;
+    _wasSleeping = sleeping;
+
+    if (sleeping) {
+      __instance.m_loadingProgress.SetActive(true);
+      if (newScreen) {
+        __instance.m_sleepingProgress.transform.SetAsLastSibling();
+      }
+    }
+
+    if (!__instance.m_loadingProgress.activeInHierarchy) {
+      if (LoadingManager.Session.Stage == LoadingStage.Hud) LoadingManager.Session.Reset();
+      return;
+    }
+
+    float now = Time.realtimeSinceStartup;
+    if (newScreen) {
+      Selection preselected = null;
+      _currentSituation = sleeping ? Situation.Sleep : SituationTracker.Consume(out preselected);
+      bool continueSession = LoadingManager.Session.CanContinue(LoadingStage.Hud, _currentSituation);
+      _lastImageTime = continueSession ? LoadingManager.Session.StartedAt : now;
+      _lastTipTime = now;
 
       if (!LoadingManager.ShowSituation(
-              LoadingManager.HudHost, situation, __instance.m_loadingTip, preselected)) {
+              LoadingManager.HudHost, LoadingStage.Hud, _currentSituation, __instance.m_loadingTip,
+              preselected, continueSession)) {
         LoadingManager.ShowFallback(LoadingManager.HudHost, __instance.m_loadingImage, __instance.m_loadingTip);
         __instance.ScaleLerpLoadingImage(__instance.m_loadingImage);
       }
+
+      if (sleeping) {
+        __instance.m_sleepingProgress.SetActive(LoadingManager.HudHost.ShowSleepUi);
+      }
+
+      return;
+    }
+
+    if (sleeping) {
+      __instance.m_sleepingProgress.SetActive(LoadingManager.HudHost.ShowSleepUi);
+    }
+
+    if (!SlideshowTiming.IsDue(now, _lastImageTime, ChangeImageEverySeconds.Value)) {
+      if (TipRotation.IsDue(
+              now, _lastTipTime, ChangeTipEverySeconds.Value, LoadingManager.CurrentCaption,
+              CustomAssets.LoadingTips.Count)) {
+        _lastTipTime = now;
+        LoadingManager.RotateTip(LoadingManager.HudHost, __instance.m_loadingTip);
+      }
+
+      return;
+    }
+
+    _lastImageTime = now;
+    _lastTipTime = now;
+    Selection current = LoadingManager.HudHost ? LoadingManager.HudHost.CurrentSelection : null;
+    Selection next = ScreenConfigLoader.Selector.SelectNext(current, _currentSituation);
+
+    if (next == null
+        || !LoadingManager.ShowSituation(
+            LoadingManager.HudHost, LoadingStage.Hud, _currentSituation, __instance.m_loadingTip, next)) {
+      LoadingManager.ShowFallback(LoadingManager.HudHost, __instance.m_loadingImage, __instance.m_loadingTip);
+      __instance.ScaleLerpLoadingImage(__instance.m_loadingImage);
+    }
+
+    if (sleeping) {
+      __instance.m_sleepingProgress.SetActive(LoadingManager.HudHost.ShowSleepUi);
     }
   }
 
@@ -137,9 +224,14 @@ static class HudPatch {
     }
 
     if (CustomAssets.GetRandomLoadingTip(out string loadingTip)) {
-      return loadingTip;
+      text = loadingTip;
     }
 
+    if (LoadingManager.HudHost) {
+      LoadingManager.HudHost.SetCaption(text);
+    }
+
+    _lastTipTime = Time.realtimeSinceStartup;
     return text;
   }
 }

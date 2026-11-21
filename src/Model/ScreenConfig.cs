@@ -38,6 +38,7 @@ public sealed class Layer {
 public sealed class Layout {
   public string Name { get; set; }
   public string Sound { get; set; }
+  public bool ShowSleepUi { get; set; } = true;
   public VignetteSettings Vignette { get; set; }
   public MaskSettings Mask { get; set; }
   public List<Layer> Layers { get; } = [];
@@ -55,9 +56,16 @@ public sealed class Entry {
   public string Sound { get; set; }
   public string Voice { get; set; }
   public string Text { get; set; }
+  public Dictionary<string, string> Translations { get; } = new(StringComparer.OrdinalIgnoreCase);
   public string LayoutName { get; set; }
   public Placement Place { get; set; } = new();
   public List<Condition> Conditions { get; } = [];
+
+  public string GetText(string code) {
+    if (code != null && Translations.TryGetValue(code, out string localized)) return localized;
+    if (Translations.TryGetValue("en", out string english)) return english;
+    return Text ?? Translations.Values.FirstOrDefault();
+  }
 }
 
 public enum PickOrder {
@@ -86,6 +94,13 @@ public sealed class TipDefaults {
   public ColorValue Color { get; set; } = new(255, 255, 255);
 }
 
+public sealed class ContinuePromptDefaults {
+  public float X { get; set; }
+  public float Bottom { get; set; } = 30f;
+  public int Size { get; set; } = 20;
+  public ColorValue Color { get; set; } = new(255, 255, 255);
+}
+
 public sealed class SeparatorDefaults {
   public bool Show { get; set; } = true;
   public float X { get; set; }
@@ -106,6 +121,7 @@ public sealed class ScreenDefaults : Placement {
   public MaskSettings Mask { get; set; }
   public ZoomDefaults Zoom { get; } = new();
   public TipDefaults Tip { get; } = new();
+  public ContinuePromptDefaults ContinuePrompt { get; } = new();
   public SeparatorDefaults Separator { get; } = new();
   public SpinnerDefaults Spinner { get; } = new();
 }
@@ -115,10 +131,12 @@ public sealed class ScreenConfig {
   public PickOrder Order { get; set; } = PickOrder.Random;
   public Dictionary<string, Layout> Layouts { get; } = new(StringComparer.OrdinalIgnoreCase);
   public EntryList General { get; set; } = new() { Name = "general" };
+  public EntryList Sleep { get; set; } = new() { Name = "sleep" };
   public Dictionary<string, EntryList> Teleport { get; } = new(StringComparer.OrdinalIgnoreCase);
   public Dictionary<string, EntryList> Death { get; } = new(StringComparer.OrdinalIgnoreCase);
+  public Dictionary<string, EntryList> Enemy { get; } = new(StringComparer.OrdinalIgnoreCase);
 
-  public IEnumerable<EntryList> AllLists => new[] { General }.Concat(Teleport.Values).Concat(Death.Values);
+  public IEnumerable<EntryList> AllLists => new[] { General, Sleep }.Concat(Teleport.Values).Concat(Death.Values).Concat(Enemy.Values);
 
   public int EntryCount => AllLists.Sum(list => list.Entries.Count);
 

@@ -8,12 +8,18 @@ using global::LoadingScreen.Model;
 public static class PluginConfig {
   public static ConfigEntry<bool> IsModEnabled { get; private set; }
   public static ConfigEntry<string> ImageFolder { get; private set; }
+  public static ConfigEntry<string> TextLanguage { get; private set; }
+  public static ConfigEntry<int> ChangeImageEverySeconds { get; private set; }
+  public static ConfigEntry<int> ChangeTipEverySeconds { get; private set; }
 
   public static ConfigEntry<bool> SceneLoaderUseLoadingImages { get; private set; }
   public static ConfigEntry<bool> SceneLoaderShowProgressText { get; private set; }
 
   public static ConfigEntry<bool> ShowLoadingScreenImmediatelyOnDeath { get; private set; }
   public static ConfigEntry<bool> ShowLoadingScreenOnTeleport { get; private set; }
+  public static ConfigEntry<bool> ShowLoadingScreenWhileSleeping { get; private set; }
+  public static ConfigEntry<bool> HoldLoadingScreen { get; private set; }
+  public static ConfigEntry<int> MaximumHoldSeconds { get; private set; }
   public static ConfigEntry<bool> CaptionUseTipWhenNoText { get; private set; }
 
   public static ConfigEntry<bool> ServeImagesToClients { get; private set; }
@@ -43,12 +49,58 @@ public static class PluginConfig {
             "Folder with loadingscreen.yaml, tips.txt, and images. Relative paths start at the BepInEx folder. "
                 + "Needs a game restart.");
 
+    TextLanguage =
+        config.BindInOrder(
+            General,
+            "Text language",
+            "Game",
+            "Language for tips and entry text. Game follows Valheim's language; enter an ISO language code "
+                + "such as ru or pt-BR to override it. Unknown codes use the game language.");
+
+    ChangeImageEverySeconds =
+        config.BindInOrder(
+            General,
+            "Change image every N seconds",
+            0,
+            "Change the image while a loading screen stays visible. 0 turns the slideshow off. "
+                + "Applies to in-game and game start loading screens.");
+
+    ChangeTipEverySeconds =
+        config.BindInOrder(
+            General,
+            "Change tip every N seconds",
+            0,
+            "Show another tip from tips.txt while a loading screen stays visible. 0 turns tip rotation off. "
+                + "Entry text stays fixed.");
+
     ShowLoadingScreenOnTeleport =
         config.BindInOrder(
             Screens,
             "Loading screen on portal teleport",
             true,
             "Show a loading screen instead of the game's portal swirl. Needed for the per-biome teleport screens.");
+
+    ShowLoadingScreenWhileSleeping =
+        config.BindInOrder(
+            Screens,
+            "Loading screen while sleeping",
+            false,
+            "Show a loading image and tip while sleeping. Uses the sleep situation, then general; keeps the game's sleep text and spinner unless the selected layout hides them.");
+
+    HoldLoadingScreen =
+        config.BindInOrder(
+            Screens,
+            "Hold loading screen until a key is pressed",
+            false,
+            "After loading finishes, keep the screen and tip visible until a key is pressed or the mouse is clicked. Never holds during cinematics or on a dedicated server.");
+
+    MaximumHoldSeconds =
+        config.BindInOrder(
+            Screens,
+            "Maximum hold time in seconds",
+            30,
+            "Close a held loading screen automatically after this many seconds, even without input.",
+            new AcceptableValueRange<int>(1, 300));
 
     ShowLoadingScreenImmediatelyOnDeath =
         config.BindInOrder(
@@ -89,7 +141,7 @@ public static class PluginConfig {
     DownloadServerImages =
         config.BindInOrder(
             Server,
-            "Use the server's screens (player)",
+            "Use screens from the server (player)",
             true,
             "As a player: while connected, use the server's loading screens and download their images in the "
                 + "background into BepInEx/cache/LoadingScreen.");
@@ -116,13 +168,19 @@ public static class PluginConfig {
         config.BindInOrder(Sound, "Mute game sounds on loading screens", GameSounds.None,
             "Game sounds to fade out while a loading screen is visible: None, or Effects (such as the portal hum), Music, or both separated by a comma.");
 
+    sync.Register(ChangeImageEverySeconds);
+    sync.Register(ChangeTipEverySeconds);
     sync.Register(ShowLoadingScreenOnTeleport);
+    sync.Register(ShowLoadingScreenWhileSleeping);
+    sync.Register(HoldLoadingScreen);
+    sync.Register(MaximumHoldSeconds);
     sync.Register(ShowLoadingScreenImmediatelyOnDeath);
     sync.Register(CaptionUseTipWhenNoText);
     sync.RegisterLock(LockSyncedSettings);
 
     sync.Register(IsModEnabled, clientControlled: true);
     sync.Register(ImageFolder, clientControlled: true);
+    sync.Register(TextLanguage, clientControlled: true);
     sync.Register(SceneLoaderUseLoadingImages, clientControlled: true);
     sync.Register(SceneLoaderShowProgressText, clientControlled: true);
     sync.Register(ServeImagesToClients, clientControlled: true);

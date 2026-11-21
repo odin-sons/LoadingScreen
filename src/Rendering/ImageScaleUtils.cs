@@ -19,17 +19,14 @@ public static class ImageScaleUtils {
   }
 
   public static IEnumerator ScaleLerp(
-      Transform transform, Vector3 startScale, Vector3 endScale, float lerpDuration) {
+      Transform transform, Vector3 startScale, Vector3 endScale, float lerpDuration,
+      float elapsed = 0f) {
     transform.localScale = startScale;
-    float timeElapsed = 0f;
+    float startedAt = Time.realtimeSinceStartup - Mathf.Max(0f, elapsed);
+    float timeElapsed;
 
-    while (timeElapsed < lerpDuration) {
-      float t = timeElapsed / lerpDuration;
-      t = t * t * (3f - (2f * t));
-
-      transform.localScale = Vector3.Lerp(startScale, endScale, t);
-      timeElapsed += Time.deltaTime;
-
+    while ((timeElapsed = Time.realtimeSinceStartup - startedAt) < lerpDuration) {
+      transform.localScale = Vector3.Lerp(startScale, endScale, ZoomTiming.Progress(timeElapsed, lerpDuration));
       yield return null;
     }
 

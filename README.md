@@ -34,7 +34,7 @@ on Unity, but **the mod has not been tested in the game yet**. See the
 - **Layered layouts.** A screen is a stack of layers (solid colors, fixed images, random image pools, the chosen
   entry's image, the caption), each sized and positioned on its own, with gradient edges and an optional slow zoom.
   Two presets are included in the example config.
-- **Captions.** An entry can carry its own text; without it, a tip from `tips.txt` is shown.
+- **Captions.** An entry can carry plain or translated text; without it, a tip from the selected language's tip file is shown.
 - **Loading sounds.** Loop music for a layout, list or entry; play an entry's voiced tip once when its text appears.
 - **Conditions.** An entry can be limited to players who, for example, have never held a Wisplight or have not
   defeated a boss yet, so a tip only reaches the players who need it.
@@ -58,14 +58,15 @@ By default, these files live in `BepInEx/config/LoadingScreen/`:
 | File | Purpose |
 |---|---|
 | `loadingscreen.yaml` | Situations, layouts, placement and appearance (below) |
-| `tips.txt` | One tip per line |
+| `tips.txt` | One tip per line; fallback when a language-specific file is absent |
+| `tips.<code>.txt` | Optional translated tips, for example `tips.ru.txt` |
 | `*.png`, `*.jpg` at the top level | Plain images, used when no situational entry applies |
 | `.ogg`, `.wav` in the config folder | Optional music and voiced tips referenced from `loadingscreen.yaml` |
 
 Set `[1 - General] Image folder` in `BepInEx/config/Odin_Sons.LoadingScreen.cfg` to use another folder. The
 default is `config/LoadingScreen`. Relative paths start at the BepInEx folder, so `plugins/MyPack/screens` means
 `BepInEx/plugins/MyPack/screens`; absolute paths also work. Restart the game after changing this setting. The chosen
-folder holds `loadingscreen.yaml`, `tips.txt`, images and audio clips.
+folder holds `loadingscreen.yaml`, tip files, images and audio clips.
 
 Behavior switches are in `BepInEx/config/Odin_Sons.LoadingScreen.cfg`; appearance is in the YAML `defaults` section.
 
@@ -76,12 +77,40 @@ as soon as the screen closes. `Mute game sounds on loading screens` (`None` by d
 `Effects` (such as the portal hum), `Music`, or both (`Effects, Music`) while a loading screen is visible, and restores them when it closes. Audio paths are relative to the config folder, with `.ogg` and `.wav` supported. Each
 clip is limited to 8 MiB.
 
+`[1 - General] Text language` defaults to `Game`, following Valheim's selected language. Set an ISO language code,
+such as `ru` or `pt-BR`, to force a language for tips and entry text. Unknown codes use the game language. The mod
+looks for `tips.<code>.txt` first, then `tips.txt`. Each file has one tip per line; a missing plain file is created
+empty. Language changes take effect on the next tip or screen selection. The game's `Chinese` and `Chinese_Trad`
+use `zh-CN` and `zh-TW`; `Portuguese_European` and `Portuguese_Brazilian` use `pt` and `pt-BR`.
+
+Set `[1 - General] Change image every N seconds` to a positive number to change images while the HUD or game start
+loading screen stays visible. The default `0` turns the slideshow off. When a situational entry is showing, each
+change picks another usable entry from that same list and follows its `order` setting. The image zoom starts again
+on each change.
+
+Set `[1 - General] Change tip every N seconds` to a positive number to show another line from `tips.txt` while a HUD
+or main-menu loading screen stays visible. The default `0` turns tip rotation off. An entry's own text stays fixed;
+entries without text rotate tips when `[2 - Situations] Random tip when an entry has no text` is on. Tip rotation also
+works with a layout's `text: caption` layer. The game's arrow keys still advance tips manually. With more than one
+tip, the next pick differs from the previous one.
+
+Set `[2 - Situations] Loading screen while sleeping` to `true` to show an image and tip during sleep (default: off).
+The game's sleep text and spinner stay visible above the image. A sleep-specific layout can hide them with
+`showSleepUi: false` and use its own layers instead. Image slideshows and tip rotation also apply while sleeping.
+
+Set `[2 - Situations] Hold loading screen until a key is pressed` to `true` to keep the HUD loading screen and tip
+visible after loading finishes (default: off). A separate "Press any key to continue" line appears; any key or mouse
+click dismisses it. `[2 - Situations] Maximum hold time in seconds` closes it automatically after 30 seconds by
+default (allowed: 1 to 300). The hold never runs on dedicated servers or during cinematics. Style the prompt with
+`defaults.continuePrompt` in `loadingscreen.yaml`.
+
 ### Selection
 
 | Loading screen | First choice | Then |
 |---|---|---|
 | Portal teleport | `situations.teleport.<destination biome>` | `situations.general`, then the plain images |
 | Respawn | `situations.death.<cause>` | `situations.general`, then the plain images |
+| Sleep (when enabled) | `situations.sleep` | `situations.general`, then the plain images |
 | Anything else, main menu, game start | `situations.general` | the plain images |
 
 - Biomes: `Meadows`, `BlackForest`, `Swamp`, `Mountain`, `Plains`, `Mistlands`, `AshLands`, `DeepNorth`, `Ocean`.
@@ -94,8 +123,8 @@ clip is limited to 8 MiB.
 - For `EnemyHit`, `PlayerHit`, `Turret`, `Catapult` and `Undefined`, the dominant damage type of the killing hit is
   tried first: `Blunt`, `Slash`, `Pierce`, `Chop`, `Pickaxe`, `Fire`, `Frost`, `Lightning`, `Poison`, `Spirit`.
   Example: a frost drake kill uses `death.Frost` if it exists, then `death.EnemyHit`, then `general`.
-- A kill by a creature tries `death.enemy.<prefab name>` before everything else, for example `death.enemy.Troll`
-  or `death.enemy.Hatchling` (a drake; `Dragon` is Moder). The cause chain is a fallback, not a choice: each list is tried in turn until one has a
+- A kill by a creature tries `situations.enemy.<prefab name>` before the damage and hit type lists, for example `enemy.Troll`
+  or `enemy.Hatchling` (a drake; `Dragon` is Moder). Prefab names are free-form, including modded creatures. Each list is tried in turn until one has a
   usable entry, so `death.EnemyHit` still catches every enemy kill whose damage type has no list.
 - Within a list an entry is picked at random, never the same one twice in a row. `order: sequential` at the top of
   the file, or on one list next to `entries`, shows the usable entries in config order instead, wrapping around.
@@ -111,10 +140,13 @@ situations:
     layout: logo-over-backdrops
     entries:
       - image: general/valheim.jpg
-        text: Skol!
+        text: { en: Skol!, ru: Скол! }
         sound: music/forest.ogg
         voice: voice/welcome.ogg
       - general/another.jpg    # an image without text
+  sleep:
+    - image: sleep/night.jpg
+      text: Rest until morning.
   teleport:
     Mistlands:
       - image: mistlands/fog.jpg
@@ -123,6 +155,8 @@ situations:
         place: { position: { anchor: right, x: -5% } }   # placement for this image only
   death:
     Fall: [ death/fall.jpg ]
+  enemy:
+    Troll: [ death/troll.jpg ]
 ```
 
 Image paths are relative to the config folder; `.png`, `.jpg` and `.jpeg` are supported, up to 8192 px per side
@@ -135,6 +169,10 @@ own image if there is none.
 Add `sound: music/forest.ogg` to a layout, entry list or entry. The entry's sound takes priority over the list's,
 then the layout's; it loops while that screen is visible. Add `voice: voice/welcome.wav` to an entry with `text` to
 play it once when the entry's text appears. A voice is not played for a random tip substituted for missing entry text.
+
+Entry `text` can be a plain string or a mapping of ISO language codes to strings, such as
+`text: { en: Welcome, ru: Добро пожаловать }`. For a missing translation, `en` is used, then the first available
+translation. A plain string is shown in every language. This also applies to text-only entries and layout captions.
 
 ### Conditions
 
@@ -366,14 +404,14 @@ situations:
         when: { notKnownItem: MooseHide }
       - text: Bloodgold is the metal of the north.
         when: { notKnownItem: Gold }
+  enemy:
+    Hatchling:
+      - text: Drakes spit frost from above. Frost resistance and a bow help.
+    Troll:
+      - text: Trolls hit hard but slowly. Dodge, then strike from behind.
+    Deathsquito:
+      - text: Deathsquitos die to one arrow. Wear armor in the Plains.
   death:
-    enemy:
-      Hatchling:
-        - text: Drakes spit frost from above. Frost resistance and a bow help.
-      Troll:
-        - text: Trolls hit hard but slowly. Dodge, then strike from behind.
-      Deathsquito:
-        - text: Deathsquitos die to one arrow. Wear armor in the Plains.
     Freezing:
       - text: Frost resistance mead or a wolf cape keeps the cold away.
         when: { notKnownItem: [MeadFrostResist, CapeWolf] }
@@ -431,31 +469,35 @@ situations:
 ```yaml
 layouts:
   logo-over-backdrops:
+    showSleepUi: false         # only during sleep: hide the game's sleep text and spinner
     vignette: { strength: 0.7 } # override one default effect value on this layout
     layers:                    # drawn in order, the first is at the back
       - color: "#000000"       # solid fill
       - id: backdrop
-        source: entry          # the chosen entry's image
-        fit: cover
-        fade: { sides: [bottom], color: "#000000", size: 25% }
-      - image: common/logo.png # one fixed image; "images: [a.png, b.png]" picks one per screen
-        fit: { width: 30% }
-        position: { anchor: top, y: 8% }
+        image: entry          # the chosen entry's image
+        place:
+          fit: cover
+          fade: { sides: [bottom], color: "#000000", size: 25% }
+      - image: common/logo.png # one fixed image; "image: [a.png, b.png]" picks one per screen
+        place: { fit: { width: 30% }, position: { anchor: top, y: 8% } }
       - text: caption          # the entry text or a tip
         size: 28
         color: "#FFFFFF"
         align: center
         background: "#00000099"
-        fit: { width: 50% }
-        position: { anchor: bottom, y: -6% }
-      - separator: game        # the game's ornament line
+        place: { fit: { width: 50% }, position: { anchor: bottom, y: -6% } }
+      - image: separator        # the game's ornament line
         color: "#FFFFFFCC"     # optional tint
-        fit: { width: 35% }
-        position: { anchor: bottom, y: -14% }
+        place: { fit: { width: 35% }, position: { anchor: bottom, y: -14% } }
 ```
 
-Placement options, accepted in `defaults`, on a layout, on a layer and in an entry's `place`. The most specific
-value wins: entry `place`, then layer, then layout, then `defaults`.
+Placement options go under `place` in `defaults`, layouts, layers and entries. The most specific
+value wins: entry, then layer, then layout, then defaults. For example, `defaults.place: { fit: contain }`.
+
+Layer `image` accepts one path, a list of paths (one picked per screen), `entry` (the selected entry's image), or
+`separator` (the game's ornament line). The exact extensionless values `entry` and `separator` are keywords;
+use `entry.png` or `separator.png` for files with those names. A layer has one content key: `image`, `text`, or
+`color`. On an `image: separator` layer, `color` is an optional tint.
 
 | Option | Values |
 |---|---|
@@ -471,12 +513,14 @@ All keys are optional. Missing or invalid values use the built-in values shown h
 
 ```yaml
 defaults:
+  place: { fit: contain, position: { anchor: center } }
   background: "#000000"            # color behind the loading image
   tint: "#FFFFFF"                  # color multiplied over entry and plain images
   vignette: { color: "#000000", size: 25%, strength: 0.5 }
   mask: { color: "#000000", opacity: 0.25 }
   zoom: { enabled: true, amount: 1.05, seconds: 15 }
   tip: { x: 0, bottom: 90, size: 24, color: "#FFFFFF" }
+  continuePrompt: { x: 0, bottom: 30, size: 20, color: "#FFFFFF" }
   separator: { show: true, x: 0, bottom: 150, onLayouts: true }
   spinner: { center: true, x: 0, bottom: 200 }
 ```
@@ -489,14 +533,20 @@ built-ins; a layout can override individual values from `defaults`. Set `strengt
 layout to disable an inherited effect there. Color alpha also affects the final opacity. Effects cover
 layered screens and plain-image fallbacks.
 
-`separator.onLayouts` keeps the built-in line on layout screens unless a layout has its own `separator: game`
+`continuePrompt` positions and styles the line shown when the optional loading hold is active; its `size` accepts
+`0` to `64`.
+`separator.onLayouts` keeps the built-in line on layout screens unless a layout has its own `image: separator`
 layer. `spinner` applies to the game start screen. A layer's `animate` overrides `zoom.enabled`.
 
-A text layer accepts `position`, `opacity`, `fit: { width }` (the text box width, default 80% of the screen) and
+A text layer accepts `place` with `position`, `opacity`, and `fit: { width }` (the text box width, default 80% of the screen), plus
 `size`, `color`, `align` (`left`, `center`, `right`), `background` (a color box behind the text). Without a text
 layer, the caption goes to the usual tip line.
 
-A `separator: game` layer draws the game's ornament line as an image layer. It takes the placement options and an
+Layouts show the game's sleep text and spinner by default. Set `showSleepUi: false` on the layout selected by a
+`sleep` entry to hide both; add a `text: caption` layer to display the entry text or a tip in their place. Other
+image and text layers can supply a fully custom sleep screen. This key has no effect outside sleep.
+
+A `image: separator` layer draws the game's ornament line as an image layer. It takes the placement options and an
 optional `color` tint; without placement it keeps its native size near the bottom. A layout with such a layer hides
 the built-in separator line; set `defaults.separator.onLayouts: false` to hide it on every screen drawn by a layout.
 To use your own line, add it as an `image` layer and set `defaults.separator.show: false`.
@@ -507,10 +557,10 @@ Behavior switches in `Odin_Sons.LoadingScreen.cfg`; each has a description in th
 
 | Section | Settings |
 |---|---|
-| `1 - General` | Enabled, Image folder |
-| `2 - Situations` | Loading screen on portal teleport, Loading screen right after death, Random tip when an entry has no text |
+| `1 - General` | Enabled, Image folder, Text language, Change image every N seconds, Change tip every N seconds |
+| `2 - Situations` | Loading screen on portal teleport, Loading screen while sleeping, Hold loading screen until a key is pressed, Maximum hold time in seconds, Loading screen right after death, Random tip when an entry has no text |
 | `3 - Game start screen` | Use loading images, Show progress |
-| `4 - Server images` | Share with players (server), Use the server's screens (player) |
+| `4 - Server images` | Share with players (server), Use screens from the server (player) |
 | `5 - Config synchronization` | Lock synced settings |
 | `6 - Sound` | Play loading screen sounds, Music volume percent, Voice volume percent, Mute game sounds on loading screens |
 
@@ -526,7 +576,7 @@ The following cfg settings are server controlled by default with ServerSync, or 
 admin can choose ownership in `ConditionalConfigSync.SyncPolicy.cfg`:
 `Change image every N seconds`, `Change tip every N seconds`, and all settings in `2 - Situations`.
 The remaining settings are client controlled, including `Enabled`, `Image folder`, `Text language`, both game
-start settings, sound settings, `Share with players (server)`, and `Use the server's screens (player)`. The server's
+start settings, sound settings, `Share with players (server)`, and `Use screens from the server (player)`. The server's
 `loadingscreen.yaml` already carries appearance defaults (tint, zoom, tip style, separator, background) through
 the existing screen transfer; they are not cfg settings.
 
@@ -540,7 +590,7 @@ Settings marked as requiring a restart remain local.
 ### Console
 
 `loadingscreen status` shows what is loaded; `loadingscreen reload` re-reads `loadingscreen.yaml`, the images and
-`tips.txt`. A broken YAML file keeps the previously loaded config.
+the selected tip file. A broken YAML file keeps the previously loaded config.
 
 ## Server images
 

@@ -2,6 +2,24 @@
 
 ### Unreleased
 
+### 0.6.0
+
+  * Simplified YAML layer content to `image`, `text` or `color`; `image` accepts a path, path list, `entry` or `separator`.
+    Enemy prefab lists now live under `situations.enemy`, and placement at every scope uses `place`.
+  * A server join keeps the same loading image, caption and zoom across the menu, scene loader and HUD. Music and
+    voice continue through host handovers without replaying the entry voice or dipping in volume during the fade.
+
+  * Tips and entry captions follow Valheim's language or the `[1 - General] Text language` override. Localized
+    `tips.<code>.txt` files take precedence over `tips.txt`; entry `text` also accepts ISO-keyed translations.
+  * Optional hold after HUD loading finishes, dismissed by a key or mouse click and capped at 30 seconds by default.
+    Disabled on dedicated servers and during cinematics; `defaults.continuePrompt` styles the prompt line.
+  * Optional loading image and tip while sleeping, with a `situations.sleep` list that falls back to `general`.
+    Layouts can hide the game's sleep text and spinner with `showSleepUi: false`.
+  * Optional tip rotation on HUD and main-menu loading screens: `[1 - General] Change tip every N seconds` (default
+    0, off). Tips from `tips.txt` advance without repeating the previous tip when possible; entry text stays fixed.
+  * Optional slideshow on HUD and game start loading screens: `[1 - General] Change image every N seconds` (default
+    0, off). Situational entries cycle within their selected list and respect `order`; zoom restarts per image.
+
 ### 0.5.0
 
   * Optional looped music on layouts, lists and entries, plus one-shot voiced entry text (`sound` and `voice` in YAML).
@@ -30,9 +48,9 @@
   * Entry conditions: `when` with `knownItem`, `hasItem`, `knownRecipe`, `knownBiome`, `globalKey` and `playerKey`,
     each also as `not...`; an entry is shown only when every condition holds.
   * Entries may have only a `text`; it is shown over a random plain image.
-  * Death screens per enemy: `death.enemy.<creature prefab>` is tried before the damage type and the hit type.
+  * Death screens per enemy: `situations.enemy.<creature prefab>` is tried before the damage type and the hit type.
   * `order: random | sequential`, for the whole file or one list.
-  * `separator: game` layer and the setting to keep or hide the built-in separator on layout screens.
+  * `image: separator` layer and the setting to keep or hide the built-in separator on layout screens.
   * Settings renamed to plain names in numbered sections, each with a description. Old settings are not migrated.
   * Fixed a white loading screen when no custom images exist.
 

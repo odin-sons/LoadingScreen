@@ -27,16 +27,6 @@ public interface IConditionContext {
 }
 
 public static class Conditions {
-  public static readonly IReadOnlyDictionary<string, ConditionKind> Keys =
-      new Dictionary<string, ConditionKind>(StringComparer.OrdinalIgnoreCase) {
-        ["knownItem"] = ConditionKind.KnownItem,
-        ["hasItem"] = ConditionKind.HasItem,
-        ["knownRecipe"] = ConditionKind.KnownRecipe,
-        ["knownBiome"] = ConditionKind.KnownBiome,
-        ["globalKey"] = ConditionKind.GlobalKey,
-        ["playerKey"] = ConditionKind.PlayerKey,
-      };
-
   const string NegationPrefix = "not";
 
   public static bool TryParseKey(string key, out ConditionKind kind, out bool negated) {
@@ -47,12 +37,13 @@ public static class Conditions {
       return false;
     }
 
-    if (Keys.TryGetValue(key, out kind)) {
+    if (Enum.TryParse(key, ignoreCase: true, out kind) && Enum.IsDefined(typeof(ConditionKind), kind)) {
       return true;
     }
 
     negated = key.StartsWith(NegationPrefix, StringComparison.OrdinalIgnoreCase);
-    return negated && Keys.TryGetValue(key.Substring(NegationPrefix.Length), out kind);
+    return negated && Enum.TryParse(key.Substring(NegationPrefix.Length), ignoreCase: true, out kind)
+        && Enum.IsDefined(typeof(ConditionKind), kind);
   }
 
   public static bool AreMet(IReadOnlyList<Condition> conditions, IConditionContext context) {

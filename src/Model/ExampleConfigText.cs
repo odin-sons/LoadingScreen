@@ -4,14 +4,15 @@ public static class ExampleConfigText {
   public const string Text = """
       # LoadingScreen situational config. Everything is commented out, so the mod behaves like Intermission
       # (random images from this folder and tips.txt) until you uncomment and edit the parts you need.
+      # Optional tips.<code>.txt (for example tips.ru.txt) is used before tips.txt for that language.
       # Image paths are relative to this folder. Supported: .png, .jpg, .jpeg.
       # Audio paths are also relative to this folder. Supported: .ogg and .wav, up to 8 MiB per clip.
       # A layout, list or entry can set sound: music/forest.ogg; the entry wins over the list, then the layout.
       # An entry can set voice: voice/tip.ogg; it plays once when that entry's own text is shown.
       # Reload in game with the console command: loadingscreen reload
       #
-      # Selection: a portal teleport uses situations.teleport.<destination biome>, a respawn uses
-      # situations.death.<cause>; if that list is missing or empty, situations.general is used; if that is
+      # Selection: sleep uses situations.sleep, a portal teleport uses situations.teleport.<destination biome>,
+      # and a respawn uses situations.death.<cause>; if that list is missing or empty, situations.general is used; if that is
       # empty too, the plain images in this folder are shown.
       #
       # Biomes: Meadows, BlackForest, Swamp, Mountain, Plains, Mistlands, AshLands, DeepNorth, Ocean
@@ -20,14 +21,17 @@ public static class ExampleConfigText {
       #   Catapult, CinderFire, AshlandsOcean, AshlandsLava, Incinerator, DrawBridge
       # Damage types (checked first for EnemyHit, PlayerHit, Turret, Catapult, Undefined): Blunt, Slash, Pierce,
       #   Chop, Pickaxe, Fire, Frost, Lightning, Poison, Spirit
-      # A kill by a creature tries death.enemy.<prefab name> first (death: { enemy: { Troll: [...] } }).
+      # A kill by a creature tries situations.enemy.<prefab name> first (enemy: { Troll: [...] }).
+      # Prefab names are free-form, including modded creatures.
       #
       # Order: entries are picked at random; "order: sequential" (top level or on a list) uses config order.
       #
       # Conditions ("when" on an entry, all must hold; prefix with "not" to invert, e.g. notKnownItem):
       #   knownItem, hasItem, knownRecipe (item prefab name like Demister), knownBiome, globalKey, playerKey
+      # Entry text can be a plain string or { en: English text, ru: Russian text }.
+      # Missing translations use en, then the first available translation.
       #
-      # Placement options (defaults, layouts, layers and an entry's "place"; the most specific one wins):
+      # Placement options (under "place" in defaults, layouts, layers and entries; the most specific wins):
       #   fit: cover | contain | stretch | none | { width: 40%, height: 300px }
       #        (one axis keeps the aspect ratio; both axes fit the image inside that box)
       #   position: { anchor: center | left | right | top | bottom | top-left | ..., x: 5%, y: -20px }
@@ -42,21 +46,23 @@ public static class ExampleConfigText {
       #        (size is the outer 0%..100% from center to screen edge; strength is 0..1)
       #   mask: { color: "#000000", opacity: 0.25 }  (a full-screen color tint; opacity is 0..1)
       #
-      # Layers: "color" (solid fill), "image" (one file), "images" (a random file per screen),
-      # "source: entry" (the image of the chosen entry), "separator: game" (the game's ornament line,
+      # Layers: "color" (solid fill), "image" (one file, a list of files, "entry", or "separator"),
+      # "image: entry" (the chosen entry's image), "image: separator" (the game's ornament line,
       # takes placement and a "color" tint, replaces the built-in separator) and "text: caption" (the entry text or a tip).
-      # A text layer takes position, opacity, "fit: { width }" and: size, color, align (left | center | right),
+      # Exact extensionless "entry" and "separator" are keywords; files named entry.png or separator.png work normally.
+      # A text layer takes place (position, opacity, fit: { width }) and: size, color, align (left | center | right),
       # background (a color box behind the text). Without a text layer the usual tip line is used.
+      # A sleep layout can set showSleepUi: false to hide the game's sleep text and spinner and use its own layers.
 
       # defaults:
-      #   fit: contain
-      #   position: { anchor: center }
+      #   place: { fit: contain, position: { anchor: center } }
       #   background: "#000000"
       #   tint: "#FFFFFF"
       #   vignette: { color: "#000000", size: 25%, strength: 0.5 }
       #   mask: { color: "#000000", opacity: 0.25 }
       #   zoom: { enabled: true, amount: 1.05, seconds: 15 }
       #   tip: { x: 0, bottom: 90, size: 24, color: "#FFFFFF" }
+      #   continuePrompt: { x: 0, bottom: 30, size: 20, color: "#FFFFFF" }
       #   separator: { show: true, x: 0, bottom: 150, onLayouts: true }
       #   spinner: { center: true, x: 0, bottom: 200 }
 
@@ -66,28 +72,27 @@ public static class ExampleConfigText {
       #     layers:
       #       - color: "#000000"
       #       - image: common/backdrop.jpg
-      #         fit: stretch
+      #         place: { fit: stretch }
       #       - id: art
-      #         source: entry
-      #         fit: { width: 45%, height: 80% }
-      #         position: { anchor: left, x: 5% }
-      #         fade: { sides: [left, right], color: "#000000", size: 10% }
+      #         image: entry
+      #         place:
+      #           fit: { width: 45%, height: 80% }
+      #           position: { anchor: left, x: 5% }
+      #           fade: { sides: [left, right], color: "#000000", size: 10% }
       #
       #   logo-over-backdrops:
+      #     showSleepUi: false
       #     vignette: { strength: 0.7 }
       #     layers:
       #       - id: backdrop
-      #         source: entry
-      #         fit: cover
-      #         fade: { sides: [bottom], color: "#000000", size: 25% }
+      #         image: entry
+      #         place: { fit: cover, fade: { sides: [bottom], color: "#000000", size: 25% } }
       #       - image: common/logo.png
-      #         fit: { width: 30% }
-      #         position: { anchor: top, y: 8% }
+      #         place: { fit: { width: 30% }, position: { anchor: top, y: 8% } }
       #       - text: caption
       #         size: 28
       #         background: "#00000099"
-      #         fit: { width: 50% }
-      #         position: { anchor: bottom, y: -6% }
+      #         place: { fit: { width: 50% }, position: { anchor: bottom, y: -6% } }
 
       # situations:
       #   general:
@@ -95,9 +100,14 @@ public static class ExampleConfigText {
       #     sound: music/forest.ogg
       #     entries:
       #       - image: general/valheim.jpg
-      #         text: Skol!
+      #         text: { en: Skol!, ru: Скол! }
       #         voice: voice/welcome.ogg
       #       - general/another.jpg
+      #   sleep:
+      #     layout: logo-over-backdrops
+      #     entries:
+      #       - image: sleep/night.jpg
+      #         text: Rest until morning.
       #   teleport:
       #     Mistlands:
       #       - image: mistlands/fog.jpg
@@ -114,6 +124,9 @@ public static class ExampleConfigText {
       #     Frost:
       #       - image: death/frost.jpg
       #         text: Should have worn the troll armor.
+      #   enemy:
+      #     Troll:
+      #       - text: Dodge the swing, then strike from behind.
 
       """;
 }
