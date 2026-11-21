@@ -2,6 +2,8 @@
 
 ### Unreleased
 
+  * Configurable image folder for `loadingscreen.yaml`, `tips.txt` and images; relative paths start at BepInEx.
+
   * Appearance settings moved from the BepInEx cfg to the YAML `defaults` section. Existing cfg appearance values
     are not migrated; the built-in YAML values preserve the former cfg defaults.
   * Entry conditions: `when` with `knownItem`, `hasItem`, `knownRecipe`, `knownBiome`, `globalKey` and `playerKey`,

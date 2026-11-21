@@ -48,13 +48,18 @@ everything in it stays commented out, the mod behaves like Intermission.
 
 ## Configuration
 
-Files in `BepInEx/config/LoadingScreen/`:
+By default, these files live in `BepInEx/config/LoadingScreen/`:
 
 | File | Purpose |
 |---|---|
 | `loadingscreen.yaml` | Situations, layouts, placement and appearance (below) |
 | `tips.txt` | One tip per line |
 | `*.png`, `*.jpg` at the top level | Plain images, used when no situational entry applies |
+
+Set `[1 - General] Image folder` in `BepInEx/config/Odin_Sons.LoadingScreen.cfg` to use another folder. The
+default is `config/LoadingScreen`. Relative paths start at the BepInEx folder, so `plugins/MyPack/screens` means
+`BepInEx/plugins/MyPack/screens`; absolute paths also work. Restart the game after changing this setting. The chosen
+folder holds `loadingscreen.yaml`, `tips.txt`, and the plain and situational images.
 
 Behavior switches are in `BepInEx/config/Odin_Sons.LoadingScreen.cfg`; appearance is in the YAML `defaults` section.
 
@@ -473,7 +478,7 @@ Behavior switches in `Odin_Sons.LoadingScreen.cfg`; each has a description in th
 
 | Section | Settings |
 |---|---|
-| `1 - General` | Enabled |
+| `1 - General` | Enabled, Image folder |
 | `2 - Situations` | Loading screen on portal teleport, Loading screen right after death, Random tip when an entry has no text |
 | `3 - Game start screen` | Use loading images, Show progress |
 | `4 - Server images` | Share with players (server), Use the server's screens (player) |
@@ -546,7 +551,7 @@ Not decided yet: JPEG encoder guidance (mozjpeg, jpegli) and recommended resolut
 ## Original Intermission features (kept)
 
 - Show custom images and tips on the loading screen.
-- Plain `.png` or `.jpg` files in `BepInEx/config/LoadingScreen/` and one loading tip per line in `tips.txt`.
+- Plain `.png` or `.jpg` files in the configured image folder and one loading tip per line in `tips.txt`.
 - The loading screen instead of the portal animation and right after death.
 - Game start screen, image tint and zoom, background color, separator line and tip text style settings.
 
