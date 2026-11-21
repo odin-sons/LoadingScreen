@@ -2,6 +2,8 @@
 
 ### Unreleased
 
+### 0.5.0
+
   * Optional looped music on layouts, lists and entries, plus one-shot voiced entry text (`sound` and `voice` in YAML).
     Audio follows the game's volume sliders; client cfg controls playback and music/voice volume. Servers can share
     bounded `.ogg` and `.wav` files with the screens.
