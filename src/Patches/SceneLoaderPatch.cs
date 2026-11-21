@@ -22,6 +22,12 @@ static class SceneLoaderPatch {
   static Image _loadingImage;
   static LayerHost _host;
   static TMP_Text _loadingText;
+  static LoadingIndicator _indicator;
+  static Vector2 _indicatorAnchorMin;
+  static Vector2 _indicatorAnchorMax;
+  static Vector2 _indicatorPivot;
+  static Vector2 _indicatorPosition;
+  static bool _indicatorShowsProgress;
 
   static float _startTime;
   static float _lastImageTime;
@@ -50,22 +56,29 @@ static class SceneLoaderPatch {
       LoadingManager.SetLoadingTip(_loadingText);
     }
 
-    if (SceneLoaderCenterProgressIndicator.Value) {
-      SetupLoadingIndicator(sceneLoader.loadingIndicator);
-    }
+    _indicator = sceneLoader.loadingIndicator;
+    RectTransform indicatorRect = _indicator.transform.GetComponent<RectTransform>();
+    _indicatorAnchorMin = indicatorRect.anchorMin;
+    _indicatorAnchorMax = indicatorRect.anchorMax;
+    _indicatorPivot = indicatorRect.pivot;
+    _indicatorPosition = indicatorRect.anchoredPosition;
+    _indicatorShowsProgress = _indicator.m_showProgressIndicator;
+    RefreshAppearance();
 
     _startTime = Time.time;
     _lastImageTime = _startTime;
   }
 
-  static void SetupLoadingIndicator(LoadingIndicator indicator) {
-    indicator.m_showProgressIndicator = true;
+  internal static void RefreshAppearance() {
+    if (!_indicator) return;
 
-    RectTransform rectTransform = indicator.transform.GetComponent<RectTransform>();
-    rectTransform.anchorMin = new(0.5f, 0f);
-    rectTransform.anchorMax = new(0.5f, 0f);
-    rectTransform.pivot = new(0.5f, 0f);
-    rectTransform.anchoredPosition = SceneLoaderProgressIndicatorOffset.Value;
+    RectTransform rectTransform = _indicator.transform.GetComponent<RectTransform>();
+    SpinnerDefaults spinner = ScreenConfigLoader.Current.Defaults.Spinner;
+    _indicator.m_showProgressIndicator = spinner.Center || _indicatorShowsProgress;
+    rectTransform.anchorMin = spinner.Center ? new(0.5f, 0f) : _indicatorAnchorMin;
+    rectTransform.anchorMax = spinner.Center ? new(0.5f, 0f) : _indicatorAnchorMax;
+    rectTransform.pivot = spinner.Center ? new(0.5f, 0f) : _indicatorPivot;
+    rectTransform.anchoredPosition = spinner.Center ? new(spinner.X, spinner.Bottom) : _indicatorPosition;
   }
 
   [HarmonyPostfix]

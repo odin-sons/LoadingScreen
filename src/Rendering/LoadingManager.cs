@@ -31,6 +31,15 @@ public static class LoadingManager {
 
   public static Sprite SeparatorSprite { get; private set; }
 
+  public static void RefreshAppearance() {
+    if (_cachedLoadingImage) SetupLoadingImage();
+    if (_cachedTipText) SetupTipText();
+    if (_cachedLoadingBackground) SetupLoadingBackground();
+    if (_cachedPanelSeparator) SetupPanelSeparator();
+    if (HudHost) HudHost.RefreshAppearance();
+    if (FejdStartupHost) FejdStartupHost.RefreshAppearance();
+  }
+
   public static bool ShowSituation(
       LayerHost host, Situation situation, TMP_Text tipText, Selection preselected = null) {
     CurrentCaption = null;
@@ -126,7 +135,7 @@ public static class LoadingManager {
   static void ApplyCustomLook(Image loadingImage) {
     loadingImage
         .SetType(Image.Type.Simple)
-        .SetColor(LoadingImageBaseColor.Value)
+        .SetColor(ToColor(ScreenConfigLoader.Current.Defaults.Tint))
         .SetPreserveAspect(true);
   }
 
@@ -172,7 +181,7 @@ public static class LoadingManager {
 
     loadingBackground.Ref()?
         .SetType(Image.Type.Simple)
-        .SetColor(LoadingScreenBackgroundColor.Value);
+        .SetColor(ToColor(ScreenConfigLoader.Current.Defaults.Background));
   }
 
   public static void SetupPanelSeparator(Transform panelSeparator = default) {
@@ -189,11 +198,12 @@ public static class LoadingManager {
       SeparatorSprite = panelSeparator.GetComponentInChildren<Image>(includeInactive: true).Ref()?.sprite;
     }
 
-    panelSeparator.gameObject.SetActive(LoadingScreenShowPanelSeparator.Value);
+    SeparatorDefaults defaults = ScreenConfigLoader.Current.Defaults.Separator;
+    panelSeparator.gameObject.SetActive(defaults.Show);
     panelSeparator.GetComponent<RectTransform>()
         .SetAnchorMin(new(0.5f, 0f))
         .SetAnchorMax(new(0.5f, 0f))
-        .SetPosition(LoadingScreenPanelSeparatorPosition.Value);
+        .SetPosition(new(defaults.X, defaults.Bottom));
   }
 
   public static void SetupTipText(TMP_Text tipText = default) {
@@ -205,17 +215,22 @@ public static class LoadingManager {
       LoadingScreen.LogError($"Could not find a TipText to setup!");
     }
 
+    TipDefaults defaults = ScreenConfigLoader.Current.Defaults.Tip;
     tipText
         .SetAlignment(TextAlignmentOptions.Top)
         .SetTextWrappingMode(TextWrappingModes.Normal)
-        .SetFontSize(LoadingTipTextFontSize.Value)
-        .SetColor(LoadingTipTextColor.Value);
+        .SetFontSize(defaults.Size)
+        .SetColor(ToColor(defaults.Color));
 
     tipText.GetComponent<RectTransform>()
         .SetAnchorMin(Vector2.zero)
         .SetAnchorMax(Vector2.right)
-        .SetPosition(LoadingTipTextPosition.Value)
+        .SetPosition(new(defaults.X, defaults.Bottom))
         .SetSizeDelta(new(-50f, 78f));
+  }
+
+  internal static Color ToColor(ColorValue value) {
+    return new Color32(value.R, value.G, value.B, value.A);
   }
 
   public static void SetupFejdStartup(FejdStartup fejdStartup) {

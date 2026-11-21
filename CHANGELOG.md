@@ -2,6 +2,8 @@
 
 ### Unreleased
 
+  * Appearance settings moved from the BepInEx cfg to the YAML `defaults` section. Existing cfg appearance values
+    are not migrated; the built-in YAML values preserve the former cfg defaults.
   * Entry conditions: `when` with `knownItem`, `hasItem`, `knownRecipe`, `knownBiome`, `globalKey` and `playerKey`,
     each also as `not...`; an entry is shown only when every condition holds.
   * Entries may have only a `text`; it is shown over a random plain image.

@@ -50,7 +50,7 @@ public sealed class Fade {
   public FadeCurve? Curve { get; set; }
 }
 
-public sealed class Placement {
+public class Placement {
   public Fit Fit { get; set; }
   public Anchor? Anchor { get; set; }
   public Length? X { get; set; }

@@ -52,11 +52,11 @@ Files in `BepInEx/config/LoadingScreen/`:
 
 | File | Purpose |
 |---|---|
-| `loadingscreen.yaml` | Situations, layouts and placement (below) |
+| `loadingscreen.yaml` | Situations, layouts, placement and appearance (below) |
 | `tips.txt` | One tip per line |
 | `*.png`, `*.jpg` at the top level | Plain images, used when no situational entry applies |
 
-Settings are in `BepInEx/config/Odin_Sons.LoadingScreen.cfg`.
+Behavior switches are in `BepInEx/config/Odin_Sons.LoadingScreen.cfg`; appearance is in the YAML `defaults` section.
 
 ### Selection
 
@@ -438,7 +438,25 @@ value wins: entry `place`, then layer, then layout, then `defaults`.
 | `position` | `{ anchor, x, y }`. Anchors: `center`, `left`, `right`, `top`, `bottom`, `top-left`, `top-right`, `bottom-left`, `bottom-right`. `x` moves right, `y` moves down, in `%` of the screen or `px`. A plain anchor name also works: `position: top`. |
 | `opacity` | `0` to `1` |
 | `fade` | `{ sides, color, size, curve }`: a gradient from the color to transparent drawn over the image edges. `sides`: any of `left`, `right`, `top`, `bottom`, or `all`. `size`: `%` of the image size or `px` (default 15%). `curve`: `smooth` (default) or `linear`. |
-| `animate` | `true` or `false`: the slow zoom; defaults to `[3 - Image] Slow zoom`. |
+| `animate` | `true` or `false`: the slow zoom; defaults to `defaults.zoom.enabled`. |
+
+The YAML `defaults` section also sets appearance for the normal screen, layout entry images and game start screen.
+All keys are optional. Missing or invalid values use the built-in values shown here. Colors accept `#RRGGBB` or
+`#RRGGBBAA`; `x` is in pixels from the horizontal center and `bottom` is in pixels above the bottom edge.
+
+```yaml
+defaults:
+  background: "#000000"            # color behind the loading image
+  tint: "#FFFFFF"                  # color multiplied over entry and plain images
+  zoom: { enabled: true, amount: 1.05, seconds: 15 }
+  tip: { x: 0, bottom: 90, size: 24, color: "#FFFFFF" }
+  separator: { show: true, x: 0, bottom: 150, onLayouts: true }
+  spinner: { center: true, x: 0, bottom: 200 }
+```
+
+`zoom.amount` accepts `0.5` to `1.5`; `zoom.seconds` must be positive. `tip.size` accepts `0` to `64`.
+`separator.onLayouts` keeps the built-in line on layout screens unless a layout has its own `separator: game`
+layer. `spinner` applies to the game start screen. A layer's `animate` overrides `zoom.enabled`.
 
 A text layer accepts `position`, `opacity`, `fit: { width }` (the text box width, default 80% of the screen) and
 `size`, `color`, `align` (`left`, `center`, `right`), `background` (a color box behind the text). Without a text
@@ -446,24 +464,19 @@ layer, the caption goes to the usual tip line.
 
 A `separator: game` layer draws the game's ornament line as an image layer. It takes the placement options and an
 optional `color` tint; without placement it keeps its native size near the bottom. A layout with such a layer hides
-the built-in separator line; turn `[6 - Separator line] Keep on layout screens` off to hide it on every screen drawn
-by a layout. To use your own line, add it as an `image` layer and
-turn `Show separator line` off.
+the built-in separator line; set `defaults.separator.onLayouts: false` to hide it on every screen drawn by a layout.
+To use your own line, add it as an `image` layer and set `defaults.separator.show: false`.
 
 ### Settings
 
-All settings in `Odin_Sons.LoadingScreen.cfg`; each has a description in the Configuration Manager tooltip.
+Behavior switches in `Odin_Sons.LoadingScreen.cfg`; each has a description in the Configuration Manager tooltip.
 
 | Section | Settings |
 |---|---|
 | `1 - General` | Enabled |
 | `2 - Situations` | Loading screen on portal teleport, Loading screen right after death, Random tip when an entry has no text |
-| `3 - Image` | Image tint, Slow zoom, Zoom amount, Zoom duration (seconds) |
-| `4 - Background` | Background color |
-| `5 - Tip text` | Position, Font size, Color |
-| `6 - Separator line` | Show separator line, Position, Keep on layout screens |
-| `7 - Game start screen` | Use loading images, Show progress, Center the spinner, Spinner position |
-| `8 - Server images` | Share with players (server), Use the server's screens (player) |
+| `3 - Game start screen` | Use loading images, Show progress |
+| `4 - Server images` | Share with players (server), Use the server's screens (player) |
 
 ### Console
 
