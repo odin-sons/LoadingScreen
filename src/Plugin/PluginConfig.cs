@@ -18,13 +18,15 @@ public static class PluginConfig {
 
   public static ConfigEntry<bool> ServeImagesToClients { get; private set; }
   public static ConfigEntry<bool> DownloadServerImages { get; private set; }
+  public static ConfigEntry<bool> LockSyncedSettings { get; private set; }
 
   const string General = "1 - General";
   const string Screens = "2 - Situations";
   const string StartScreen = "3 - Game start screen";
   const string Server = "4 - Server images";
+  const string Synchronization = "5 - Config synchronization";
 
-  public static void BindConfig(ConfigFile config) {
+  internal static void BindConfig(ConfigFile config, ConfigSynchronization sync) {
     IsModEnabled =
         config.BindInOrder(General, "Enabled", true, "Turn the whole mod on or off. Needs a game restart.");
 
@@ -86,5 +88,24 @@ public static class PluginConfig {
             true,
             "As a player: while connected, use the server's loading screens and download their images in the "
                 + "background into BepInEx/cache/LoadingScreen.");
+
+    LockSyncedSettings =
+        config.BindInOrder(
+            Synchronization,
+            "Lock synced settings",
+            true,
+            "Allow only server admins to change synchronized settings while connected.");
+
+    sync.Register(ShowLoadingScreenOnTeleport);
+    sync.Register(ShowLoadingScreenImmediatelyOnDeath);
+    sync.Register(CaptionUseTipWhenNoText);
+    sync.RegisterLock(LockSyncedSettings);
+
+    sync.Register(IsModEnabled, clientControlled: true);
+    sync.Register(ImageFolder, clientControlled: true);
+    sync.Register(SceneLoaderUseLoadingImages, clientControlled: true);
+    sync.Register(SceneLoaderShowProgressText, clientControlled: true);
+    sync.Register(ServeImagesToClients, clientControlled: true);
+    sync.Register(DownloadServerImages, clientControlled: true);
   }
 }
