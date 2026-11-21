@@ -25,6 +25,109 @@ public class ConfigParserTests {
 
     Assert.True(result.Config.IsEmpty);
     Assert.Empty(result.Warnings);
+    AssertBuiltInAppearance(result.Config.Defaults);
+  }
+
+  [Fact]
+  public void ParsesAppearanceDefaults() {
+    const string yaml = """
+        defaults:
+          background: "#10203040"
+          tint: "#ABCDEF"
+          zoom: { enabled: false, amount: 1.25, seconds: 8.5 }
+          tip: { x: -12, bottom: 75, size: 32, color: "#112233" }
+          separator: { show: false, x: 14, bottom: 120, onLayouts: false }
+          spinner: { center: false, x: -5, bottom: 180 }
+        """;
+
+    ConfigLoadResult result = Parse(yaml);
+    ScreenDefaults defaults = result.Config.Defaults;
+
+    Assert.Empty(result.Warnings);
+    Assert.Equal(new ColorValue(0x10, 0x20, 0x30, 0x40), defaults.Background);
+    Assert.Equal(new ColorValue(0xAB, 0xCD, 0xEF), defaults.Tint);
+    Assert.False(defaults.Zoom.Enabled);
+    Assert.Equal(1.25f, defaults.Zoom.Amount);
+    Assert.Equal(8.5f, defaults.Zoom.Seconds);
+    Assert.Equal(-12f, defaults.Tip.X);
+    Assert.Equal(75f, defaults.Tip.Bottom);
+    Assert.Equal(32, defaults.Tip.Size);
+    Assert.Equal(new ColorValue(0x11, 0x22, 0x33), defaults.Tip.Color);
+    Assert.False(defaults.Separator.Show);
+    Assert.Equal(14f, defaults.Separator.X);
+    Assert.Equal(120f, defaults.Separator.Bottom);
+    Assert.False(defaults.Separator.OnLayouts);
+    Assert.False(defaults.Spinner.Center);
+    Assert.Equal(-5f, defaults.Spinner.X);
+    Assert.Equal(180f, defaults.Spinner.Bottom);
+  }
+
+  [Fact]
+  public void MissingAppearanceKeysUseBuiltIns() {
+    ConfigLoadResult result = Parse("defaults:\n  fit: contain\n  tip: { x: 10 }\n");
+
+    Assert.Empty(result.Warnings);
+    Assert.Equal(FitMode.Contain, result.Config.Defaults.Fit.Mode);
+    AssertBuiltInAppearance(result.Config.Defaults);
+    Assert.Equal(10f, result.Config.Defaults.Tip.X);
+  }
+
+  [Fact]
+  public void InvalidAppearanceValuesWarnWithLinesAndUseBuiltIns() {
+    const string yaml = """
+        defaults:
+          background: wrong
+          tint: "#123"
+          zoom: { enabled: sometimes, amount: 1.6, seconds: 0, extra: true }
+          tip: { x: nope, bottom: .nan, size: 65, color: bad, other: 1 }
+          separator: { show: maybe, x: false, bottom: {}, onLayouts: null, unknown: 2 }
+          spinner: { center: nope, x: .inf, bottom: [] , unknown: 3 }
+        """;
+
+    ConfigLoadResult result = Parse(yaml);
+
+    AssertBuiltInAppearance(result.Config.Defaults);
+    Assert.Equal(20, result.Warnings.Count);
+    Assert.All(result.Warnings, warning => Assert.Contains("line ", warning));
+    Assert.Contains(result.Warnings, warning => warning.Contains("zoom: unknown key 'extra'"));
+    Assert.Contains(result.Warnings, warning => warning.Contains("tip: unknown key 'other'"));
+    Assert.Contains(result.Warnings, warning => warning.Contains("separator: unknown key 'unknown'"));
+    Assert.Contains(result.Warnings, warning => warning.Contains("spinner: unknown key 'unknown'"));
+  }
+
+  [Fact]
+  public void InvalidAppearanceMapsWarnAndUseBuiltIns() {
+    const string yaml = """
+        defaults:
+          zoom: false
+          tip: null
+          separator: []
+          spinner: wrong
+        """;
+
+    ConfigLoadResult result = Parse(yaml);
+
+    AssertBuiltInAppearance(result.Config.Defaults);
+    Assert.Equal(4, result.Warnings.Count);
+    Assert.All(result.Warnings, warning => Assert.Contains("line ", warning));
+  }
+
+  static void AssertBuiltInAppearance(ScreenDefaults defaults) {
+    Assert.Equal(new ColorValue(0, 0, 0), defaults.Background);
+    Assert.Equal(new ColorValue(255, 255, 255), defaults.Tint);
+    Assert.True(defaults.Zoom.Enabled);
+    Assert.Equal(1.05f, defaults.Zoom.Amount);
+    Assert.Equal(15f, defaults.Zoom.Seconds);
+    Assert.Equal(90f, defaults.Tip.Bottom);
+    Assert.Equal(24, defaults.Tip.Size);
+    Assert.Equal(new ColorValue(255, 255, 255), defaults.Tip.Color);
+    Assert.True(defaults.Separator.Show);
+    Assert.Equal(0f, defaults.Separator.X);
+    Assert.Equal(150f, defaults.Separator.Bottom);
+    Assert.True(defaults.Separator.OnLayouts);
+    Assert.True(defaults.Spinner.Center);
+    Assert.Equal(0f, defaults.Spinner.X);
+    Assert.Equal(200f, defaults.Spinner.Bottom);
   }
 
   [Fact]

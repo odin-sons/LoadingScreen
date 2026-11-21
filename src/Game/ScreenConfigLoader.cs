@@ -141,5 +141,8 @@ public static class ScreenConfigLoader {
         Current,
         entry => (entry.Image == null || IsImageAvailable(entry.Image))
             && Conditions.AreMet(entry.Conditions, PlayerConditions.Instance));
+    LoadingManager.RefreshAppearance();
+    ImageScaleUtils.RefreshAppearance();
+    SceneLoaderPatch.RefreshAppearance();
   }
 }

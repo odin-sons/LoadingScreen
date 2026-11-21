@@ -32,7 +32,7 @@ public static class ExampleConfigText {
       #   opacity: 0..1
       #   fade: { sides: [left, bottom], color: "#000000", size: 15%, curve: smooth | linear }
       #        (gradient from the color into the image; size is % of the image size or px)
-      #   animate: true | false   (slow zoom, defaults to the Slow zoom setting)
+      #   animate: true | false   (slow zoom, defaults to defaults.zoom.enabled)
       #
       # Layers: "color" (solid fill), "image" (one file), "images" (a random file per screen),
       # "source: entry" (the image of the chosen entry), "separator: game" (the game's ornament line,
@@ -43,6 +43,12 @@ public static class ExampleConfigText {
       # defaults:
       #   fit: contain
       #   position: { anchor: center }
+      #   background: "#000000"
+      #   tint: "#FFFFFF"
+      #   zoom: { enabled: true, amount: 1.05, seconds: 15 }
+      #   tip: { x: 0, bottom: 90, size: 24, color: "#FFFFFF" }
+      #   separator: { show: true, x: 0, bottom: 150, onLayouts: true }
+      #   spinner: { center: true, x: 0, bottom: 200 }
 
       # layouts:
       #   backdrop-art:

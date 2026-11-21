@@ -10,11 +10,10 @@ using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
 
-using static PluginConfig;
-
 public sealed class LayerHost : MonoBehaviour {
   sealed class PlacedImage {
     public RectTransform Rect;
+    public Layer Layer;
     public Placement Placement;
     public Vector2 ImageSize;
     public readonly List<(Sides Side, RectTransform Rect, Length? Size)> Fades = [];
@@ -39,17 +38,24 @@ public sealed class LayerHost : MonoBehaviour {
   RectTransform _root;
   Graphic _vanillaImage;
   Vector2 _lastSize;
+  bool _layoutShowsSeparator;
 
   public bool IsShowing { get; private set; }
 
   public Transform Separator { get; set; }
 
-  static readonly Placement _separatorDefaults = new() {
-    Fit = new() { Mode = FitMode.None },
-    Anchor = Anchor.Bottom,
-    Y = new Length(-150f, LengthUnit.Pixels),
-    Animate = false,
-  };
+  static Placement SeparatorPlacement {
+    get {
+      SeparatorDefaults defaults = ScreenConfigLoader.Current.Defaults.Separator;
+      return new() {
+        Fit = new() { Mode = FitMode.None },
+        Anchor = Anchor.Bottom,
+        X = new Length(defaults.X, LengthUnit.Pixels),
+        Y = new Length(-defaults.Bottom, LengthUnit.Pixels),
+        Animate = false,
+      };
+    }
+  }
 
   public static LayerHost Attach(Graphic vanillaImage) {
     Transform parent = vanillaImage.transform.parent;
@@ -112,7 +118,7 @@ public sealed class LayerHost : MonoBehaviour {
 
       if (layer.GameSeparator) {
         if (LoadingManager.SeparatorSprite) {
-          AddImageLayer(layer, LoadingManager.SeparatorSprite, Placement.Merge(layer.Placement, _separatorDefaults));
+          AddImageLayer(layer, LoadingManager.SeparatorSprite, Placement.Merge(layer.Placement, SeparatorPlacement));
         }
 
         continue;
@@ -154,7 +160,8 @@ public sealed class LayerHost : MonoBehaviour {
         _placed
             .Select(placed => placed.Rect.GetComponent<Image>().sprite)
             .Where(sprite => sprite != LoadingManager.SeparatorSprite));
-    SetSeparatorVisible(!layout.ShowsSeparator && LoadingScreenPanelSeparatorWithLayouts.Value);
+    _layoutShowsSeparator = layout.ShowsSeparator;
+    SetSeparatorVisible(!_layoutShowsSeparator && config.Defaults.Separator.OnLayouts);
     IsShowing = true;
     Relayout();
     StartAnimations();
@@ -172,9 +179,35 @@ public sealed class LayerHost : MonoBehaviour {
     }
   }
 
+  public void RefreshAppearance() {
+    if (Separator) {
+      LoadingManager.SetupPanelSeparator(Separator);
+      SetSeparatorVisible(!IsShowing || (!_layoutShowsSeparator && ScreenConfigLoader.Current.Defaults.Separator.OnLayouts));
+    }
+
+    if (!IsShowing) {
+      return;
+    }
+
+    _animated.Clear();
+    foreach (PlacedImage placed in _placed) {
+      if (placed.Layer.FromEntry) {
+        Color color = ToColor(ScreenConfigLoader.Current.Defaults.Tint);
+        color.a *= placed.Placement.Opacity ?? 1f;
+        placed.Rect.GetComponent<Image>().color = color;
+      }
+
+      if (placed.Placement.Animate ?? ScreenConfigLoader.Current.Defaults.Zoom.Enabled) {
+        _animated.Add(placed.Rect);
+      }
+    }
+
+    StartAnimations();
+  }
+
   void SetSeparatorVisible(bool visible) {
     if (Separator) {
-      Separator.gameObject.SetActive(visible && LoadingScreenShowPanelSeparator.Value);
+      Separator.gameObject.SetActive(visible && ScreenConfigLoader.Current.Defaults.Separator.Show);
     }
   }
 
@@ -282,12 +315,13 @@ public sealed class LayerHost : MonoBehaviour {
     image.preserveAspect = false;
     image.raycastTarget = false;
 
-    Color color = layer.FromEntry ? LoadingImageBaseColor.Value : layer.HasTint ? ToColor(layer.Color) : Color.white;
+    Color color = layer.FromEntry ? ToColor(ScreenConfigLoader.Current.Defaults.Tint) : layer.HasTint ? ToColor(layer.Color) : Color.white;
     color.a *= placement.Opacity ?? 1f;
     image.color = color;
 
     PlacedImage placed = new() {
       Rect = image.rectTransform,
+      Layer = layer,
       Placement = placement,
       ImageSize = new(sprite.rect.width, sprite.rect.height),
     };
@@ -317,7 +351,7 @@ public sealed class LayerHost : MonoBehaviour {
 
     _placed.Add(placed);
 
-    if (placement.Animate ?? LoadingImageUseScaleLerp.Value) {
+    if (placement.Animate ?? ScreenConfigLoader.Current.Defaults.Zoom.Enabled) {
       _animated.Add(image.transform);
     }
   }
@@ -335,6 +369,10 @@ public sealed class LayerHost : MonoBehaviour {
   void StartAnimations() {
     StopAllCoroutines();
 
+    foreach (PlacedImage placed in _placed) {
+      if (placed.Rect) placed.Rect.localScale = Vector3.one;
+    }
+
     if (!isActiveAndEnabled) {
       return;
     }
@@ -345,8 +383,8 @@ public sealed class LayerHost : MonoBehaviour {
             ImageScaleUtils.ScaleLerp(
                 target,
                 Vector3.one,
-                Vector3.one * LoadingImageScaleLerpEndScale.Value,
-                LoadingImageScaleLerpDuration.Value));
+                Vector3.one * ScreenConfigLoader.Current.Defaults.Zoom.Amount,
+                ScreenConfigLoader.Current.Defaults.Zoom.Seconds));
       }
     }
   }

@@ -20,6 +20,9 @@ public sealed class ConfigParser {
   const int MaxNestingDepth = 32;
 
   static readonly string[] _placementKeys = ["fit", "position", "opacity", "fade", "animate"];
+  static readonly string[] _defaultKeys = [
+    .. _placementKeys, "background", "tint", "zoom", "tip", "separator", "spinner"
+  ];
   static readonly string[] _layerKeys = [
     "id", "color", "image", "images", "source", "separator", "text", "size", "align", "background", .. _placementKeys
   ];
@@ -74,7 +77,7 @@ public sealed class ConfigParser {
     foreach (KeyValuePair<YamlNode, YamlNode> pair in root.Children) {
       switch (Key(pair.Key)) {
         case "defaults":
-          _result.Config.Defaults = ParsePlacement(pair.Value, _placementKeys, "defaults");
+          _result.Config.Defaults = ParseDefaults(pair.Value);
           break;
 
         case "layouts":
@@ -567,6 +570,121 @@ public sealed class ConfigParser {
     }
 
     return true;
+  }
+
+  ScreenDefaults ParseDefaults(YamlNode node) {
+    ScreenDefaults defaults = new();
+    Placement placement = ParsePlacement(node, _defaultKeys, "defaults");
+    defaults.Fit = placement.Fit;
+    defaults.Anchor = placement.Anchor;
+    defaults.X = placement.X;
+    defaults.Y = placement.Y;
+    defaults.Opacity = placement.Opacity;
+    defaults.Fade = placement.Fade;
+    defaults.Animate = placement.Animate;
+
+    if (node is not YamlMappingNode mapping) {
+      return defaults;
+    }
+
+    defaults.Background = ParseDefaultColor(Child(mapping, "background"), "defaults.background", defaults.Background);
+    defaults.Tint = ParseDefaultColor(Child(mapping, "tint"), "defaults.tint", defaults.Tint);
+
+    if (DefaultMap(Child(mapping, "zoom"), "zoom", ["enabled", "amount", "seconds"]) is { } zoom) {
+      defaults.Zoom.Enabled = ParseDefaultBool(Child(zoom, "enabled"), "zoom.enabled", defaults.Zoom.Enabled);
+      defaults.Zoom.Amount = ParseDefaultFloat(Child(zoom, "amount"), "zoom.amount", defaults.Zoom.Amount, 0.5f, 1.5f);
+      defaults.Zoom.Seconds = ParseDefaultFloat(Child(zoom, "seconds"), "zoom.seconds", defaults.Zoom.Seconds, float.Epsilon, float.MaxValue);
+    }
+
+    if (DefaultMap(Child(mapping, "tip"), "tip", ["x", "bottom", "size", "color"]) is { } tip) {
+      defaults.Tip.X = ParseDefaultFloat(Child(tip, "x"), "tip.x", defaults.Tip.X);
+      defaults.Tip.Bottom = ParseDefaultFloat(Child(tip, "bottom"), "tip.bottom", defaults.Tip.Bottom);
+      defaults.Tip.Size = ParseDefaultInt(Child(tip, "size"), "tip.size", defaults.Tip.Size, 0, 64);
+      defaults.Tip.Color = ParseDefaultColor(Child(tip, "color"), "tip.color", defaults.Tip.Color);
+    }
+
+    if (DefaultMap(Child(mapping, "separator"), "separator", ["show", "x", "bottom", "onlayouts"]) is { } separator) {
+      defaults.Separator.Show = ParseDefaultBool(Child(separator, "show"), "separator.show", defaults.Separator.Show);
+      defaults.Separator.X = ParseDefaultFloat(Child(separator, "x"), "separator.x", defaults.Separator.X);
+      defaults.Separator.Bottom = ParseDefaultFloat(Child(separator, "bottom"), "separator.bottom", defaults.Separator.Bottom);
+      defaults.Separator.OnLayouts = ParseDefaultBool(Child(separator, "onlayouts"), "separator.onLayouts", defaults.Separator.OnLayouts);
+    }
+
+    if (DefaultMap(Child(mapping, "spinner"), "spinner", ["center", "x", "bottom"]) is { } spinner) {
+      defaults.Spinner.Center = ParseDefaultBool(Child(spinner, "center"), "spinner.center", defaults.Spinner.Center);
+      defaults.Spinner.X = ParseDefaultFloat(Child(spinner, "x"), "spinner.x", defaults.Spinner.X);
+      defaults.Spinner.Bottom = ParseDefaultFloat(Child(spinner, "bottom"), "spinner.bottom", defaults.Spinner.Bottom);
+    }
+
+    return defaults;
+  }
+
+  YamlMappingNode DefaultMap(YamlNode node, string key, IReadOnlyCollection<string> allowedKeys) {
+    if (node == null) {
+      return null;
+    }
+
+    if (node is not YamlMappingNode mapping) {
+      Warn(node, $"defaults.{key}: expected a mapping; built-in values used");
+      return null;
+    }
+
+    WarnUnknownKeys(mapping, allowedKeys, $"defaults.{key}");
+    return mapping;
+  }
+
+  ColorValue ParseDefaultColor(YamlNode node, string key, ColorValue fallback) {
+    if (node == null) {
+      return fallback;
+    }
+
+    if (ColorValue.TryParse(Scalar(node), out ColorValue value)) {
+      return value;
+    }
+
+    Warn(node, $"{key}: invalid color, use #RRGGBB or #RRGGBBAA; built-in value used");
+    return fallback;
+  }
+
+  bool ParseDefaultBool(YamlNode node, string key, bool fallback) {
+    if (node == null) {
+      return fallback;
+    }
+
+    if (bool.TryParse(Scalar(node), out bool value)) {
+      return value;
+    }
+
+    Warn(node, $"{key}: must be true or false; built-in value used");
+    return fallback;
+  }
+
+  float ParseDefaultFloat(YamlNode node, string key, float fallback, float min = float.MinValue, float max = float.MaxValue) {
+    if (node == null) {
+      return fallback;
+    }
+
+    if (float.TryParse(Scalar(node), NumberStyles.Float, CultureInfo.InvariantCulture, out float value)
+        && !float.IsNaN(value) && !float.IsInfinity(value) && value >= min && value <= max) {
+      return value;
+    }
+
+    Warn(node, $"{key}: invalid number; built-in value used");
+    return fallback;
+  }
+
+  int ParseDefaultInt(YamlNode node, string key, int fallback, int min, int max) {
+    if (node == null) {
+      return fallback;
+    }
+
+    if (int.TryParse(Scalar(node), NumberStyles.Integer, CultureInfo.InvariantCulture, out int value)
+        && value >= min && value <= max) {
+      return value;
+    }
+
+    Warn(node, $"{key}: must be an integer from {min} to {max}; built-in value used");
+    return fallback;
   }
 
   Placement ParsePlacement(YamlNode node, IReadOnlyCollection<string> allowedKeys, string where) {

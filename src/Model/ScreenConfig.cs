@@ -67,8 +67,43 @@ public sealed class EntryList {
   public List<Entry> Entries { get; } = [];
 }
 
+public sealed class ZoomDefaults {
+  public bool Enabled { get; set; } = true;
+  public float Amount { get; set; } = 1.05f;
+  public float Seconds { get; set; } = 15f;
+}
+
+public sealed class TipDefaults {
+  public float X { get; set; }
+  public float Bottom { get; set; } = 90f;
+  public int Size { get; set; } = 24;
+  public ColorValue Color { get; set; } = new(255, 255, 255);
+}
+
+public sealed class SeparatorDefaults {
+  public bool Show { get; set; } = true;
+  public float X { get; set; }
+  public float Bottom { get; set; } = 150f;
+  public bool OnLayouts { get; set; } = true;
+}
+
+public sealed class SpinnerDefaults {
+  public bool Center { get; set; } = true;
+  public float X { get; set; }
+  public float Bottom { get; set; } = 200f;
+}
+
+public sealed class ScreenDefaults : Placement {
+  public ColorValue Background { get; set; } = new(0, 0, 0);
+  public ColorValue Tint { get; set; } = new(255, 255, 255);
+  public ZoomDefaults Zoom { get; } = new();
+  public TipDefaults Tip { get; } = new();
+  public SeparatorDefaults Separator { get; } = new();
+  public SpinnerDefaults Spinner { get; } = new();
+}
+
 public sealed class ScreenConfig {
-  public Placement Defaults { get; set; } = new();
+  public ScreenDefaults Defaults { get; set; } = new();
   public PickOrder Order { get; set; } = PickOrder.Random;
   public Dictionary<string, Layout> Layouts { get; } = new(StringComparer.OrdinalIgnoreCase);
   public EntryList General { get; set; } = new() { Name = "general" };
