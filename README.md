@@ -72,7 +72,8 @@ Behavior switches are in `BepInEx/config/Odin_Sons.LoadingScreen.cfg`; appearanc
 `[6 - Sound] Play loading screen sounds` turns configured music and voices on or off (on by default). `Music volume
 percent` and `Voice volume percent` each range from 0 to 100 and default to 100. Music also follows Valheim's master
 and music sliders; voices follow its master and effects sliders. Music follows the loading screen's fade and stops
-as soon as the screen closes. Audio paths are relative to the config folder, with `.ogg` and `.wav` supported. Each
+as soon as the screen closes. `Mute game sounds on loading screens` (`None` by default) fades out the game's
+`Effects` (such as the portal hum), `Music`, or both (`Effects, Music`) while a loading screen is visible, and restores them when it closes. Audio paths are relative to the config folder, with `.ogg` and `.wav` supported. Each
 clip is limited to 8 MiB.
 
 ### Selection
@@ -511,7 +512,7 @@ Behavior switches in `Odin_Sons.LoadingScreen.cfg`; each has a description in th
 | `3 - Game start screen` | Use loading images, Show progress |
 | `4 - Server images` | Share with players (server), Use the server's screens (player) |
 | `5 - Config synchronization` | Lock synced settings |
-| `6 - Sound` | Play loading screen sounds, Music volume percent, Voice volume percent |
+| `6 - Sound` | Play loading screen sounds, Music volume percent, Voice volume percent, Mute game sounds on loading screens |
 
 ### Config synchronization
 

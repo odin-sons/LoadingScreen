@@ -5,6 +5,9 @@
   * Optional looped music on layouts, lists and entries, plus one-shot voiced entry text (`sound` and `voice` in YAML).
     Audio follows the game's volume sliders; client cfg controls playback and music/voice volume. Servers can share
     bounded `.ogg` and `.wav` files with the screens.
+    Voices are scaled like the game's sound effects, music like the game's music, and the game start screen stays
+    silent until the game's volume settings are loaded. `Mute game sounds on loading screens` (`None` by default) fades
+    out the game's effects, music or both while a screen is visible.
 
 ### 0.4.0
 
