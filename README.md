@@ -560,7 +560,7 @@ Behavior switches in `Odin_Sons.LoadingScreen.cfg`; each has a description in th
 | `1 - General` | Enabled, Image folder, Text language, Change image every N seconds, Change tip every N seconds |
 | `2 - Situations` | Loading screen on portal teleport, Loading screen while sleeping, Hold loading screen until a key is pressed, Maximum hold time in seconds, Loading screen right after death, Random tip when an entry has no text |
 | `3 - Game start screen` | Use loading images, Show progress |
-| `4 - Server images` | Share with players (server), Use the server's screens (player) |
+| `4 - Server images` | Share with players (server), Use screens from the server (player) |
 | `5 - Config synchronization` | Lock synced settings |
 | `6 - Sound` | Play loading screen sounds, Music volume percent, Voice volume percent, Mute game sounds on loading screens |
 
@@ -576,7 +576,7 @@ The following cfg settings are server controlled by default with ServerSync, or 
 admin can choose ownership in `ConditionalConfigSync.SyncPolicy.cfg`:
 `Change image every N seconds`, `Change tip every N seconds`, and all settings in `2 - Situations`.
 The remaining settings are client controlled, including `Enabled`, `Image folder`, `Text language`, both game
-start settings, sound settings, `Share with players (server)`, and `Use the server's screens (player)`. The server's
+start settings, sound settings, `Share with players (server)`, and `Use screens from the server (player)`. The server's
 `loadingscreen.yaml` already carries appearance defaults (tint, zoom, tip style, separator, background) through
 the existing screen transfer; they are not cfg settings.
 
