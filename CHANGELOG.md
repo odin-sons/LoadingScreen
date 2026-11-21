@@ -2,6 +2,8 @@
 
 ### Unreleased
 
+### 0.2.0 (2026-11-20)
+
   * Configurable image folder for `loadingscreen.yaml`, `tips.txt` and images; relative paths start at BepInEx.
 
   * Appearance settings moved from the BepInEx cfg to the YAML `defaults` section. Existing cfg appearance values
@@ -14,8 +16,6 @@
   * `separator: game` layer and the setting to keep or hide the built-in separator on layout screens.
   * Settings renamed to plain names in numbered sections, each with a description. Old settings are not migrated.
   * Fixed a white loading screen when no custom images exist.
-
-### 0.2.0 (2026-11-20)
 
   * Situational loading screens from `BepInEx/config/LoadingScreen/loadingscreen.yaml` (YamlDotNet, new dependency
     `ValheimModding-YamlDotNet`):
