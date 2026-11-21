@@ -1,4 +1,4 @@
-namespace ComfyLib;
+namespace LoadingScreen.Extensions;
 
 using System;
 using System.Collections.Generic;

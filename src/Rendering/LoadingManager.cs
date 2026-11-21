@@ -1,6 +1,11 @@
 namespace LoadingScreen;
 
-using ComfyLib;
+using System.Collections.Generic;
+using System.Linq;
+
+using global::LoadingScreen.Extensions;
+
+using global::LoadingScreen.Model;
 
 using TMPro;
 
@@ -10,14 +15,90 @@ using UnityEngine.UI;
 using static PluginConfig;
 
 public static class LoadingManager {
+  sealed record VanillaLook(Sprite Sprite, Color Color, Image.Type Type, bool PreserveAspect);
+
+  static readonly Dictionary<Image, VanillaLook> _vanillaLooks = [];
+
   static TMP_Text _cachedTipText;
   static Image _cachedLoadingImage;
   static Image _cachedLoadingBackground;
   static Transform _cachedPanelSeparator;
 
+  public static LayerHost HudHost { get; private set; }
+  public static LayerHost FejdStartupHost { get; private set; }
+
+  public static string CurrentCaption { get; private set; }
+
+  public static Sprite SeparatorSprite { get; private set; }
+
+  public static void RefreshAppearance() {
+    if (_cachedLoadingImage) SetupLoadingImage();
+    if (_cachedTipText) SetupTipText();
+    if (_cachedLoadingBackground) SetupLoadingBackground();
+    if (_cachedPanelSeparator) SetupPanelSeparator();
+    if (HudHost) HudHost.RefreshAppearance();
+    if (FejdStartupHost) FejdStartupHost.RefreshAppearance();
+  }
+
+  public static bool ShowSituation(
+      LayerHost host, Situation situation, TMP_Text tipText, Selection preselected = null) {
+    CurrentCaption = null;
+
+    if (!host) {
+      return false;
+    }
+
+    Selection selection = preselected ?? ScreenConfigLoader.Selector.Select(situation);
+
+    if (selection == null) {
+      host.Hide();
+      return false;
+    }
+
+    bool hasEntryText = !string.IsNullOrEmpty(selection.Entry.Text);
+    string caption = hasEntryText ? selection.Entry.Text : null;
+
+    if (!hasEntryText && CaptionUseTipWhenNoText.Value && CustomAssets.GetRandomLoadingTip(out string tip)) {
+      caption = tip;
+    }
+
+    if (!host.Show(selection, caption, tipText)) {
+      return false;
+    }
+
+    LoadingScreen.LogInfo($"Loading screen for {situation}: {selection.List.Name} -> {selection.Entry.Image}");
+
+    CurrentCaption = hasEntryText ? selection.Entry.Text : CaptionUseTipWhenNoText.Value ? null : string.Empty;
+
+    if (tipText && !host.ShowsOwnText) {
+      tipText.SetText(caption ?? string.Empty);
+    }
+
+    return true;
+  }
+
+  public static void ShowFallback(LayerHost host, Image loadingImage, TMP_Text tipText) {
+    CurrentCaption = null;
+
+    if (host) {
+      host.Hide();
+    }
+
+    SetLoadingImage(loadingImage);
+    SetLoadingTip(tipText);
+  }
+
   public static void SetLoadingImage(Image loadingImage) {
-    if (loadingImage && CustomAssets.GetRandomLoadingImage(out Sprite loadingImageSprite)) {
+    if (!loadingImage) {
+      return;
+    }
+
+    if (CustomAssets.GetRandomLoadingImage(out Sprite loadingImageSprite)) {
       loadingImage.SetSprite(loadingImageSprite);
+      ApplyCustomLook(loadingImage);
+      CustomAssets.Pin(loadingImage, [loadingImageSprite]);
+    } else {
+      RestoreVanillaLook(loadingImage);
     }
   }
 
@@ -34,12 +115,40 @@ public static class LoadingManager {
       loadingImage = _cachedLoadingImage;
     } else {
       LoadingScreen.LogError($"Could not find a LoadingImage to setup!");
+      return;
     }
 
+    foreach (Image destroyed in _vanillaLooks.Keys.Where(key => !key).ToList()) {
+      _vanillaLooks.Remove(destroyed);
+    }
+
+    if (!_vanillaLooks.TryGetValue(loadingImage, out VanillaLook vanilla)) {
+      vanilla = new(loadingImage.sprite, loadingImage.color, loadingImage.type, loadingImage.preserveAspect);
+      _vanillaLooks[loadingImage] = vanilla;
+    }
+
+    if (loadingImage.sprite != vanilla.Sprite) {
+      ApplyCustomLook(loadingImage);
+    }
+  }
+
+  static void ApplyCustomLook(Image loadingImage) {
     loadingImage
         .SetType(Image.Type.Simple)
-        .SetColor(LoadingImageBaseColor.Value)
+        .SetColor(ToColor(ScreenConfigLoader.Current.Defaults.Tint))
         .SetPreserveAspect(true);
+  }
+
+  static void RestoreVanillaLook(Image loadingImage) {
+    if (_vanillaLooks.TryGetValue(loadingImage, out VanillaLook vanilla)) {
+      loadingImage
+          .SetSprite(vanilla.Sprite)
+          .SetType(vanilla.Type)
+          .SetColor(vanilla.Color)
+          .SetPreserveAspect(vanilla.PreserveAspect);
+    }
+
+    CustomAssets.Pin(loadingImage, []);
   }
 
   public static void SetupLoadingBackground(Transform parentTransform) {
@@ -72,7 +181,7 @@ public static class LoadingManager {
 
     loadingBackground.Ref()?
         .SetType(Image.Type.Simple)
-        .SetColor(LoadingScreenBackgroundColor.Value);
+        .SetColor(ToColor(ScreenConfigLoader.Current.Defaults.Background));
   }
 
   public static void SetupPanelSeparator(Transform panelSeparator = default) {
@@ -82,13 +191,19 @@ public static class LoadingManager {
       panelSeparator = _cachedPanelSeparator;
     } else {
       LoadingScreen.LogError($"Could not find a PanelSeparator to setup!");
+      return;
     }
 
-    panelSeparator.gameObject.SetActive(LoadingScreenShowPanelSeparator.Value);
+    if (!SeparatorSprite) {
+      SeparatorSprite = panelSeparator.GetComponentInChildren<Image>(includeInactive: true).Ref()?.sprite;
+    }
+
+    SeparatorDefaults defaults = ScreenConfigLoader.Current.Defaults.Separator;
+    panelSeparator.gameObject.SetActive(defaults.Show);
     panelSeparator.GetComponent<RectTransform>()
         .SetAnchorMin(new(0.5f, 0f))
         .SetAnchorMax(new(0.5f, 0f))
-        .SetPosition(LoadingScreenPanelSeparatorPosition.Value);
+        .SetPosition(new(defaults.X, defaults.Bottom));
   }
 
   public static void SetupTipText(TMP_Text tipText = default) {
@@ -100,17 +215,22 @@ public static class LoadingManager {
       LoadingScreen.LogError($"Could not find a TipText to setup!");
     }
 
+    TipDefaults defaults = ScreenConfigLoader.Current.Defaults.Tip;
     tipText
         .SetAlignment(TextAlignmentOptions.Top)
         .SetTextWrappingMode(TextWrappingModes.Normal)
-        .SetFontSize(LoadingTipTextFontSize.Value)
-        .SetColor(LoadingTipTextColor.Value);
+        .SetFontSize(defaults.Size)
+        .SetColor(ToColor(defaults.Color));
 
     tipText.GetComponent<RectTransform>()
         .SetAnchorMin(Vector2.zero)
         .SetAnchorMax(Vector2.right)
-        .SetPosition(LoadingTipTextPosition.Value)
+        .SetPosition(new(defaults.X, defaults.Bottom))
         .SetSizeDelta(new(-50f, 78f));
+  }
+
+  internal static Color ToColor(ColorValue value) {
+    return new Color32(value.R, value.G, value.B, value.A);
   }
 
   public static void SetupFejdStartup(FejdStartup fejdStartup) {
@@ -131,8 +251,12 @@ public static class LoadingManager {
     SetupLoadingImage(loadingImage);
     SetupPanelSeparator(panelSeparator);
 
-    SetLoadingTip(loadingText);
-    SetLoadingImage(loadingImage);
+    FejdStartupHost = LayerHost.Attach(loadingImage);
+    FejdStartupHost.Separator = panelSeparator;
+
+    if (!ShowSituation(FejdStartupHost, Situation.General, loadingText)) {
+      ShowFallback(FejdStartupHost, loadingImage, loadingText);
+    }
   }
 
   public static void SetupHud(Hud hud) {
@@ -143,8 +267,9 @@ public static class LoadingManager {
     SetupLoadingImage(hud.m_loadingImage);
     SetupPanelSeparator(panelSeparator);
 
-    SetLoadingTip(hud.m_loadingTip);
-    SetLoadingImage(hud.m_loadingImage);
+    HudHost = LayerHost.Attach(hud.m_loadingImage);
+    HudHost.Separator = panelSeparator;
+    ShowFallback(HudHost, hud.m_loadingImage, hud.m_loadingTip);
 
     loadingProgress.Find("TopFade").Ref()?.gameObject.SetActive(false);
     loadingProgress.Find("BottomFade").Ref()?.gameObject.SetActive(false);

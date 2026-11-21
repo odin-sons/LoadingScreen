@@ -1,5 +1,41 @@
 ## Changelog
 
+### Unreleased
+
+### 0.2.0 (2026-11-20)
+
+  * Configurable image folder for `loadingscreen.yaml`, `tips.txt` and images; relative paths start at BepInEx.
+
+  * Appearance settings moved from the BepInEx cfg to the YAML `defaults` section. Existing cfg appearance values
+    are not migrated; the built-in YAML values preserve the former cfg defaults.
+  * Entry conditions: `when` with `knownItem`, `hasItem`, `knownRecipe`, `knownBiome`, `globalKey` and `playerKey`,
+    each also as `not...`; an entry is shown only when every condition holds.
+  * Entries may have only a `text`; it is shown over a random plain image.
+  * Death screens per enemy: `death.enemy.<creature prefab>` is tried before the damage type and the hit type.
+  * `order: random | sequential`, for the whole file or one list.
+  * `separator: game` layer and the setting to keep or hide the built-in separator on layout screens.
+  * Settings renamed to plain names in numbered sections, each with a description. Old settings are not migrated.
+  * Fixed a white loading screen when no custom images exist.
+
+  * Situational loading screens from `BepInEx/config/LoadingScreen/loadingscreen.yaml` (YamlDotNet, new dependency
+    `ValheimModding-YamlDotNet`):
+    * portal teleports pick entries by destination biome, respawns by cause of death (hit type, then the dominant
+      damage type for hits), everything else by the general list; random without immediate repeats;
+    * config problems are logged with line numbers and never stop the rest of the config from loading;
+    * a commented example config is created on first start.
+  * Layered layouts: color layers, fixed images, random image pools, the entry image and a caption text layer, each
+    with fit, anchor, offsets, opacity, gradient edges and the scale animation; placement falls back from the entry
+    to the layer, the layout and the global defaults.
+  * Entry captions replace the tip; new setting `[Situations] useTipWhenNoText`.
+  * Server images: a server running the mod shares its config and images; clients download them in the background
+    into `BepInEx/cache/LoadingScreen/` with size, path and hash checks. New settings `[ServerImages] serveToClients`
+    and `downloadFromServer`.
+  * Console command `loadingscreen reload|status`.
+  * Images are checked before decoding (PNG or JPEG, at most 8192 px per side and 16.7 megapixels) and decoded
+    without mipmaps or a CPU copy.
+  * The chosen image is decoded when the death or teleport happens; at most 16 decoded images are kept in memory.
+  * Not yet tested in the game.
+
 ### 0.1.0 (2026-11-20)
 
   * Modified fork of Intermission 1.10.0 by redseiko (ComfyMods, upstream commit `cc8647b`), changed by Odin_Sons.

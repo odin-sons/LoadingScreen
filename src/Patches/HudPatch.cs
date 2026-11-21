@@ -3,9 +3,11 @@ namespace LoadingScreen;
 using System.Collections.Generic;
 using System.Reflection.Emit;
 
-using ComfyLib;
+using global::LoadingScreen.Extensions;
 
 using HarmonyLib;
+
+using global::LoadingScreen.Model;
 
 using UnityEngine;
 
@@ -31,10 +33,13 @@ static class HudPatch {
   [HarmonyPatch(nameof(Hud.UpdateBlackScreen))]
   static void UpdateBlackScreenPostfix(Hud __instance) {
     if (!_loadingScreenState && __instance.m_loadingProgress.activeInHierarchy) {
-      LoadingManager.SetLoadingImage(__instance.m_loadingImage);
-      LoadingManager.SetLoadingTip(__instance.m_loadingTip);
+      Situation situation = SituationTracker.Consume(out Selection preselected);
 
-      __instance.ScaleLerpLoadingImage(__instance.m_loadingImage);
+      if (!LoadingManager.ShowSituation(
+              LoadingManager.HudHost, situation, __instance.m_loadingTip, preselected)) {
+        LoadingManager.ShowFallback(LoadingManager.HudHost, __instance.m_loadingImage, __instance.m_loadingTip);
+        __instance.ScaleLerpLoadingImage(__instance.m_loadingImage);
+      }
     }
   }
 
@@ -127,6 +132,10 @@ static class HudPatch {
   }
 
   static string LoadingTipSetTextDelegate(string text) {
+    if (LoadingManager.CurrentCaption != null) {
+      return LoadingManager.CurrentCaption;
+    }
+
     if (CustomAssets.GetRandomLoadingTip(out string loadingTip)) {
       return loadingTip;
     }
