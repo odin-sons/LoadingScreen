@@ -10,6 +10,8 @@ using BepInEx.Logging;
 
 using HarmonyLib;
 
+using global::LoadingScreen.Model;
+
 using static PluginConfig;
 
 [BepInPlugin(PluginGuid, PluginName, PluginVersion)]
@@ -25,10 +27,10 @@ public sealed class LoadingScreen : BaseUnityPlugin {
     BindConfig(Config);
 
     if (IsModEnabled.Value) {
-      string pluginDir = Path.Combine(Path.GetDirectoryName(Config.ConfigFilePath), PluginName);
       try {
-        CustomAssets.Initialize(pluginDir);
-        ScreenConfigLoader.Load(pluginDir);
+        string imageFolder = ImageFolderPath.Resolve(ImageFolder.Value, Paths.BepInExRootPath);
+        CustomAssets.Initialize(imageFolder);
+        ScreenConfigLoader.Load(imageFolder);
       } catch (Exception exception) {
         LogError($"Could not load the loading screen config: {exception}");
       }

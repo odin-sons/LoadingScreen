@@ -3,9 +3,11 @@ namespace LoadingScreen;
 using BepInEx.Configuration;
 
 using global::LoadingScreen.Extensions;
+using global::LoadingScreen.Model;
 
 public static class PluginConfig {
   public static ConfigEntry<bool> IsModEnabled { get; private set; }
+  public static ConfigEntry<string> ImageFolder { get; private set; }
 
   public static ConfigEntry<bool> SceneLoaderUseLoadingImages { get; private set; }
   public static ConfigEntry<bool> SceneLoaderShowProgressText { get; private set; }
@@ -25,6 +27,14 @@ public static class PluginConfig {
   public static void BindConfig(ConfigFile config) {
     IsModEnabled =
         config.BindInOrder(General, "Enabled", true, "Turn the whole mod on or off. Needs a game restart.");
+
+    ImageFolder =
+        config.BindInOrder(
+            General,
+            "Image folder",
+            ImageFolderPath.DefaultFolder,
+            "Folder with loadingscreen.yaml, tips.txt, and images. Relative paths start at the BepInEx folder. "
+                + "Needs a game restart.");
 
     ShowLoadingScreenOnTeleport =
         config.BindInOrder(
