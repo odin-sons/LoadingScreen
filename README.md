@@ -123,8 +123,8 @@ default (allowed: 1 to 300). The hold never runs on dedicated servers or during 
 - For `EnemyHit`, `PlayerHit`, `Turret`, `Catapult` and `Undefined`, the dominant damage type of the killing hit is
   tried first: `Blunt`, `Slash`, `Pierce`, `Chop`, `Pickaxe`, `Fire`, `Frost`, `Lightning`, `Poison`, `Spirit`.
   Example: a frost drake kill uses `death.Frost` if it exists, then `death.EnemyHit`, then `general`.
-- A kill by a creature tries `death.enemy.<prefab name>` before everything else, for example `death.enemy.Troll`
-  or `death.enemy.Hatchling` (a drake; `Dragon` is Moder). The cause chain is a fallback, not a choice: each list is tried in turn until one has a
+- A kill by a creature tries `situations.enemy.<prefab name>` before the damage and hit type lists, for example `enemy.Troll`
+  or `enemy.Hatchling` (a drake; `Dragon` is Moder). Prefab names are free-form, including modded creatures. Each list is tried in turn until one has a
   usable entry, so `death.EnemyHit` still catches every enemy kill whose damage type has no list.
 - Within a list an entry is picked at random, never the same one twice in a row. `order: sequential` at the top of
   the file, or on one list next to `entries`, shows the usable entries in config order instead, wrapping around.
@@ -155,6 +155,8 @@ situations:
         place: { position: { anchor: right, x: -5% } }   # placement for this image only
   death:
     Fall: [ death/fall.jpg ]
+  enemy:
+    Troll: [ death/troll.jpg ]
 ```
 
 Image paths are relative to the config folder; `.png`, `.jpg` and `.jpeg` are supported, up to 8192 px per side
@@ -402,14 +404,14 @@ situations:
         when: { notKnownItem: MooseHide }
       - text: Bloodgold is the metal of the north.
         when: { notKnownItem: Gold }
+  enemy:
+    Hatchling:
+      - text: Drakes spit frost from above. Frost resistance and a bow help.
+    Troll:
+      - text: Trolls hit hard but slowly. Dodge, then strike from behind.
+    Deathsquito:
+      - text: Deathsquitos die to one arrow. Wear armor in the Plains.
   death:
-    enemy:
-      Hatchling:
-        - text: Drakes spit frost from above. Frost resistance and a bow help.
-      Troll:
-        - text: Trolls hit hard but slowly. Dodge, then strike from behind.
-      Deathsquito:
-        - text: Deathsquitos die to one arrow. Wear armor in the Plains.
     Freezing:
       - text: Frost resistance mead or a wolf cape keeps the cold away.
         when: { notKnownItem: [MeadFrostResist, CapeWolf] }
@@ -472,27 +474,30 @@ layouts:
     layers:                    # drawn in order, the first is at the back
       - color: "#000000"       # solid fill
       - id: backdrop
-        source: entry          # the chosen entry's image
-        fit: cover
-        fade: { sides: [bottom], color: "#000000", size: 25% }
-      - image: common/logo.png # one fixed image; "images: [a.png, b.png]" picks one per screen
-        fit: { width: 30% }
-        position: { anchor: top, y: 8% }
+        image: entry          # the chosen entry's image
+        place:
+          fit: cover
+          fade: { sides: [bottom], color: "#000000", size: 25% }
+      - image: common/logo.png # one fixed image; "image: [a.png, b.png]" picks one per screen
+        place: { fit: { width: 30% }, position: { anchor: top, y: 8% } }
       - text: caption          # the entry text or a tip
         size: 28
         color: "#FFFFFF"
         align: center
         background: "#00000099"
-        fit: { width: 50% }
-        position: { anchor: bottom, y: -6% }
-      - separator: game        # the game's ornament line
+        place: { fit: { width: 50% }, position: { anchor: bottom, y: -6% } }
+      - image: separator        # the game's ornament line
         color: "#FFFFFFCC"     # optional tint
-        fit: { width: 35% }
-        position: { anchor: bottom, y: -14% }
+        place: { fit: { width: 35% }, position: { anchor: bottom, y: -14% } }
 ```
 
-Placement options, accepted in `defaults`, on a layout, on a layer and in an entry's `place`. The most specific
-value wins: entry `place`, then layer, then layout, then `defaults`.
+Placement options go under `place` in `defaults`, layouts, layers and entries. The most specific
+value wins: entry, then layer, then layout, then defaults. For example, `defaults.place: { fit: contain }`.
+
+Layer `image` accepts one path, a list of paths (one picked per screen), `entry` (the selected entry's image), or
+`separator` (the game's ornament line). The exact extensionless values `entry` and `separator` are keywords;
+use `entry.png` or `separator.png` for files with those names. A layer has one content key: `image`, `text`, or
+`color`. On an `image: separator` layer, `color` is an optional tint.
 
 | Option | Values |
 |---|---|
@@ -508,6 +513,7 @@ All keys are optional. Missing or invalid values use the built-in values shown h
 
 ```yaml
 defaults:
+  place: { fit: contain, position: { anchor: center } }
   background: "#000000"            # color behind the loading image
   tint: "#FFFFFF"                  # color multiplied over entry and plain images
   vignette: { color: "#000000", size: 25%, strength: 0.5 }
@@ -529,10 +535,10 @@ layered screens and plain-image fallbacks.
 
 `continuePrompt` positions and styles the line shown when the optional loading hold is active; its `size` accepts
 `0` to `64`.
-`separator.onLayouts` keeps the built-in line on layout screens unless a layout has its own `separator: game`
+`separator.onLayouts` keeps the built-in line on layout screens unless a layout has its own `image: separator`
 layer. `spinner` applies to the game start screen. A layer's `animate` overrides `zoom.enabled`.
 
-A text layer accepts `position`, `opacity`, `fit: { width }` (the text box width, default 80% of the screen) and
+A text layer accepts `place` with `position`, `opacity`, and `fit: { width }` (the text box width, default 80% of the screen), plus
 `size`, `color`, `align` (`left`, `center`, `right`), `background` (a color box behind the text). Without a text
 layer, the caption goes to the usual tip line.
 
@@ -540,7 +546,7 @@ Layouts show the game's sleep text and spinner by default. Set `showSleepUi: fal
 `sleep` entry to hide both; add a `text: caption` layer to display the entry text or a tip in their place. Other
 image and text layers can supply a fully custom sleep screen. This key has no effect outside sleep.
 
-A `separator: game` layer draws the game's ornament line as an image layer. It takes the placement options and an
+A `image: separator` layer draws the game's ornament line as an image layer. It takes the placement options and an
 optional `color` tint; without placement it keeps its native size near the bottom. A layout with such a layer hides
 the built-in separator line; set `defaults.separator.onLayouts: false` to hide it on every screen drawn by a layout.
 To use your own line, add it as an `image` layer and set `defaults.separator.show: false`.

@@ -21,7 +21,8 @@ public static class ExampleConfigText {
       #   Catapult, CinderFire, AshlandsOcean, AshlandsLava, Incinerator, DrawBridge
       # Damage types (checked first for EnemyHit, PlayerHit, Turret, Catapult, Undefined): Blunt, Slash, Pierce,
       #   Chop, Pickaxe, Fire, Frost, Lightning, Poison, Spirit
-      # A kill by a creature tries death.enemy.<prefab name> first (death: { enemy: { Troll: [...] } }).
+      # A kill by a creature tries situations.enemy.<prefab name> first (enemy: { Troll: [...] }).
+      # Prefab names are free-form, including modded creatures.
       #
       # Order: entries are picked at random; "order: sequential" (top level or on a list) uses config order.
       #
@@ -30,7 +31,7 @@ public static class ExampleConfigText {
       # Entry text can be a plain string or { en: English text, ru: Russian text }.
       # Missing translations use en, then the first available translation.
       #
-      # Placement options (defaults, layouts, layers and an entry's "place"; the most specific one wins):
+      # Placement options (under "place" in defaults, layouts, layers and entries; the most specific wins):
       #   fit: cover | contain | stretch | none | { width: 40%, height: 300px }
       #        (one axis keeps the aspect ratio; both axes fit the image inside that box)
       #   position: { anchor: center | left | right | top | bottom | top-left | ..., x: 5%, y: -20px }
@@ -45,16 +46,16 @@ public static class ExampleConfigText {
       #        (size is the outer 0%..100% from center to screen edge; strength is 0..1)
       #   mask: { color: "#000000", opacity: 0.25 }  (a full-screen color tint; opacity is 0..1)
       #
-      # Layers: "color" (solid fill), "image" (one file), "images" (a random file per screen),
-      # "source: entry" (the image of the chosen entry), "separator: game" (the game's ornament line,
+      # Layers: "color" (solid fill), "image" (one file, a list of files, "entry", or "separator"),
+      # "image: entry" (the chosen entry's image), "image: separator" (the game's ornament line,
       # takes placement and a "color" tint, replaces the built-in separator) and "text: caption" (the entry text or a tip).
-      # A text layer takes position, opacity, "fit: { width }" and: size, color, align (left | center | right),
+      # Exact extensionless "entry" and "separator" are keywords; files named entry.png or separator.png work normally.
+      # A text layer takes place (position, opacity, fit: { width }) and: size, color, align (left | center | right),
       # background (a color box behind the text). Without a text layer the usual tip line is used.
       # A sleep layout can set showSleepUi: false to hide the game's sleep text and spinner and use its own layers.
 
       # defaults:
-      #   fit: contain
-      #   position: { anchor: center }
+      #   place: { fit: contain, position: { anchor: center } }
       #   background: "#000000"
       #   tint: "#FFFFFF"
       #   vignette: { color: "#000000", size: 25%, strength: 0.5 }
@@ -71,29 +72,27 @@ public static class ExampleConfigText {
       #     layers:
       #       - color: "#000000"
       #       - image: common/backdrop.jpg
-      #         fit: stretch
+      #         place: { fit: stretch }
       #       - id: art
-      #         source: entry
-      #         fit: { width: 45%, height: 80% }
-      #         position: { anchor: left, x: 5% }
-      #         fade: { sides: [left, right], color: "#000000", size: 10% }
+      #         image: entry
+      #         place:
+      #           fit: { width: 45%, height: 80% }
+      #           position: { anchor: left, x: 5% }
+      #           fade: { sides: [left, right], color: "#000000", size: 10% }
       #
       #   logo-over-backdrops:
       #     showSleepUi: false
       #     vignette: { strength: 0.7 }
       #     layers:
       #       - id: backdrop
-      #         source: entry
-      #         fit: cover
-      #         fade: { sides: [bottom], color: "#000000", size: 25% }
+      #         image: entry
+      #         place: { fit: cover, fade: { sides: [bottom], color: "#000000", size: 25% } }
       #       - image: common/logo.png
-      #         fit: { width: 30% }
-      #         position: { anchor: top, y: 8% }
+      #         place: { fit: { width: 30% }, position: { anchor: top, y: 8% } }
       #       - text: caption
       #         size: 28
       #         background: "#00000099"
-      #         fit: { width: 50% }
-      #         position: { anchor: bottom, y: -6% }
+      #         place: { fit: { width: 50% }, position: { anchor: bottom, y: -6% } }
 
       # situations:
       #   general:
@@ -125,6 +124,9 @@ public static class ExampleConfigText {
       #     Frost:
       #       - image: death/frost.jpg
       #         text: Should have worn the troll armor.
+      #   enemy:
+      #     Troll:
+      #       - text: Dodge the swing, then strike from behind.
 
       """;
 }

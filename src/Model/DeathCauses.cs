@@ -20,17 +20,8 @@ public static class DeathCauses {
   static readonly HashSet<string> _hitTypesWithDamageType =
       new(["Undefined", "EnemyHit", "PlayerHit", "Turret", "Catapult"], StringComparer.OrdinalIgnoreCase);
 
-  public const string EnemySection = "enemy";
-
-  public static string EnemyKey(string prefabName) => $"{EnemySection}:{prefabName}";
-
-  public static string[] Keys(
-      string hitType, IEnumerable<KeyValuePair<string, float>> damages, string attackerPrefab = null) {
+  public static string[] Keys(string hitType, IEnumerable<KeyValuePair<string, float>> damages) {
     List<string> keys = [];
-
-    if (!string.IsNullOrEmpty(attackerPrefab)) {
-      keys.Add(EnemyKey(attackerPrefab));
-    }
 
     if (hitType != null && _hitTypesWithDamageType.Contains(hitType)) {
       KeyValuePair<string, float> dominant =

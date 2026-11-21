@@ -134,8 +134,9 @@ public sealed class ScreenConfig {
   public EntryList Sleep { get; set; } = new() { Name = "sleep" };
   public Dictionary<string, EntryList> Teleport { get; } = new(StringComparer.OrdinalIgnoreCase);
   public Dictionary<string, EntryList> Death { get; } = new(StringComparer.OrdinalIgnoreCase);
+  public Dictionary<string, EntryList> Enemy { get; } = new(StringComparer.OrdinalIgnoreCase);
 
-  public IEnumerable<EntryList> AllLists => new[] { General, Sleep }.Concat(Teleport.Values).Concat(Death.Values);
+  public IEnumerable<EntryList> AllLists => new[] { General, Sleep }.Concat(Teleport.Values).Concat(Death.Values).Concat(Enemy.Values);
 
   public int EntryCount => AllLists.Sum(list => list.Entries.Count);
 

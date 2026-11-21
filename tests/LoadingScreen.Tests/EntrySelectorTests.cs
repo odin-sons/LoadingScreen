@@ -204,6 +204,12 @@ public class EntrySelectorTests {
 }
 
 public class DeathCausesTests {
+  static EntryList List(string name, string image) {
+    EntryList list = new() { Name = name };
+    list.Entries.Add(new Entry { Image = image });
+    return list;
+  }
+
   [Fact]
   public void EnemyHitPrefersDominantDamageType() {
     string[] keys = DeathCauses.Keys("EnemyHit", new Dictionary<string, float> { ["Slash"] = 10f, ["Frost"] = 30f });
@@ -212,10 +218,12 @@ public class DeathCausesTests {
   }
 
   [Fact]
-  public void EnemyComesBeforeDamageTypeAndHitType() {
-    string[] keys = DeathCauses.Keys("EnemyHit", new Dictionary<string, float> { ["Frost"] = 30f }, "Dragon");
+  public void EnemyIsCarriedSeparatelyFromDamageAndHitType() {
+    string[] keys = DeathCauses.Keys("EnemyHit", new Dictionary<string, float> { ["Frost"] = 30f });
+    Situation situation = Situation.Death(keys, "Dragon");
 
-    Assert.Equal(["enemy:Dragon", "Frost", "EnemyHit"], keys);
+    Assert.Equal(["Frost", "EnemyHit"], situation.Keys);
+    Assert.Equal("Dragon", situation.AttackerPrefab);
   }
 
   [Fact]
@@ -236,5 +244,20 @@ public class DeathCausesTests {
     Assert.Equal("frost.jpg", selector.Select(Situation.Death("Frost", "EnemyHit")).Entry.Image);
     Assert.Equal("enemy.jpg", selector.Select(Situation.Death("Slash", "EnemyHit")).Entry.Image);
     Assert.Equal("g.jpg", selector.Select(Situation.Death("Fall")).Entry.Image);
+  }
+
+  [Fact]
+  public void EnemyListPrecedesDamageAndHitTypeAndFallsBackWhenUnusable() {
+    ScreenConfig config = new();
+    config.General.Entries.Add(new Entry { Image = "general.jpg" });
+    config.Enemy["Dragon"] = List("enemy.Dragon", "dragon.jpg");
+    config.Death["Frost"] = List("death.Frost", "frost.jpg");
+    config.Death["EnemyHit"] = List("death.EnemyHit", "hit.jpg");
+    Situation death = Situation.Death(["Frost", "EnemyHit"], "dragon");
+
+    Assert.Equal("dragon.jpg", new EntrySelector(config).Select(death).Entry.Image);
+    Assert.Equal("frost.jpg", new EntrySelector(config, entry => entry.Image != "dragon.jpg").Select(death).Entry.Image);
+    Assert.Equal("hit.jpg", new EntrySelector(config, entry => entry.Image != "dragon.jpg" && entry.Image != "frost.jpg").Select(death).Entry.Image);
+    Assert.Equal("general.jpg", new EntrySelector(config, entry => entry.Image == "general.jpg").Select(death).Entry.Image);
   }
 }

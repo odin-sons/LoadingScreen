@@ -44,8 +44,8 @@ public static class SituationTracker {
       ["Spirit"] = damage.m_spirit,
     };
 
-    Situation situation =
-        Situation.Death(DeathCauses.Keys(lastHit.m_hitType.ToString(), damages, AttackerPrefab(lastHit)));
+    Situation situation = Situation.Death(
+        DeathCauses.Keys(lastHit.m_hitType.ToString(), damages), AttackerPrefab(lastHit));
     Set(situation);
     LoadingScreen.LogInfo($"Player died: {situation}.");
   }
