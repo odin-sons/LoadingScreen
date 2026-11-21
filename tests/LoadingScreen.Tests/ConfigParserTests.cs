@@ -9,11 +9,61 @@ using Xunit;
 
 public class ConfigParserTests {
   static readonly HashSet<string> _files = [
-    "general/a.jpg", "general/b.png", "mistlands/fog.jpg", "death/fall.jpg", "common/logo.png", "common/bg.jpeg"
+    "general/a.jpg", "general/b.png", "mistlands/fog.jpg", "death/fall.jpg", "common/logo.png", "common/bg.jpeg",
+    "music/forest.ogg", "music/list.wav", "music/entry.ogg", "voice/tip.wav"
   ];
 
   static ConfigLoadResult Parse(string yaml, ICollection<string> causes = null) {
     return new ConfigParser(path => _files.Contains(path), causes).Parse(yaml);
+  }
+
+  [Fact]
+  public void ParsesMusicAtEachScopeAndEntryVoice() {
+    const string yaml = """
+        layouts:
+          forest:
+            sound: music/forest.ogg
+            layers: [ { source: entry } ]
+        situations:
+          general:
+            layout: forest
+            sound: music/list.wav
+            entries:
+              - image: general/a.jpg
+                sound: music/entry.ogg
+                voice: voice/tip.wav
+                text: Welcome.
+        """;
+
+    ConfigLoadResult result = Parse(yaml);
+
+    Assert.Empty(result.Warnings);
+    Assert.Equal("music/forest.ogg", result.Config.Layouts["forest"].Sound);
+    Assert.Equal("music/list.wav", result.Config.General.Sound);
+    Assert.Equal("music/entry.ogg", result.Config.General.Entries[0].Sound);
+    Assert.Equal("voice/tip.wav", result.Config.General.Entries[0].Voice);
+  }
+
+  [Fact]
+  public void InvalidAudioPathsWarnAndAreIgnoredWithoutLosingEntries() {
+    const string yaml = """
+        situations:
+          general:
+            sound: ../outside.ogg
+            entries:
+              - image: general/a.jpg
+                sound: music/missing.ogg
+                voice: voice/tip.mp3
+        """;
+
+    ConfigLoadResult result = Parse(yaml);
+
+    Assert.Single(result.Config.General.Entries);
+    Assert.Null(result.Config.General.Sound);
+    Assert.Null(result.Config.General.Entries[0].Sound);
+    Assert.Null(result.Config.General.Entries[0].Voice);
+    Assert.Equal(3, result.Warnings.Count);
+    Assert.All(result.Warnings, warning => Assert.Contains("line ", warning));
   }
 
   [Theory]

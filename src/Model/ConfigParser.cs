@@ -26,16 +26,16 @@ public sealed class ConfigParser {
   static readonly string[] _layerKeys = [
     "id", "color", "image", "images", "source", "separator", "text", "size", "align", "background", .. _placementKeys
   ];
-  static readonly string[] _layoutKeys = ["layers", "vignette", "mask", .. _placementKeys];
-  static readonly string[] _entryKeys = ["image", "text", "layout", "place", "when"];
+  static readonly string[] _layoutKeys = ["layers", "sound", "vignette", "mask", .. _placementKeys];
+  static readonly string[] _entryKeys = ["image", "sound", "voice", "text", "layout", "place", "when"];
 
-  readonly Func<string, bool> _imageExists;
+  readonly Func<string, bool> _assetExists;
   readonly IEnumerable<string> _knownCauses;
 
   ConfigLoadResult _result;
 
-  public ConfigParser(Func<string, bool> imageExists, IEnumerable<string> knownCauses = null) {
-    _imageExists = imageExists ?? (_ => true);
+  public ConfigParser(Func<string, bool> assetExists, IEnumerable<string> knownCauses = null) {
+    _assetExists = assetExists ?? (_ => true);
     _knownCauses = knownCauses;
   }
 
@@ -165,6 +165,7 @@ public sealed class ConfigParser {
       layersNode = Child(mapping, "layers");
       layout.Vignette = ParseVignette(Child(mapping, "vignette"), $"layout '{name}'.vignette");
       layout.Mask = ParseMask(Child(mapping, "mask"), $"layout '{name}'.mask");
+      layout.Sound = ParseAudio(Child(mapping, "sound"), $"layout '{name}'", "sound");
     }
 
     if (layersNode is not YamlSequenceNode layers) {
@@ -466,8 +467,9 @@ public sealed class ConfigParser {
     YamlNode entriesNode = node;
 
     if (node is YamlMappingNode mapping) {
-      WarnUnknownKeys(mapping, ["layout", "order", "entries"], name);
+      WarnUnknownKeys(mapping, ["layout", "sound", "order", "entries"], name);
       list.LayoutName = Scalar(Child(mapping, "layout"));
+      list.Sound = ParseAudio(Child(mapping, "sound"), name, "sound");
 
       YamlNode orderNode = Child(mapping, "order");
 
@@ -519,6 +521,8 @@ public sealed class ConfigParser {
 
     Entry entry = new() {
       Image = IsNull(imageNode) ? null : NormalizePath(image),
+      Sound = ParseAudio(Child(mapping, "sound"), listName, "sound"),
+      Voice = ParseAudio(Child(mapping, "voice"), listName, "voice"),
       Text = text,
       LayoutName = Scalar(Child(mapping, "layout")),
       Place = IsNull(place) ? new() : ParsePlacement(place, _placementKeys, $"{listName}: 'place'"),
@@ -979,12 +983,48 @@ public sealed class ConfigParser {
       return false;
     }
 
-    if (!_imageExists(normalized)) {
+    if (!_assetExists(normalized)) {
       Warn(node, $"{where}: image '{path}' not found, ignored");
       return false;
     }
 
     return true;
+  }
+
+  string ParseAudio(YamlNode node, string where, string key) {
+    if (IsNull(node)) return null;
+
+    string path = Scalar(node);
+    if (string.IsNullOrWhiteSpace(path)) {
+      Warn(node, $"{where}: '{key}' needs an audio path, ignored");
+      return null;
+    }
+
+    string normalized = NormalizePath(path);
+    string extension;
+    try {
+      if (Path.IsPathRooted(path) || normalized.StartsWith("/", StringComparison.Ordinal)
+          || normalized.Split('/').Any(segment => segment == ".." || segment.IndexOf(':') >= 0)) {
+        Warn(node, $"{where}: audio path '{path}' must be relative to the config folder, ignored");
+        return null;
+      }
+      extension = Path.GetExtension(normalized);
+    } catch (ArgumentException) {
+      Warn(node, $"{where}: invalid audio path '{path}', ignored");
+      return null;
+    }
+
+    if (!KnownNames.AudioExtensions.Any(known => string.Equals(known, extension, StringComparison.OrdinalIgnoreCase))) {
+      Warn(node, $"{where}: unsupported audio type '{path}', use .ogg or .wav");
+      return null;
+    }
+
+    if (!_assetExists(normalized)) {
+      Warn(node, $"{where}: audio '{path}' not found, ignored");
+      return null;
+    }
+
+    return normalized;
   }
 
   void ValidateLayoutReferences() {

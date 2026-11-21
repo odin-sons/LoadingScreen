@@ -5,6 +5,9 @@ public static class ExampleConfigText {
       # LoadingScreen situational config. Everything is commented out, so the mod behaves like Intermission
       # (random images from this folder and tips.txt) until you uncomment and edit the parts you need.
       # Image paths are relative to this folder. Supported: .png, .jpg, .jpeg.
+      # Audio paths are also relative to this folder. Supported: .ogg and .wav, up to 8 MiB per clip.
+      # A layout, list or entry can set sound: music/forest.ogg; the entry wins over the list, then the layout.
+      # An entry can set voice: voice/tip.ogg; it plays once when that entry's own text is shown.
       # Reload in game with the console command: loadingscreen reload
       #
       # Selection: a portal teleport uses situations.teleport.<destination biome>, a respawn uses
@@ -59,6 +62,7 @@ public static class ExampleConfigText {
 
       # layouts:
       #   backdrop-art:
+      #     sound: music/forest.ogg
       #     layers:
       #       - color: "#000000"
       #       - image: common/backdrop.jpg
@@ -88,9 +92,11 @@ public static class ExampleConfigText {
       # situations:
       #   general:
       #     layout: logo-over-backdrops
+      #     sound: music/forest.ogg
       #     entries:
       #       - image: general/valheim.jpg
       #         text: Skol!
+      #         voice: voice/welcome.ogg
       #       - general/another.jpg
       #   teleport:
       #     Mistlands:
