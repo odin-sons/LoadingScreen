@@ -21,12 +21,12 @@ public sealed class ConfigParser {
 
   static readonly string[] _placementKeys = ["fit", "position", "opacity", "fade", "animate"];
   static readonly string[] _defaultKeys = [
-    .. _placementKeys, "background", "tint", "zoom", "tip", "separator", "spinner"
+    .. _placementKeys, "background", "tint", "vignette", "mask", "zoom", "tip", "separator", "spinner"
   ];
   static readonly string[] _layerKeys = [
     "id", "color", "image", "images", "source", "separator", "text", "size", "align", "background", .. _placementKeys
   ];
-  static readonly string[] _layoutKeys = ["layers", .. _placementKeys];
+  static readonly string[] _layoutKeys = ["layers", "vignette", "mask", .. _placementKeys];
   static readonly string[] _entryKeys = ["image", "text", "layout", "place", "when"];
 
   readonly Func<string, bool> _imageExists;
@@ -163,6 +163,8 @@ public sealed class ConfigParser {
     if (node is YamlMappingNode mapping) {
       layout.Placement = ParsePlacement(mapping, _layoutKeys, $"layout '{name}'");
       layersNode = Child(mapping, "layers");
+      layout.Vignette = ParseVignette(Child(mapping, "vignette"), $"layout '{name}'.vignette");
+      layout.Mask = ParseMask(Child(mapping, "mask"), $"layout '{name}'.mask");
     }
 
     if (layersNode is not YamlSequenceNode layers) {
@@ -589,6 +591,8 @@ public sealed class ConfigParser {
 
     defaults.Background = ParseDefaultColor(Child(mapping, "background"), "defaults.background", defaults.Background);
     defaults.Tint = ParseDefaultColor(Child(mapping, "tint"), "defaults.tint", defaults.Tint);
+    defaults.Vignette = ParseVignette(Child(mapping, "vignette"), "defaults.vignette");
+    defaults.Mask = ParseMask(Child(mapping, "mask"), "defaults.mask");
 
     if (DefaultMap(Child(mapping, "zoom"), "zoom", ["enabled", "amount", "seconds"]) is { } zoom) {
       defaults.Zoom.Enabled = ParseDefaultBool(Child(zoom, "enabled"), "zoom.enabled", defaults.Zoom.Enabled);
@@ -617,6 +621,55 @@ public sealed class ConfigParser {
     }
 
     return defaults;
+  }
+
+  VignetteSettings ParseVignette(YamlNode node, string where) {
+    if (node == null) return null;
+    if (node is not YamlMappingNode mapping) {
+      Warn(node, $"{where}: expected a mapping; effect ignored");
+      return null;
+    }
+
+    WarnUnknownKeys(mapping, ["color", "size", "strength"], where);
+    VignetteSettings result = new() { Color = ParseColor(Child(mapping, "color"), where, "color") };
+    YamlNode sizeNode = Child(mapping, "size");
+    if (!IsNull(sizeNode)) {
+      string text = Scalar(sizeNode);
+      if (text != null && text.EndsWith("%", StringComparison.Ordinal)
+          && Length.TryParse(text, out Length length) && length.Value >= 0f && length.Value <= 100f) {
+        result.Size = length.Value;
+      } else {
+        Warn(sizeNode, $"{where}: 'size' must be from 0% to 100%");
+      }
+    }
+
+    result.Strength = ParseEffectOpacity(Child(mapping, "strength"), where, "strength");
+    return result;
+  }
+
+  MaskSettings ParseMask(YamlNode node, string where) {
+    if (node == null) return null;
+    if (node is not YamlMappingNode mapping) {
+      Warn(node, $"{where}: expected a mapping; effect ignored");
+      return null;
+    }
+
+    WarnUnknownKeys(mapping, ["color", "opacity"], where);
+    return new() {
+      Color = ParseColor(Child(mapping, "color"), where, "color"),
+      Opacity = ParseEffectOpacity(Child(mapping, "opacity"), where, "opacity"),
+    };
+  }
+
+  float? ParseEffectOpacity(YamlNode node, string where, string key) {
+    if (IsNull(node)) return null;
+    if (float.TryParse(Scalar(node), NumberStyles.Float, CultureInfo.InvariantCulture, out float value)
+        && !float.IsNaN(value) && value >= 0f && value <= 1f) {
+      return value;
+    }
+
+    Warn(node, $"{where}: '{key}' must be a number from 0 to 1");
+    return null;
   }
 
   YamlMappingNode DefaultMap(YamlNode node, string key, IReadOnlyCollection<string> allowedKeys) {

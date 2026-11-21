@@ -412,6 +412,7 @@ situations:
 ```yaml
 layouts:
   logo-over-backdrops:
+    vignette: { strength: 0.7 } # override one default effect value on this layout
     layers:                    # drawn in order, the first is at the back
       - color: "#000000"       # solid fill
       - id: backdrop
@@ -453,6 +454,8 @@ All keys are optional. Missing or invalid values use the built-in values shown h
 defaults:
   background: "#000000"            # color behind the loading image
   tint: "#FFFFFF"                  # color multiplied over entry and plain images
+  vignette: { color: "#000000", size: 25%, strength: 0.5 }
+  mask: { color: "#000000", opacity: 0.25 }
   zoom: { enabled: true, amount: 1.05, seconds: 15 }
   tip: { x: 0, bottom: 90, size: 24, color: "#FFFFFF" }
   separator: { show: true, x: 0, bottom: 150, onLayouts: true }
@@ -460,6 +463,13 @@ defaults:
 ```
 
 `zoom.amount` accepts `0.5` to `1.5`; `zoom.seconds` must be positive. `tip.size` accepts `0` to `64`.
+`vignette` darkens the outer screen area with a radial gradient. `size` is the outer `0%` to `100%` of the
+distance from the center to the screen edge; `strength` is `0` to `1`. `mask` tints the whole screen with
+`opacity` from `0` to `1`. Both effects are off when omitted. Once enabled, missing values use the shown
+built-ins; a layout can override individual values from `defaults`. Set `strength: 0` or `opacity: 0` on a
+layout to disable an inherited effect there. Color alpha also affects the final opacity. Effects cover
+layered screens and plain-image fallbacks.
+
 `separator.onLayouts` keeps the built-in line on layout screens unless a layout has its own `separator: game`
 layer. `spinner` applies to the game start screen. A layer's `animate` overrides `zoom.enabled`.
 

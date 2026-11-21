@@ -37,6 +37,8 @@ public sealed class Layer {
 
 public sealed class Layout {
   public string Name { get; set; }
+  public VignetteSettings Vignette { get; set; }
+  public MaskSettings Mask { get; set; }
   public List<Layer> Layers { get; } = [];
   public Placement Placement { get; set; } = new();
 
@@ -96,6 +98,8 @@ public sealed class SpinnerDefaults {
 public sealed class ScreenDefaults : Placement {
   public ColorValue Background { get; set; } = new(0, 0, 0);
   public ColorValue Tint { get; set; } = new(255, 255, 255);
+  public VignetteSettings Vignette { get; set; }
+  public MaskSettings Mask { get; set; }
   public ZoomDefaults Zoom { get; } = new();
   public TipDefaults Tip { get; } = new();
   public SeparatorDefaults Separator { get; } = new();
