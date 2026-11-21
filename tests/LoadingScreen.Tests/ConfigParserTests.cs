@@ -292,7 +292,7 @@ public class ConfigParserTests {
               - image: general/a.jpg
                 text: Skol!
               - general/b.png
-          teleport:
+          biome:
             mistlands:
               - image: mistlands/fog.jpg
                 place: { position: { anchor: right, x: -5% } }
@@ -330,11 +330,11 @@ public class ConfigParserTests {
     Assert.Equal("Skol!", config.General.Entries[0].Text);
     Assert.Equal("general/b.png", config.General.Entries[1].Image);
 
-    Entry fog = config.Teleport["Mistlands"].Entries.Single();
+    Entry fog = config.Biome["Mistlands"].Entries.Single();
     Assert.Equal(Anchor.Right, fog.Place.Anchor);
     Assert.Equal(new Length(-5, LengthUnit.Percent), fog.Place.X);
-    Assert.True(config.Teleport.ContainsKey("MISTLANDS"));
-    Assert.Equal("Mistlands", config.Teleport.Keys.Single());
+    Assert.True(config.Biome.ContainsKey("MISTLANDS"));
+    Assert.Equal("Mistlands", config.Biome.Keys.Single());
 
     Assert.Single(config.Death["fall"].Entries);
     Assert.Equal(4, config.EntryCount);
@@ -366,7 +366,7 @@ public class ConfigParserTests {
     const string yaml = """
         colour: red
         when:
-          teleport:
+          biome:
             Narnia: [ general/a.jpg ]
           death:
             Boredom: [ general/a.jpg ]
@@ -376,7 +376,7 @@ public class ConfigParserTests {
 
     ConfigLoadResult result = Parse(yaml, ["Fall", "Drowning"]);
 
-    Assert.True(result.Config.Teleport.ContainsKey("Narnia"));
+    Assert.True(result.Config.Biome.ContainsKey("Narnia"));
     Assert.Equal(["Fall"], result.Config.Death.Keys);
     Assert.Contains(result.Warnings, warning => warning.Contains("'colour'"));
     Assert.DoesNotContain(result.Warnings, warning => warning.Contains("'Narnia'"));
@@ -391,6 +391,22 @@ public class ConfigParserTests {
 
     Assert.Empty(result.Warnings);
     Assert.True(result.Config.Death.ContainsKey("whatever"));
+  }
+
+  [Fact]
+  public void BiomeListsParseAndLegacyTeleportIsUnknown() {
+    ConfigLoadResult result = Parse("""
+        when:
+          biome:
+            mistlands: [ mistlands/fog.jpg ]
+          teleport:
+            Meadows: [ general/a.jpg ]
+        """);
+
+    Assert.Equal(["Mistlands"], result.Config.Biome.Keys);
+    Assert.Equal("biome.Mistlands", result.Config.Biome["Mistlands"].Name);
+    Assert.Contains(result.Warnings, warning => warning.Contains("unknown situation 'teleport'"));
+    Assert.Single(result.Warnings);
   }
 
   [Fact]

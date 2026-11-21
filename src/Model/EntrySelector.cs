@@ -34,8 +34,8 @@ public readonly struct Situation {
 
   public static Situation Death(params string[] causes) => new(SituationKind.Death, causes);
 
-  public static Situation Death(IReadOnlyList<string> causes, string attackerPrefab) =>
-      new(SituationKind.Death, causes, attackerPrefab);
+  public static Situation Death(IReadOnlyList<string> causes, string attackerPrefab, int? biomeValue = null) =>
+      new(SituationKind.Death, causes, attackerPrefab, biomeValue);
 
   public override string ToString() {
     if (Kind == SituationKind.Death && AttackerPrefab != null) {
@@ -125,7 +125,8 @@ public sealed class EntrySelector {
       }
     }
 
-    if (situation.Kind == SituationKind.Teleport && situation.BiomeValue.HasValue && _biomes != null) {
+    if ((situation.Kind is SituationKind.Teleport or SituationKind.Death)
+        && situation.BiomeValue.HasValue && _biomes != null) {
       int biome = situation.BiomeValue.Value;
       foreach (EntryList list in MatchingBiomeLists(biome)) yield return (list, $"biome {biome}");
       int baseBiome = _biomes.GetBaseBiome(biome);
@@ -135,7 +136,7 @@ public sealed class EntrySelector {
     } else if (situation.Kind == SituationKind.Teleport) {
       foreach (string key in situation.Keys) {
         if (key == null) continue;
-        if (_config.Teleport.TryGetValue(key, out EntryList list)) yield return (list, $"destination biome {key}");
+        if (_config.Biome.TryGetValue(key, out EntryList list)) yield return (list, $"destination biome {key}");
         else _debug?.Invoke($"No biome list for destination {key}.");
       }
     }
@@ -144,7 +145,7 @@ public sealed class EntrySelector {
   }
 
   IEnumerable<EntryList> MatchingBiomeLists(int biome) {
-    foreach (KeyValuePair<string, EntryList> pair in _config.Teleport) {
+    foreach (KeyValuePair<string, EntryList> pair in _config.Biome) {
       if (_biomes.TryResolve(pair.Key, out int value) && value == biome) yield return pair.Value;
     }
   }

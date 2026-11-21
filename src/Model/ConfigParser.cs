@@ -373,8 +373,8 @@ public sealed class ConfigParser {
           _result.Config.Sleep = ParseEntryList("sleep", pair.Value);
           break;
 
-        case "teleport":
-          ParseNamedLists(pair.Value, "teleport", _result.Config.Teleport, null);
+        case "biome":
+          ParseNamedLists(pair.Value, "biome", _result.Config.Biome, null);
           break;
 
         case "death":
@@ -386,7 +386,7 @@ public sealed class ConfigParser {
           break;
 
         default:
-          Warn(pair.Key, $"unknown situation '{Name(pair.Key)}', use 'general', 'sleep', 'teleport', 'death' or 'enemy'");
+          Warn(pair.Key, $"unknown situation '{Name(pair.Key)}', use 'general', 'sleep', 'biome', 'death' or 'enemy'");
           break;
       }
     }
@@ -406,7 +406,7 @@ public sealed class ConfigParser {
     foreach (KeyValuePair<YamlNode, YamlNode> pair in mapping.Children) {
       string name = Name(pair.Key);
 
-      if (situation == "teleport") {
+      if (situation == "biome") {
         name = KnownNames.Biomes.FirstOrDefault(
             candidate => string.Equals(candidate, name, StringComparison.OrdinalIgnoreCase)) ?? name;
       } else if (knownNames != null) {

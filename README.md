@@ -28,9 +28,9 @@ on Unity, but **the mod has not been tested in the game yet**. See the
 
 ## Features
 
-- **Situational screens.** A portal teleport shows an image chosen for the destination biome; a respawn shows an
-  image chosen for the cause of death; everything else uses the general list. Within a list, one entry is picked at
-  random without immediate repeats.
+- **Situational screens.** A portal teleport shows an image chosen for the destination biome; a respawn first tries
+  the cause of death, then the biome where the player died; everything else uses the general list. Within a list,
+  one entry is picked at random without immediate repeats.
 - **Layered layouts.** A screen is a stack of layers (solid colors, fixed images, random image pools, the chosen
   entry's image, the caption), each sized and positioned on its own, with gradient edges and enter, idle and exit animations.
   Two presets are included in the example config.
@@ -131,17 +131,17 @@ dedicated servers or during cinematics. Style the key prompt with `defaults.cont
 
 | Loading screen | First choice | Then |
 |---|---|---|
-| Portal teleport | `when.teleport.<destination biome>` | base biome list for EWD custom biomes, then `when.general` and plain images |
-| Respawn | `when.death.<cause>` | `when.general`, then the plain images |
+| Portal teleport | `when.biome.<destination biome>` | base biome list for EWD custom biomes, then `when.general` and plain images |
+| Respawn | `when.enemy.<attacker prefab>`, then `when.death.<dominant damage type>`, then `when.death.<hit type>` | `when.biome.<death biome>`, base biome list for EWD custom biomes, `when.general`, then plain images |
 | Sleep (when enabled) | `when.sleep` | `when.general`, then the plain images |
 | Anything else, main menu, game start | `when.general` | the plain images |
 
 - Biomes: `Meadows`, `BlackForest`, `Swamp`, `Mountain`, `Plains`, `Mistlands`, `AshLands`, `DeepNorth`, `Ocean`.
-  The biome is resolved from the destination position. Teleport screens need `[2 - When to show] Loading screen on portal teleport`
-  (on by default); without it the game shows its own portal animation.
+  Teleports use the destination position; deaths use the player's position when death occurs. Teleport screens need
+  `[2 - When to show] Loading screen on portal teleport` (on by default); without it the game shows its own portal animation.
 - Expand World Data custom biomes use the `biome:` identifier from `expand_biomes.yaml` in
-  `when.teleport` and `knownBiome`, not the display name. Names are case-insensitive. When a custom biome
-  has no usable teleport entry, its base vanilla biome list is tried before `general`. Unknown biome names are
+  `when.biome` and `knownBiome`, not the display name. Names are case-insensitive. When a custom biome
+  has no usable entry, its base vanilla biome list is tried before `general`. Unknown biome names are
   logged once after EWD biome data becomes available following world load; without EWD, they are logged when the
   config is loaded.
 - Causes are the game's own hit types: `Undefined`, `EnemyHit`, `PlayerHit`, `Fall`, `Drowning`, `Burning`,
@@ -150,7 +150,7 @@ dedicated servers or during cinematics. Style the key prompt with `defaults.cont
   `DrawBridge`.
 - For `EnemyHit`, `PlayerHit`, `Turret`, `Catapult` and `Undefined`, the dominant damage type of the killing hit is
   tried first: `Blunt`, `Slash`, `Pierce`, `Chop`, `Pickaxe`, `Fire`, `Frost`, `Lightning`, `Poison`, `Spirit`.
-  Example: a frost drake kill uses `death.Frost` if it exists, then `death.EnemyHit`, then `general`.
+  Example: a frost drake kill uses `death.Frost` if it exists, then `death.EnemyHit`, then the death biome and `general`.
 - A kill by a creature tries `when.enemy.<prefab name>` before the damage and hit type lists, for example `enemy.Troll`
   or `enemy.Hatchling` (a drake; `Dragon` is Moder). Prefab names are free-form, including modded creatures. Each list is tried in turn until one has a
   usable entry, so `death.EnemyHit` still catches every enemy kill whose damage type has no list.
@@ -175,7 +175,7 @@ when:
   sleep:
     - image: sleep/night.jpg
       text: Rest until morning.
-  teleport:
+  biome:
     Mistlands:
       - image: mistlands/fog.jpg
         text: Light your wisp.
@@ -208,7 +208,7 @@ translation. A plain string is shown in every language. This also applies to tex
 
 ```yaml
 when:
-  teleport:
+  biome:
     Mistlands:
       - text: The mist is thick. Craft a Wisplight to see further.
         when:
@@ -370,7 +370,7 @@ Biome tips for every biome, shown until the player has found the item the tip is
 
 ```yaml
 when:
-  teleport:
+  biome:
     Meadows:
       - text: Wood and stone make a hammer. Build a workbench under a roof.
         when: { notKnownRecipe: $piece_workbench }
@@ -690,7 +690,7 @@ it uses. A client with the mod then:
 1. receives the config and a manifest (path, size, SHA-256 of every file) when its character spawns;
 2. uses the server's screens while connected, and its own local config again after disconnecting;
 3. downloads the files in the background, one 32 KiB piece at a time over the game connection, in this order:
-   layer images, general, death, teleport, then audio;
+   layer images, general, death, biome, then audio;
 4. stores them in `BepInEx/cache/LoadingScreen/` named by hash, so a file is downloaded only once, also across
    servers. The folder can be deleted at any time.
 
