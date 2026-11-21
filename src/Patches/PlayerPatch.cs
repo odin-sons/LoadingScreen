@@ -18,7 +18,7 @@ static class PlayerPatch {
   [HarmonyPatch(nameof(Player.OnDeath))]
   static void OnDeathPrefix(Player __instance) {
     if (PluginConfig.IsModEnabled.Value && __instance == Player.m_localPlayer && __instance.m_nview && __instance.m_nview.IsOwner()) {
-      SituationTracker.OnDeath(__instance.m_lastHit);
+      SituationTracker.OnDeath(__instance.m_lastHit, __instance.transform.position);
     }
   }
 }

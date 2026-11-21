@@ -290,9 +290,9 @@ public static class ServerImages {
     IEnumerable<string> general = config.General.Entries.Select(entry => entry.Image);
     IEnumerable<string> sleep = config.Sleep.Entries.Select(entry => entry.Image);
     IEnumerable<string> death = config.Death.Values.SelectMany(list => list.Entries).Select(entry => entry.Image);
-    IEnumerable<string> teleport = config.Teleport.Values.SelectMany(list => list.Entries).Select(entry => entry.Image);
+    IEnumerable<string> biome = config.Biome.Values.SelectMany(list => list.Entries).Select(entry => entry.Image);
 
-    return layerImages.Concat(general).Concat(sleep).Concat(death).Concat(teleport).Concat(AudioFile.Paths(config))
+    return layerImages.Concat(general).Concat(sleep).Concat(death).Concat(biome).Concat(AudioFile.Paths(config))
         .Where(image => image != null)
         .Distinct(StringComparer.OrdinalIgnoreCase);
   }

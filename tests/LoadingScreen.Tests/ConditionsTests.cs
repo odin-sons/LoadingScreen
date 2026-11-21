@@ -20,7 +20,7 @@ public class ConditionsTests {
 
   const string MistTip = """
       when:
-        teleport:
+        biome:
           Mistlands:
             - text: Craft a Wisplight to push back the mist.
               when:
@@ -34,7 +34,7 @@ public class ConditionsTests {
   [Fact]
   public void ParsesConditionsAndTextOnlyEntries() {
     ConfigLoadResult result = Parse(MistTip);
-    List<Entry> entries = result.Config.Teleport["Mistlands"].Entries;
+    List<Entry> entries = result.Config.Biome["Mistlands"].Entries;
 
     Assert.Empty(result.Warnings);
     Assert.Equal(2, entries.Count);

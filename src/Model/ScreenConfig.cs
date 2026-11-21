@@ -130,11 +130,11 @@ public sealed class ScreenConfig {
   public Dictionary<string, Layout> Layouts { get; } = new(StringComparer.OrdinalIgnoreCase);
   public EntryList General { get; set; } = new() { Name = "general" };
   public EntryList Sleep { get; set; } = new() { Name = "sleep" };
-  public Dictionary<string, EntryList> Teleport { get; } = new(StringComparer.OrdinalIgnoreCase);
+  public Dictionary<string, EntryList> Biome { get; } = new(StringComparer.OrdinalIgnoreCase);
   public Dictionary<string, EntryList> Death { get; } = new(StringComparer.OrdinalIgnoreCase);
   public Dictionary<string, EntryList> Enemy { get; } = new(StringComparer.OrdinalIgnoreCase);
 
-  public IEnumerable<EntryList> AllLists => new[] { General, Sleep }.Concat(Teleport.Values).Concat(Death.Values).Concat(Enemy.Values);
+  public IEnumerable<EntryList> AllLists => new[] { General, Sleep }.Concat(Biome.Values).Concat(Death.Values).Concat(Enemy.Values);
 
   public int EntryCount => AllLists.Sum(list => list.Entries.Count);
 

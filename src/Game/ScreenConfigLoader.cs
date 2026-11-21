@@ -27,7 +27,7 @@ public static class ScreenConfigLoader {
     if (_biomeWarningsChecked || !BiomeResolver.Instance.IsReady) return;
     if (BiomeResolver.Instance.IsInstalled && !Player.m_localPlayer) return;
 
-    IEnumerable<string> names = Current.Teleport.Keys.Concat(
+    IEnumerable<string> names = Current.Biome.Keys.Concat(
         Current.AllLists.SelectMany(list => list.Entries)
             .SelectMany(entry => entry.Conditions)
             .Where(condition => condition.Kind == ConditionKind.KnownBiome)
@@ -96,8 +96,8 @@ public static class ScreenConfigLoader {
   public static string Summary() {
     return $"{(IsUsingServerConfig ? "server config" : ConfigFileName)}: {Current.General.Entries.Count} general, "
         + $"{Current.Sleep.Entries.Count} sleep, "
-        + $"{Current.Teleport.Values.Sum(list => list.Entries.Count)} teleport "
-        + $"({string.Join(", ", Current.Teleport.Keys)}), "
+        + $"{Current.Biome.Values.Sum(list => list.Entries.Count)} biome "
+        + $"({string.Join(", ", Current.Biome.Keys)}), "
         + $"{Current.Death.Values.Sum(list => list.Entries.Count)} death entries "
         + $"({string.Join(", ", Current.Death.Keys)}), {Current.Layouts.Count} layouts, "
         + $"{_lastWarningCount} warnings in {ConfigFileName} (see BepInEx/LogOutput.log); "

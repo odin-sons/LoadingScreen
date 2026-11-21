@@ -12,9 +12,11 @@ public static class ExampleConfigText {
       # Custom animation presets belong in animations.yaml beside this file.
       # Reload both files in game with: loadingscreen reload
       #
-      # Selection: sleep uses when.sleep, a portal teleport uses when.teleport.<destination biome>,
-      # and a respawn uses when.death.<cause>; custom EWD biomes try their base biome list before general;
-      # if a list is missing or empty, when.general is used; if that is
+      # Selection: sleep uses when.sleep, a portal teleport uses when.biome.<destination biome>,
+      # and a respawn tries when.enemy.<attacker>, when.death.<damage type>,
+      # when.death.<hit type>,
+      # then when.biome.<death biome>; custom EWD biomes try their base biome list before general;
+      # if these lists are missing or empty, when.general is used; if that is
       # empty too, the plain images in this folder are shown.
       #
       # Biomes: Meadows, BlackForest, Swamp, Mountain, Plains, Mistlands, AshLands, DeepNorth, Ocean
@@ -118,7 +120,7 @@ public static class ExampleConfigText {
       #     entries:
       #       - image: sleep/night.jpg
       #         text: Rest until morning.
-      #   teleport:
+      #   biome:
       #     Mistlands:
       #       - image: mistlands/fog.jpg
       #         text: Light your wisp.

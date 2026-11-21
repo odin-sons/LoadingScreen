@@ -2,8 +2,10 @@
 
 ### Unreleased
 
-  * Expand World Data custom biomes can be used in teleport lists and `knownBiome` conditions by their `biome:`
-    identifiers. Custom teleport destinations fall back to their base biome list; unresolved names warn at runtime.
+  * `when.biome` replaces `when.teleport` for destination biome lists and death biome tips. Death tries
+    enemy, dominant damage type, hit type, death biome, custom biome's base biome, then general. Expand World Data
+    custom biomes use their `biome:` identifiers in these lists and `knownBiome` conditions; unresolved names warn
+    at runtime.
 
   * Added enter, idle and exit animations for YAML layers, built-in motion presets, and custom presets in
     `animations.yaml`. Server screen sharing and reload include custom presets. The default entry image keeps its

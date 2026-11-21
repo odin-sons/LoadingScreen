@@ -23,9 +23,10 @@ public static class SituationTracker {
     LoadingScreen.LogInfo($"Portal teleport to {targetPosition}, destination biome: {biome?.ToString() ?? "unknown"}.");
   }
 
-  public static void OnDeath(HitData lastHit) {
+  public static void OnDeath(HitData lastHit, Vector3 deathPosition) {
+    int? biome = ResolveBiome(deathPosition);
     if (lastHit == null) {
-      Set(Situation.Death());
+      Set(Situation.Death([], null, biome));
       return;
     }
 
@@ -45,7 +46,7 @@ public static class SituationTracker {
     };
 
     Situation situation = Situation.Death(
-        DeathCauses.Keys(lastHit.m_hitType.ToString(), damages), AttackerPrefab(lastHit));
+        DeathCauses.Keys(lastHit.m_hitType.ToString(), damages), AttackerPrefab(lastHit), biome);
     Set(situation);
     LoadingScreen.LogInfo($"Player died: {situation}.");
   }
