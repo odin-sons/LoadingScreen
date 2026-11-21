@@ -30,5 +30,6 @@ static class NetworkPatch {
     ServerImages.Reset();
     SituationTracker.Clear();
     PlayerConditions.Instance.ClearCache();
+    BiomeResolver.Instance.ClearCache();
   }
 }

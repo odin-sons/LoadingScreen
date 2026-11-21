@@ -9,6 +9,30 @@ using LoadingScreen.Model;
 using Xunit;
 
 public class EntrySelectorTests {
+  sealed class FakeBiomes : IBiomeResolver {
+    public bool TryResolve(string name, out int biome) {
+      biome = name.ToLowerInvariant() switch {
+        "mistlands" => 8,
+        "meadows" => 1,
+        "moon" => 1024,
+        "luna" => 1024,
+        _ => 0,
+      };
+      return biome != 0;
+    }
+
+    public int GetBaseBiome(int biome) => biome == 1024 ? 1 : biome;
+  }
+
+  [Fact]
+  public void TeleportMatchesResolvedBiomeValue() {
+    ScreenConfig config = Config();
+    config.Teleport["Moon"] = List("teleport.Moon", "moon.jpg");
+    EntrySelector selector = new(config, biomes: new FakeBiomes());
+
+    Assert.Equal("moon.jpg", selector.Select(Situation.Teleport(1024)).Entry.Image);
+  }
+
   [Fact]
   public void DebugExplainsSkippedListAndGeneralFallback() {
     ScreenConfig config = Config();
@@ -31,6 +55,20 @@ public class EntrySelectorTests {
 
     Assert.Contains(messages, message => message.Contains("No biome list for destination Plains"));
     Assert.Contains(messages, message => message.Contains("general fallback for Teleport(Plains)"));
+  }
+
+  [Fact]
+  public void CustomBiomeFallsBackToBaseThenGeneral() {
+    ScreenConfig config = Config();
+    config.Teleport["Luna"] = List("teleport.Luna", "moon.jpg");
+    config.Teleport["Meadows"] = List("teleport.Meadows", "meadows.jpg");
+    EntrySelector selector = new(config, entry => entry.Image != "moon.jpg", biomes: new FakeBiomes());
+
+    Assert.Equal("meadows.jpg", selector.Select(Situation.Teleport(1024)).Entry.Image);
+
+    EntrySelector general = new(config, entry => entry.Image is not "moon.jpg" and not "meadows.jpg",
+        biomes: new FakeBiomes());
+    Assert.Equal("general", general.Select(Situation.Teleport(1024)).List.Name);
   }
 
   static EntryList List(string name, params string[] images) {

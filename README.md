@@ -131,7 +131,7 @@ dedicated servers or during cinematics. Style the key prompt with `defaults.cont
 
 | Loading screen | First choice | Then |
 |---|---|---|
-| Portal teleport | `when.teleport.<destination biome>` | `when.general`, then the plain images |
+| Portal teleport | `when.teleport.<destination biome>` | base biome list for EWD custom biomes, then `when.general` and plain images |
 | Respawn | `when.death.<cause>` | `when.general`, then the plain images |
 | Sleep (when enabled) | `when.sleep` | `when.general`, then the plain images |
 | Anything else, main menu, game start | `when.general` | the plain images |
@@ -139,6 +139,11 @@ dedicated servers or during cinematics. Style the key prompt with `defaults.cont
 - Biomes: `Meadows`, `BlackForest`, `Swamp`, `Mountain`, `Plains`, `Mistlands`, `AshLands`, `DeepNorth`, `Ocean`.
   The biome is resolved from the destination position. Teleport screens need `[2 - When to show] Loading screen on portal teleport`
   (on by default); without it the game shows its own portal animation.
+- Expand World Data custom biomes use the `biome:` identifier from `expand_biomes.yaml` in
+  `when.teleport` and `knownBiome`, not the display name. Names are case-insensitive. When a custom biome
+  has no usable teleport entry, its base vanilla biome list is tried before `general`. Unknown biome names are
+  logged once after EWD biome data becomes available following world load; without EWD, they are logged when the
+  config is loaded.
 - Causes are the game's own hit types: `Undefined`, `EnemyHit`, `PlayerHit`, `Fall`, `Drowning`, `Burning`,
   `Freezing`, `Poisoned`, `Water`, `Smoke`, `EdgeOfWorld`, `Impact`, `Cart`, `Tree`, `Self`, `Structural`,
   `Turret`, `Boat`, `Stalagtite`, `Catapult`, `CinderFire`, `AshlandsOcean`, `AshlandsLava`, `Incinerator`,
@@ -152,8 +157,8 @@ dedicated servers or during cinematics. Style the key prompt with `defaults.cont
 - Within a list an entry is picked at random, never the same one twice in a row. `order: sequential` at the top of
   the file, or on one list next to `entries`, shows the usable entries in config order instead, wrapping around.
 - YAML anchors and aliases are not supported, and nesting is limited to 32 levels.
-- Names are case-insensitive. Unknown names, missing files and invalid values are reported in
-  `BepInEx/LogOutput.log` with line numbers; the rest of the config still loads.
+- Names are case-insensitive. Missing files and invalid values are reported in `BepInEx/LogOutput.log` with line
+  numbers; unknown biome names are checked at runtime. The rest of the config still loads.
 
 ### Entries
 
@@ -217,7 +222,7 @@ when:
 | `knownItem` | the player has ever picked up the item | item prefab name (`Demister`) or `$item_` token |
 | `hasItem` | the item is in the inventory now | same as above |
 | `knownRecipe` | the player knows the recipe for the item or build piece | same as above, or a piece token (`$ship_karve`) |
-| `knownBiome` | the player has discovered the biome | biome name from the list above |
+| `knownBiome` | the player has discovered the biome | vanilla name or EWD `biome:` identifier |
 | `globalKey` | the world has the global key | key name (`defeated_bonemass`, `defeated_queen`, ...) |
 | `playerKey` | the player has the unique key | key name |
 

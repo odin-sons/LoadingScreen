@@ -374,7 +374,7 @@ public sealed class ConfigParser {
           break;
 
         case "teleport":
-          ParseNamedLists(pair.Value, "teleport", _result.Config.Teleport, KnownNames.Biomes);
+          ParseNamedLists(pair.Value, "teleport", _result.Config.Teleport, null);
           break;
 
         case "death":
@@ -406,7 +406,10 @@ public sealed class ConfigParser {
     foreach (KeyValuePair<YamlNode, YamlNode> pair in mapping.Children) {
       string name = Name(pair.Key);
 
-      if (knownNames != null) {
+      if (situation == "teleport") {
+        name = KnownNames.Biomes.FirstOrDefault(
+            candidate => string.Equals(candidate, name, StringComparison.OrdinalIgnoreCase)) ?? name;
+      } else if (knownNames != null) {
         string known = knownNames.FirstOrDefault(
             candidate => string.Equals(candidate, name, StringComparison.OrdinalIgnoreCase));
 
@@ -565,12 +568,7 @@ public sealed class ConfigParser {
           string biome = KnownNames.Biomes.FirstOrDefault(
               known => string.Equals(known, name, StringComparison.OrdinalIgnoreCase));
 
-          if (biome == null) {
-            Warn(item, $"{where}: unknown biome '{name}', entry ignored");
-            return false;
-          }
-
-          name = biome;
+          name = biome ?? name;
         }
 
         conditions.Add(new() { Kind = kind, Name = name, Negated = negated });

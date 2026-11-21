@@ -2,6 +2,9 @@
 
 ### Unreleased
 
+  * Expand World Data custom biomes can be used in teleport lists and `knownBiome` conditions by their `biome:`
+    identifiers. Custom teleport destinations fall back to their base biome list; unresolved names warn at runtime.
+
   * Added enter, idle and exit animations for YAML layers, built-in motion presets, and custom presets in
     `animations.yaml`. Server screen sharing and reload include custom presets. The default entry image keeps its
     existing slow zoom without the old `animate` and `defaults.zoom` fields.

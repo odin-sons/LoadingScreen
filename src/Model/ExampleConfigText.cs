@@ -13,10 +13,13 @@ public static class ExampleConfigText {
       # Reload both files in game with: loadingscreen reload
       #
       # Selection: sleep uses when.sleep, a portal teleport uses when.teleport.<destination biome>,
-      # and a respawn uses when.death.<cause>; if that list is missing or empty, when.general is used; if that is
+      # and a respawn uses when.death.<cause>; custom EWD biomes try their base biome list before general;
+      # if a list is missing or empty, when.general is used; if that is
       # empty too, the plain images in this folder are shown.
       #
       # Biomes: Meadows, BlackForest, Swamp, Mountain, Plains, Mistlands, AshLands, DeepNorth, Ocean
+      # EWD custom biomes use the biome: identifier from expand_biomes.yaml, not the display name.
+      # Unknown biome names warn after EWD data loads, or when the config loads if EWD is absent.
       # Causes (how the last hit happened): Undefined, EnemyHit, PlayerHit, Fall, Drowning, Burning, Freezing,
       #   Poisoned, Water, Smoke, EdgeOfWorld, Impact, Cart, Tree, Self, Structural, Turret, Boat, Stalagtite,
       #   Catapult, CinderFire, AshlandsOcean, AshlandsLava, Incinerator, DrawBridge
