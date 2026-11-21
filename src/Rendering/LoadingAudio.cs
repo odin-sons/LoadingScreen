@@ -27,6 +27,8 @@ public sealed class LoadingAudio : MonoBehaviour {
   CanvasGroup[] _screenGroups = [];
   bool _visible;
   float _fade;
+  float _appliedMute;
+  float _mutedMusicVolume = -1f;
 
   public static void Initialize(GameObject owner) {
     _instance = owner.AddComponent<LoadingAudio>();
@@ -57,9 +59,13 @@ public sealed class LoadingAudio : MonoBehaviour {
     _music.playOnAwake = false;
     _music.loop = true;
     _music.spatialBlend = 0f;
+    _music.priority = 0;
+    _music.bypassReverbZones = true;
     _voice = gameObject.AddComponent<AudioSource>();
     _voice.playOnAwake = false;
     _voice.spatialBlend = 0f;
+    _voice.priority = 0;
+    _voice.bypassReverbZones = true;
   }
 
   void Select(LayerHost host, string music, string voice) {
@@ -73,7 +79,7 @@ public sealed class LoadingAudio : MonoBehaviour {
     _selectedMusic = music;
     _selectedVoice = voice;
     _screenGroups = host ? host.GetComponentsInParent<CanvasGroup>(true) : [];
-    if (!PlayLoadingSounds.Value) {
+    if (!PlayLoadingSounds.Value || !GameVolumeReady) {
       StopVoice();
       StopMusic();
       _visible = false;
@@ -91,13 +97,18 @@ public sealed class LoadingAudio : MonoBehaviour {
     }
   }
 
+  static bool GameVolumeReady => MusicMan.instance && AudioMan.instance;
+
+
   void Update() {
-    if (!PlayLoadingSounds.Value) {
+    if (!PlayLoadingSounds.Value || !GameVolumeReady) {
       if (_visible) {
         StopVoice();
         StopMusic();
         _visible = false;
       }
+      bool showing = _host && _host.IsShowing && _host.gameObject.activeInHierarchy;
+      ApplyGameMute(showing ? ScreenOpacity() : 0f);
       return;
     }
 
@@ -115,19 +126,47 @@ public sealed class LoadingAudio : MonoBehaviour {
       _fade = ScreenOpacity();
     }
 
-    if (_music) _music.volume = _fade * MusicVolumePercent.Value / 100f * MusicMan.m_masterMusicVolume;
-    if (_voice) _voice.volume = _fade * VoiceVolumePercent.Value / 100f * AudioMan.GetSFXVolume();
+    if (_music) _music.volume = MusicVolume();
+    if (_voice) _voice.volume = VoiceVolume();
+    ApplyGameMute(_visible ? _fade : 0f);
+  }
+
+  void LateUpdate() {
+    if (_appliedMute <= 0f || !MusicMan.instance || !Mutes(GameSounds.Music)) return;
+    AudioSource music = MusicMan.instance.m_musicSource;
+    if (!music || Mathf.Approximately(music.volume, _mutedMusicVolume)) return;
+    _mutedMusicVolume = music.volume * (1f - _appliedMute);
+    music.volume = _mutedMusicVolume;
+  }
+
+  static bool Mutes(GameSounds sounds) => (MuteGameSounds.Value & sounds) != 0;
+
+  void ApplyGameMute(float mute) {
+    if (MuteGameSounds.Value == GameSounds.None) mute = 0f;
+    if (Mathf.Approximately(mute, _appliedMute) || !AudioMan.instance) return;
+    _appliedMute = mute;
+    if (!Mutes(GameSounds.Effects)) mute = 0f;
+    float effects = PlatformPrefs.GetFloat("MasterVolume", 1f) * PlatformPrefs.GetFloat("SfxVolume", 1f);
+    AudioMan.SetSFXVolume(mute >= 0.999f ? 0f : effects * (1f - mute));
   }
 
   float ScreenOpacity() {
     float opacity = 1f;
     foreach (CanvasGroup group in _screenGroups) {
-      if (group) opacity *= group.alpha;
+      if (!group) continue;
+      opacity *= group.alpha;
+      if (group.ignoreParentGroups) break;
     }
     return opacity;
   }
 
+  float MusicVolume() => _fade * MusicVolumePercent.Value / 100f * MusicMan.m_masterMusicVolume;
+
+  // The game's effects slider is applied as power, not amplitude.
+  float VoiceVolume() => _fade * VoiceVolumePercent.Value / 100f * Mathf.Sqrt(AudioMan.GetSFXVolume());
+
   void EndScreen() {
+    ApplyGameMute(0f);
     _host = null;
     _visible = false;
     _selectedMusic = null;
@@ -185,9 +224,7 @@ public sealed class LoadingAudio : MonoBehaviour {
       yield break;
     }
     _fade = ScreenOpacity();
-    source.volume = _fade * (music
-        ? MusicVolumePercent.Value / 100f * MusicMan.m_masterMusicVolume
-        : VoiceVolumePercent.Value / 100f * AudioMan.GetSFXVolume());
+    source.volume = music ? MusicVolume() : VoiceVolume();
     source.clip = clip;
     source.Play();
     if (music) {
@@ -225,6 +262,7 @@ public sealed class LoadingAudio : MonoBehaviour {
   }
 
   void OnDestroy() {
+    ApplyGameMute(0f);
     StopAllSounds();
     if (_instance == this) _instance = null;
   }

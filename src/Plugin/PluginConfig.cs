@@ -22,6 +22,7 @@ public static class PluginConfig {
   public static ConfigEntry<bool> PlayLoadingSounds { get; private set; }
   public static ConfigEntry<int> MusicVolumePercent { get; private set; }
   public static ConfigEntry<int> VoiceVolumePercent { get; private set; }
+  public static ConfigEntry<GameSounds> MuteGameSounds { get; private set; }
 
   const string General = "1 - General";
   const string Screens = "2 - Situations";
@@ -111,6 +112,9 @@ public static class PluginConfig {
         config.BindInOrder(Sound, "Voice volume percent", 100,
             "Volume of voiced tips, from 0 to 100 percent. Also follows the game's master and effects volume.",
             new AcceptableValueRange<int>(0, 100));
+    MuteGameSounds =
+        config.BindInOrder(Sound, "Mute game sounds on loading screens", GameSounds.None,
+            "Game sounds to fade out while a loading screen is visible: None, or Effects (such as the portal hum), Music, or both separated by a comma.");
 
     sync.Register(ShowLoadingScreenOnTeleport);
     sync.Register(ShowLoadingScreenImmediatelyOnDeath);
@@ -126,5 +130,6 @@ public static class PluginConfig {
     sync.Register(PlayLoadingSounds, clientControlled: true);
     sync.Register(MusicVolumePercent, clientControlled: true);
     sync.Register(VoiceVolumePercent, clientControlled: true);
+    sync.Register(MuteGameSounds, clientControlled: true);
   }
 }
