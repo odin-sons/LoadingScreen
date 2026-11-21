@@ -11,6 +11,10 @@ Only the Intermission plugin was taken from the ComfyMods repository; it is self
 - Licensed under **GPL-3.0** (see [`LICENSE`](LICENSE)), the same license as the upstream repository.
 - Original work: Copyright (C) redseiko / ComfyMods. All upstream copyright notices stay in place.
 - Changes are tracked in this repository's history and in [`CHANGELOG.md`](CHANGELOG.md).
+- The optional [Conditional Config Sync adapter](https://github.com/shudnal/ConditionalConfigSync/tree/430a064d5c815c8b90066442ba1b3a40647efa02/ConditionalConfigSync.API)
+  is included as source under its [upstream license](src/Vendor/ConditionalConfigSync/LICENSE).
+  [ServerSync v1.20](https://github.com/blaxxun-boop/ServerSync/releases/tag/v1.20)
+  is merged into the plugin DLL; its license is in [`lib/ServerSync/LICENSE.txt`](lib/ServerSync/LICENSE.txt).
 - Planned reuse of code from [cjayride/CustomLoadingScreens](https://github.com/cjayride/CustomLoadingScreens_Fork),
   itself a fork of [aedenthorn/CustomLoadingScreens](https://github.com/aedenthorn/ValheimMods/tree/master/CustomLoadingScreens).
   Both repositories state that their content is released into the public domain, which is compatible with GPL-3.0.
@@ -492,6 +496,30 @@ Behavior switches in `Odin_Sons.LoadingScreen.cfg`; each has a description in th
 | `2 - Situations` | Loading screen on portal teleport, Loading screen right after death, Random tip when an entry has no text |
 | `3 - Game start screen` | Use loading images, Show progress |
 | `4 - Server images` | Share with players (server), Use the server's screens (player) |
+| `5 - Config synchronization` | Lock synced settings |
+
+### Config synchronization
+
+Install LoadingScreen on the server and players who should receive its settings. With
+[Conditional Config Sync 1.0.10+](https://github.com/shudnal/ConditionalConfigSync/blob/master/docs/conditional-conditional-config-sync.md)
+active, LoadingScreen uses its optional adapter. Otherwise the ServerSync code merged into LoadingScreen handles
+config synchronization. The server and player must use the same path; install CCS on both or neither. If there is
+no matching server plugin or sync path, settings stay local.
+
+The following cfg settings are server controlled by default with ServerSync, or `Conditional` with CCS so a server
+admin can choose ownership in `ConditionalConfigSync.SyncPolicy.cfg`:
+`Change image every N seconds`, `Change tip every N seconds`, and all settings in `2 - Situations`.
+The remaining settings are client controlled, including `Enabled`, `Image folder`, `Text language`, both game
+start settings, `Share with players (server)`, and `Use the server's screens (player)`. The server's
+`loadingscreen.yaml` already carries appearance defaults (tint, zoom, tip style, separator, background) through
+the existing screen transfer; they are not cfg settings.
+
+Set `[5 - Config synchronization] Lock synced settings` to `true` on the server (the default) to restrict changes
+to server admins. Set it to `false` to allow unlocked synchronized settings to be changed by clients.
+CCS admins can also override `Conditional` ownership in
+`BepInEx/config/shudnal.ConditionalConfigSync/ConditionalConfigSync.SyncPolicy.cfg`.
+Received cfg values take effect on the next relevant loading screen or update without restarting the game.
+Settings marked as requiring a restart remain local.
 
 ### Console
 

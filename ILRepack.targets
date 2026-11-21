@@ -1,0 +1,15 @@
+<Project>
+  <Target Name="MergeServerSync" AfterTargets="Build">
+    <ItemGroup>
+      <ServerSyncAssemblies Include="$(TargetPath)" />
+      <ServerSyncAssemblies Include="$(MSBuildProjectDirectory)/lib/ServerSync/ServerSync.dll" />
+    </ItemGroup>
+    <ILRepack
+      Internalize="true"
+      InputAssemblies="@(ServerSyncAssemblies)"
+      OutputFile="$(TargetPath)"
+      TargetKind="SameAsPrimaryAssembly"
+      LibraryPath="$(TargetDir);$(BepInExPath)/core;$(GamePath)/valheim_Data/Managed" />
+  </Target>
+
+</Project>
