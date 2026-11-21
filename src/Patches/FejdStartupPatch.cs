@@ -19,6 +19,7 @@ static class FejdStartupPatch {
     LoadingManager.SetupFejdStartup(__instance);
     _loadingWasVisible = __instance.m_loading.activeInHierarchy;
     _lastTipTime = Time.realtimeSinceStartup;
+    if (_loadingWasVisible) LoadingManager.Session.MarkVisible(_lastTipTime);
   }
 
   [HarmonyPostfix]
@@ -29,6 +30,12 @@ static class FejdStartupPatch {
 
     if (visible && !_loadingWasVisible) {
       _lastTipTime = now;
+      if (LoadingManager.Session.WasVisible) {
+        LoadingManager.ShowSituation(
+            LoadingManager.FejdStartupHost, LoadingStage.Menu, Situation.General,
+            LoadingManager.FejdStartupTipText);
+      }
+      LoadingManager.Session.MarkVisible(now);
     }
 
     _loadingWasVisible = visible;

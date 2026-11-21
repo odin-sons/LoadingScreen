@@ -40,6 +40,7 @@ public sealed class LayerHost : MonoBehaviour {
   Graphic _vanillaImage;
   Vector2 _lastSize;
   bool _layoutShowsSeparator;
+  float _animationStartedAt;
 
   public bool IsShowing { get; private set; }
   public bool ShowSleepUi { get; private set; } = true;
@@ -88,7 +89,8 @@ public sealed class LayerHost : MonoBehaviour {
     return host;
   }
 
-  public bool Show(Selection selection, string caption = null, TMP_Text textTemplate = null) {
+  public bool Show(Selection selection, string caption = null, TMP_Text textTemplate = null,
+      float animationElapsed = 0f) {
     Clear();
 
     if (selection == null) {
@@ -128,14 +130,11 @@ public sealed class LayerHost : MonoBehaviour {
         continue;
       }
 
-      Sprite sprite;
-
-      if (layer.FromEntry && selection.Entry.Image == null) {
-        CustomAssets.GetRandomLoadingImage(out sprite);
-      } else {
-        string path = layer.FromEntry ? selection.Entry.Image : PickFromPool(layer);
-        sprite = CustomAssets.ReadLoadingImage(ScreenConfigLoader.ResolveImagePath(path));
-      }
+      string path = layer.FromEntry
+          ? selection.Entry.Image ?? LoadingManager.Session.ImageFor(layer, CustomAssets.NextLoadingImagePath)
+          : LoadingManager.Session.ImageFor(layer, () => PickFromPool(layer));
+      Sprite sprite = CustomAssets.ReadLoadingImage(
+          layer.FromEntry && selection.Entry.Image == null ? path : ScreenConfigLoader.ResolveImagePath(path));
 
       if (!sprite) {
         continue;
@@ -169,8 +168,9 @@ public sealed class LayerHost : MonoBehaviour {
     SetSeparatorVisible(!_layoutShowsSeparator && config.Defaults.Separator.OnLayouts);
     CurrentSelection = selection;
     IsShowing = true;
+    _animationStartedAt = Time.realtimeSinceStartup - animationElapsed;
     Relayout();
-    StartAnimations();
+    StartAnimations(animationElapsed);
     _effects.Apply(config.Defaults, layout);
     return true;
   }
@@ -218,7 +218,7 @@ public sealed class LayerHost : MonoBehaviour {
       }
     }
 
-    StartAnimations();
+    StartAnimations(Time.realtimeSinceStartup - _animationStartedAt);
   }
 
   void SetSeparatorVisible(bool visible) {
@@ -389,11 +389,16 @@ public sealed class LayerHost : MonoBehaviour {
 
   void OnEnable() {
     if (IsShowing) {
-      StartAnimations();
+      if (this == LoadingManager.FejdStartupHost && LoadingManager.Session.Stage == LoadingStage.Menu
+          && !LoadingManager.Session.WasVisible) {
+        _animationStartedAt = Time.realtimeSinceStartup;
+        LoadingManager.Session.MarkVisible(_animationStartedAt);
+      }
+      StartAnimations(Time.realtimeSinceStartup - _animationStartedAt);
     }
   }
 
-  void StartAnimations() {
+  void StartAnimations(float elapsed = 0f) {
     StopAllCoroutines();
 
     foreach (PlacedImage placed in _placed) {
@@ -411,7 +416,8 @@ public sealed class LayerHost : MonoBehaviour {
                 target,
                 Vector3.one,
                 Vector3.one * ScreenConfigLoader.Current.Defaults.Zoom.Amount,
-                ScreenConfigLoader.Current.Defaults.Zoom.Seconds));
+                ScreenConfigLoader.Current.Defaults.Zoom.Seconds,
+                elapsed));
       }
     }
   }

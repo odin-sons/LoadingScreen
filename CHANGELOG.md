@@ -2,6 +2,9 @@
 
 ### Unreleased
 
+  * A server join keeps the same loading image, caption and zoom across the menu, scene loader and HUD. Music and
+    voice continue through host handovers without replaying the entry voice or dipping in volume during the fade.
+
   * Tips and entry captions follow Valheim's language or the `[1 - General] Text language` override. Localized
     `tips.<code>.txt` files take precedence over `tips.txt`; entry `text` also accepts ISO-keyed translations.
   * Optional hold after HUD loading finishes, dismissed by a key or mouse click and capped at 30 seconds by default.

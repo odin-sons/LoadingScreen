@@ -208,19 +208,20 @@ public static class CustomAssets {
   static int _loadingImageIndex = -1;
 
   public static bool GetRandomLoadingImage(out Sprite loadingImageSprite) {
+    loadingImageSprite = ReadLoadingImage(NextLoadingImagePath());
+    return loadingImageSprite;
+  }
+
+  public static string NextLoadingImagePath() {
     if (LoadingImageFiles.Count > 0) {
       if (_loadingImageIndex < 0 || _loadingImageIndex >= LoadingImageFiles.Count) {
         Utils.Shuffle(LoadingImageFiles);
         _loadingImageIndex = 0;
       }
 
-      loadingImageSprite = ReadLoadingImage(LoadingImageFiles[_loadingImageIndex]);
-      _loadingImageIndex++;
-
-      return loadingImageSprite;
+      return LoadingImageFiles[_loadingImageIndex++];
     }
 
-    loadingImageSprite = default;
-    return false;
+    return null;
   }
 }

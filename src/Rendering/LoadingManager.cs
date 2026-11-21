@@ -18,6 +18,7 @@ public static class LoadingManager {
   sealed record VanillaLook(Sprite Sprite, Color Color, Image.Type Type, bool PreserveAspect);
 
   static readonly Dictionary<Image, VanillaLook> _vanillaLooks = [];
+  public static LoadingSession Session { get; } = new();
 
   static TMP_Text _cachedTipText;
   static TMP_Text _continuePrompt;
@@ -44,14 +45,15 @@ public static class LoadingManager {
   }
 
   public static bool ShowSituation(
-      LayerHost host, Situation situation, TMP_Text tipText, Selection preselected = null) {
-    CurrentCaption = null;
+      LayerHost host, LoadingStage stage, Situation situation, TMP_Text tipText,
+      Selection preselected = null, bool continueSession = false) {
+    if (!continueSession) CurrentCaption = null;
 
     if (!host) {
       return false;
     }
 
-    Selection selection = preselected ?? ScreenConfigLoader.Selector.Select(situation);
+    Selection selection = continueSession ? Session.Selection : preselected ?? ScreenConfigLoader.Selector.Select(situation);
 
     if (selection == null) {
       host.Hide();
@@ -60,21 +62,27 @@ public static class LoadingManager {
 
     string entryText = selection.Entry.GetText(CustomAssets.CurrentLanguageCode);
     bool hasEntryText = !string.IsNullOrEmpty(entryText);
-    string caption = hasEntryText ? entryText : null;
+    string caption = continueSession ? Session.Caption : hasEntryText ? entryText : null;
 
-    if (!hasEntryText && CaptionUseTipWhenNoText.Value && CustomAssets.GetRandomLoadingTip(out string tip)) {
+    if (!continueSession && !hasEntryText && CaptionUseTipWhenNoText.Value
+        && CustomAssets.GetRandomLoadingTip(out string tip)) {
       caption = tip;
     }
 
-    if (!host.Show(selection, caption, tipText)) {
+    float startedAt = continueSession ? Session.StartedAt : Time.realtimeSinceStartup;
+    if (!continueSession) Session.ResetImages();
+    if (!host.Show(selection, caption, tipText, Time.realtimeSinceStartup - startedAt)) {
       return false;
     }
 
-    LoadingAudio.Play(host, selection, hasEntryText && tipText);
+    LoadingAudio.Play(host, selection, hasEntryText && tipText, continueSession);
 
     LoadingScreen.LogInfo($"Loading screen for {situation}: {selection.List.Name} -> {selection.Entry.Image}");
 
-    CurrentCaption = hasEntryText ? entryText : CaptionUseTipWhenNoText.Value ? null : string.Empty;
+    CurrentCaption = continueSession ? Session.CurrentCaption
+        : hasEntryText ? entryText : CaptionUseTipWhenNoText.Value ? null : string.Empty;
+    if (continueSession) Session.Continue(stage);
+    else Session.Record(stage, selection, caption, CurrentCaption, startedAt);
 
     if (tipText && !host.ShowsOwnText) {
       tipText.SetText(caption ?? string.Empty);
@@ -122,6 +130,7 @@ public static class LoadingManager {
 
     if (tipText) tipText.SetText(tip);
     if (host) host.SetCaption(tip);
+    if (Session.Stage == LoadingStage.Menu) Session.SetCaption(tip);
   }
 
   public static void SetupLoadingImage(Image loadingImage = default) {
@@ -299,7 +308,7 @@ public static class LoadingManager {
     FejdStartupHost = LayerHost.Attach(loadingImage);
     FejdStartupHost.Separator = panelSeparator;
 
-    if (!ShowSituation(FejdStartupHost, Situation.General, loadingText)) {
+    if (!ShowSituation(FejdStartupHost, LoadingStage.Menu, Situation.General, loadingText)) {
       ShowFallback(FejdStartupHost, loadingImage, loadingText);
     }
   }
