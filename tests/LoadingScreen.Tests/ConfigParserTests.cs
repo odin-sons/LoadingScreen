@@ -10,7 +10,7 @@ using Xunit;
 public class ConfigParserTests {
   static readonly HashSet<string> _files = [
     "general/a.jpg", "general/b.png", "sleep/night.jpg", "mistlands/fog.jpg", "death/fall.jpg", "common/logo.png", "common/bg.jpeg",
-    "music/forest.ogg", "music/list.wav", "music/entry.ogg", "voice/tip.wav"
+    "music/forest.ogg", "music/list.wav", "music/entry.ogg", "voice/tip.wav", "entry.png", "separator.png"
   ];
 
   static ConfigLoadResult Parse(string yaml, ICollection<string> causes = null) {
@@ -23,7 +23,7 @@ public class ConfigParserTests {
         layouts:
           forest:
             sound: music/forest.ogg
-            layers: [ { source: entry } ]
+            layers: [ { image: entry } ]
         situations:
           general:
             layout: forest
@@ -85,7 +85,7 @@ public class ConfigParserTests {
           dream:
             showSleepUi: false
             layers:
-              - source: entry
+              - image: entry
               - text: caption
         situations:
           sleep:
@@ -103,7 +103,7 @@ public class ConfigParserTests {
 
   [Fact]
   public void InvalidSleepUiKeepsGameUiVisible() {
-    ConfigLoadResult result = Parse("layouts: { dream: { showSleepUi: maybe, layers: [ { source: entry } ] } }");
+    ConfigLoadResult result = Parse("layouts: { dream: { showSleepUi: maybe, layers: [ { image: entry } ] } }");
 
     Assert.True(result.Config.Layouts["dream"].ShowSleepUi);
     Assert.Contains(result.Warnings, warning => warning.Contains("'showSleepUi' must be true or false"));
@@ -150,7 +150,7 @@ public class ConfigParserTests {
 
   [Fact]
   public void MissingAppearanceKeysUseBuiltIns() {
-    ConfigLoadResult result = Parse("defaults:\n  fit: contain\n  tip: { x: 10 }\n");
+    ConfigLoadResult result = Parse("defaults:\n  place: { fit: contain }\n  tip: { x: 10 }\n");
 
     Assert.Empty(result.Warnings);
     Assert.Equal(FitMode.Contain, result.Config.Defaults.Fit.Mode);
@@ -245,21 +245,17 @@ public class ConfigParserTests {
   public void ParsesFullExample() {
     const string yaml = """
         defaults:
-          fit: cover
-          position: { anchor: center }
+          place: { fit: cover, position: { anchor: center } }
 
         layouts:
           logo-over-backdrops:
             layers:
               - color: "#000000"
               - id: backdrop
-                source: entry
-                fade: { sides: [bottom, left], color: "#00000080", size: 25%, curve: smooth }
+                image: entry
+                place: { fade: { sides: [bottom, left], color: "#00000080", size: 25%, curve: smooth } }
               - image: common/logo.png
-                fit: { width: 30% }
-                position: { anchor: top, y: 8% }
-                opacity: 0.9
-                animate: false
+                place: { fit: { width: 30% }, position: { anchor: top, y: 8% }, opacity: 0.9, animate: false }
 
         situations:
           general:
@@ -390,22 +386,23 @@ public class ConfigParserTests {
   public void InvalidValuesAreReportedAndDropped() {
     const string yaml = """
         defaults:
-          fit: squash
-          position: { anchor: middle, x: 10em }
-          opacity: 2
-          fade: { sides: [inside], color: red }
-          animate: maybe
+          place:
+            fit: squash
+            position: { anchor: middle, x: 10em }
+            opacity: 2
+            fade: { sides: [inside], color: red }
+            animate: maybe
         layouts:
           broken:
             layers:
               - color: blue
               - image: common/logo.png
-                source: entry
+                text: caption
               - id: nothing
           ok:
             layers:
               - image: common/bg.jpeg
-                fit: { width: -10px, height: 50% }
+                place: { fit: { width: -10px, height: 50% } }
         """;
 
     ConfigLoadResult result = Parse(yaml);
@@ -425,7 +422,7 @@ public class ConfigParserTests {
     Assert.Contains(result.Warnings, warning => warning.Contains("inside"));
     Assert.Contains(result.Warnings, warning => warning.Contains("animate"));
     Assert.Contains(result.Warnings, warning => warning.Contains("negative"));
-    Assert.Contains(result.Warnings, warning => warning.Contains("no 'source: entry'"));
+    Assert.Contains(result.Warnings, warning => warning.Contains("no 'image: entry'"));
   }
 
   [Fact]
@@ -467,10 +464,12 @@ public class ConfigParserTests {
           general:
             order: random
             entries: [ general/a.jpg ]
+          enemy:
+            Dragon:
+              - text: Drakes spit frost.
+            Modded_Wisp:
+              - text: A modded creature.
           death:
-            enemy:
-              Dragon:
-                - text: Drakes spit frost.
             Fall: [ death/fall.jpg ]
         """;
 
@@ -479,7 +478,8 @@ public class ConfigParserTests {
     Assert.Empty(result.Warnings);
     Assert.Equal(PickOrder.Sequential, result.Config.Order);
     Assert.Equal(PickOrder.Random, result.Config.General.Order);
-    Assert.Equal("death.enemy.Dragon", result.Config.Death[DeathCauses.EnemyKey("dragon")].Name);
+    Assert.Equal("enemy.Dragon", result.Config.Enemy["dragon"].Name);
+    Assert.Single(result.Config.Enemy["Modded_Wisp"].Entries);
     Assert.Contains("Fall", result.Config.Death.Keys);
   }
 
@@ -497,11 +497,10 @@ public class ConfigParserTests {
         layouts:
           lined:
             layers:
-              - source: entry
-              - separator: game
+              - image: entry
+              - image: separator
                 color: "#FFFFFF80"
-                fit: { width: 40% }
-                position: { anchor: bottom, y: -20% }
+                place: { fit: { width: 40% }, position: { anchor: bottom, y: -20% } }
         situations:
           general:
             layout: lined
@@ -521,22 +520,135 @@ public class ConfigParserTests {
   }
 
   [Fact]
-  public void RejectsUnknownSeparatorAndMixedSources() {
+  public void RejectsMixedLayerContentAndOldKeys() {
     const string yaml = """
         layouts:
           broken:
             layers:
               - separator: fancy
-              - separator: game
-                image: common/logo.png
-              - source: entry
+              - image: common/logo.png
+                text: caption
+              - image: entry
         """;
 
     ConfigLoadResult result = Parse(yaml);
 
-    Assert.Contains(result.Warnings, warning => warning.Contains("'separator' supports only 'game'"));
+    Assert.Contains(result.Warnings, warning => warning.Contains("unknown key 'separator'"));
     Assert.Contains(result.Warnings, warning => warning.Contains("use only one of"));
     Assert.False(result.Config.Layouts["broken"].ShowsSeparator);
+  }
+
+  [Fact]
+  public void FormerLayerAndNestedEnemyKeysWarnAsUnknown() {
+    const string yaml = """
+        layouts:
+          old:
+            layers:
+              - source: entry
+              - images: [common/logo.png]
+              - image: entry
+        situations:
+          death:
+            enemy: { Troll: [death/fall.jpg] }
+        """;
+
+    ConfigLoadResult result = Parse(yaml, DeathCauses.Names.ToArray());
+
+    Assert.Contains(result.Warnings, warning => warning.Contains("unknown key 'source'"));
+    Assert.Contains(result.Warnings, warning => warning.Contains("unknown key 'images'"));
+    Assert.Contains(result.Warnings, warning => warning.Contains("unknown death name 'enemy'"));
+    Assert.Empty(result.Config.Enemy);
+  }
+
+  [Fact]
+  public void ImageAcceptsKeywordsPathsAndPathLists() {
+    const string yaml = """
+        layouts:
+          mixed:
+            layers:
+              - image: entry
+              - image: separator
+                color: "#FFFFFF80"
+              - image: [common/logo.png, common/bg.jpeg]
+              - image: common/logo.png
+              - image: entry.png
+              - image: separator.png
+        """;
+
+    ConfigLoadResult result = Parse(yaml);
+    Layer[] layers = [.. result.Config.Layouts["mixed"].Layers];
+
+    Assert.Empty(result.Warnings);
+    Assert.True(layers[0].FromEntry);
+    Assert.True(layers[1].GameSeparator);
+    Assert.True(layers[1].HasTint);
+    Assert.Equal(["common/logo.png", "common/bg.jpeg"], layers[2].Images);
+    Assert.Equal(["common/logo.png"], layers[3].Images);
+    Assert.Equal(["entry.png"], layers[4].Images);
+    Assert.Equal(["separator.png"], layers[5].Images);
+  }
+
+  [Fact]
+  public void PlaceWorksAtEveryScopeAndFlatKeysAreUnknown() {
+    const string yaml = """
+        defaults:
+          place: { fit: contain }
+          fit: cover
+        layouts:
+          placed:
+            place: { position: top }
+            opacity: 0.5
+            layers:
+              - image: entry
+                place: { opacity: 0.7 }
+                animate: false
+        situations:
+          general:
+            layout: placed
+            entries:
+              - image: general/a.jpg
+                place: { animate: true }
+        """;
+
+    ConfigLoadResult result = Parse(yaml);
+
+    Assert.Equal(FitMode.Contain, result.Config.Defaults.Fit.Mode);
+    Assert.Equal(Anchor.Top, result.Config.Layouts["placed"].Placement.Anchor);
+    Assert.Equal(0.7f, result.Config.Layouts["placed"].Layers[0].Placement.Opacity);
+    Assert.True(result.Config.General.Entries[0].Place.Animate);
+    Assert.Equal(3, result.Warnings.Count);
+    Assert.Contains(result.Warnings, warning => warning.Contains("unknown key 'fit'"));
+    Assert.Contains(result.Warnings, warning => warning.Contains("unknown key 'opacity'"));
+    Assert.Contains(result.Warnings, warning => warning.Contains("unknown key 'animate'"));
+  }
+
+  [Fact]
+  public void GenericDefaultsKeepValidFieldsAndWarnForInvalidAndUnknownFields() {
+    const string yaml = """
+        defaults:
+          zoom: { enabled: false, amount: 1.6, seconds: 9, surprise: 1 }
+          tip: { x: 4, size: 65, color: bad, extra: true }
+          continuePrompt: { size: 18, bottom: .nan }
+          separator: { show: false, onLayouts: wrong }
+          spinner: { center: false, x: .inf }
+        """;
+
+    ConfigLoadResult result = Parse(yaml);
+    ScreenDefaults defaults = result.Config.Defaults;
+
+    Assert.False(defaults.Zoom.Enabled);
+    Assert.Equal(1.05f, defaults.Zoom.Amount);
+    Assert.Equal(9f, defaults.Zoom.Seconds);
+    Assert.Equal(4f, defaults.Tip.X);
+    Assert.Equal(24, defaults.Tip.Size);
+    Assert.Equal(18, defaults.ContinuePrompt.Size);
+    Assert.Equal(30f, defaults.ContinuePrompt.Bottom);
+    Assert.False(defaults.Separator.Show);
+    Assert.True(defaults.Separator.OnLayouts);
+    Assert.False(defaults.Spinner.Center);
+    Assert.Equal(0f, defaults.Spinner.X);
+    Assert.Equal(8, result.Warnings.Count);
+    Assert.All(result.Warnings, warning => Assert.Contains("line ", warning));
   }
 }
 
@@ -561,7 +673,7 @@ public class ExampleConfigTests {
 
     Assert.Empty(result.Warnings);
     Assert.Equal(2, result.Config.Layouts.Count);
-    Assert.Equal(7, result.Config.EntryCount);
+    Assert.Equal(8, result.Config.EntryCount);
   }
 }
 
@@ -572,14 +684,13 @@ public class TextLayerTests {
         layouts:
           captioned:
             layers:
-              - source: entry
+              - image: entry
               - text: caption
                 size: 32
                 color: "#FFFFFF"
                 align: left
                 background: "#00000080"
-                fit: { width: 40% }
-                position: { anchor: bottom-left, x: 5%, y: -5% }
+                place: { fit: { width: 40% }, position: { anchor: bottom-left, x: 5%, y: -5% } }
         """;
 
     ConfigLoadResult result = new ConfigParser(_ => true).Parse(yaml);
@@ -600,12 +711,12 @@ public class TextLayerTests {
         layouts:
           broken:
             layers:
-              - source: entry
+              - image: entry
               - text: weather
               - text: caption
                 image: a.png
               - text: caption
-                fit: cover
+                place: { fit: cover }
                 size: -3
               - image: a.png
                 align: left

@@ -5,6 +5,7 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
 using System.Linq;
+using System.Reflection;
 
 using YamlDotNet.Core;
 using YamlDotNet.Core.Events;
@@ -21,12 +22,12 @@ public sealed class ConfigParser {
 
   static readonly string[] _placementKeys = ["fit", "position", "opacity", "fade", "animate"];
   static readonly string[] _defaultKeys = [
-    .. _placementKeys, "background", "tint", "vignette", "mask", "zoom", "tip", "continueprompt", "separator", "spinner"
+    "place", "background", "tint", "vignette", "mask", "zoom", "tip", "continueprompt", "separator", "spinner"
   ];
   static readonly string[] _layerKeys = [
-    "id", "color", "image", "images", "source", "separator", "text", "size", "align", "background", .. _placementKeys
+    "id", "color", "image", "text", "size", "align", "background", "place"
   ];
-  static readonly string[] _layoutKeys = ["layers", "sound", "showsleepui", "vignette", "mask", .. _placementKeys];
+  static readonly string[] _layoutKeys = ["layers", "sound", "showsleepui", "vignette", "mask", "place"];
   static readonly string[] _entryKeys = ["image", "sound", "voice", "text", "layout", "place", "when"];
 
   readonly Func<string, bool> _assetExists;
@@ -161,7 +162,8 @@ public sealed class ConfigParser {
     Layout layout = new() { Name = name };
 
     if (node is YamlMappingNode mapping) {
-      layout.Placement = ParsePlacement(mapping, _layoutKeys, $"layout '{name}'");
+      WarnUnknownKeys(mapping, _layoutKeys, $"layout '{name}'");
+      layout.Placement = ParsePlacement(Child(mapping, "place"), $"layout '{name}': 'place'");
       layersNode = Child(mapping, "layers");
       layout.Vignette = ParseVignette(Child(mapping, "vignette"), $"layout '{name}'.vignette");
       layout.Mask = ParseMask(Child(mapping, "mask"), $"layout '{name}'.mask");
@@ -205,22 +207,18 @@ public sealed class ConfigParser {
       return null;
     }
 
+    WarnUnknownKeys(mapping, _layerKeys, where);
     Layer layer = new() {
       Id = Scalar(Child(mapping, "id")),
-      Placement = ParsePlacement(mapping, _layerKeys, where),
+      Placement = ParsePlacement(Child(mapping, "place"), $"{where}: 'place'"),
     };
 
     YamlNode color = Child(mapping, "color");
     YamlNode image = Child(mapping, "image");
-    YamlNode images = Child(mapping, "images");
-    YamlNode source = Child(mapping, "source");
-    YamlNode separator = Child(mapping, "separator");
     YamlNode text = Child(mapping, "text");
 
-    int imageSources = new[] { image, images, source, separator, text }.Count(child => child != null);
-
-    if (imageSources > 1) {
-      Warn(node, $"{where}: use only one of 'image', 'images', 'source', 'separator' and 'text' in a layer, ignored");
+    if (image != null && text != null) {
+      Warn(node, $"{where}: use only one of 'image' and 'text' in a layer, ignored");
       return null;
     }
 
@@ -234,9 +232,9 @@ public sealed class ConfigParser {
       }
     }
 
-    if (imageSources == 0) {
+    if (image == null) {
       if (color == null) {
-        Warn(node, $"{where}: a layer needs 'image', 'images', 'source', 'separator' or 'color', ignored");
+        Warn(node, $"{where}: a layer needs 'image', 'text' or 'color', ignored");
         return null;
       }
 
@@ -252,12 +250,7 @@ public sealed class ConfigParser {
 
     layer.Kind = LayerKind.Image;
 
-    if (separator != null) {
-      if (!string.Equals(Scalar(separator), "game", StringComparison.OrdinalIgnoreCase)) {
-        Warn(separator, $"{where}: 'separator' supports only 'game' (the game's ornament line), layer ignored");
-        return null;
-      }
-
+    if (image is YamlScalarNode && string.Equals(Scalar(image), "separator", StringComparison.OrdinalIgnoreCase)) {
       if (color != null) {
         if (!ColorValue.TryParse(Scalar(color), out ColorValue tint)) {
           Warn(color, $"{where}: invalid color '{Scalar(color)}', use #RRGGBB or #RRGGBBAA; tint ignored");
@@ -275,17 +268,12 @@ public sealed class ConfigParser {
       Warn(color, $"{where}: 'color' is ignored on an image layer");
     }
 
-    if (source != null) {
-      if (!string.Equals(Scalar(source), "entry", StringComparison.OrdinalIgnoreCase)) {
-        Warn(source, $"{where}: 'source' supports only 'entry', layer ignored");
-        return null;
-      }
-
+    if (image is YamlScalarNode && string.Equals(Scalar(image), "entry", StringComparison.OrdinalIgnoreCase)) {
       layer.FromEntry = true;
       return layer;
     }
 
-    IEnumerable<YamlNode> imageNodes = image != null ? [image] : Sequence(images, $"{where}: 'images'");
+    IEnumerable<YamlNode> imageNodes = image is YamlSequenceNode sequence ? sequence.Children : [image];
 
     foreach (YamlNode imageNode in imageNodes) {
       string path = Scalar(imageNode);
@@ -338,7 +326,9 @@ public sealed class ConfigParser {
     }
 
     if (layer.Placement.Fit != null && layer.Placement.Fit.Mode != FitMode.Box) {
-      Warn(Child(mapping, "fit"), $"{where}: a text layer supports only 'fit: {{ width }}' (the text width)");
+      YamlMappingNode place = Child(mapping, "place") as YamlMappingNode;
+      Warn(place == null ? null : Child(place, "fit"),
+          $"{where}: a text layer supports only 'fit: {{ width }}' (the text width)");
       layer.Placement.Fit = null;
     }
 
@@ -386,8 +376,12 @@ public sealed class ConfigParser {
           ParseNamedLists(pair.Value, "death", _result.Config.Death, _knownCauses);
           break;
 
+        case "enemy":
+          ParseNamedLists(pair.Value, "enemy", _result.Config.Enemy, null);
+          break;
+
         default:
-          Warn(pair.Key, $"unknown situation '{Name(pair.Key)}', use 'general', 'sleep', 'teleport' or 'death'");
+          Warn(pair.Key, $"unknown situation '{Name(pair.Key)}', use 'general', 'sleep', 'teleport', 'death' or 'enemy'");
           break;
       }
     }
@@ -406,11 +400,6 @@ public sealed class ConfigParser {
 
     foreach (KeyValuePair<YamlNode, YamlNode> pair in mapping.Children) {
       string name = Name(pair.Key);
-
-      if (situation == "death" && string.Equals(name, DeathCauses.EnemySection, StringComparison.OrdinalIgnoreCase)) {
-        ParseEnemyLists(pair.Value, target);
-        continue;
-      }
 
       if (knownNames != null) {
         string known = knownNames.FirstOrDefault(
@@ -449,29 +438,6 @@ public sealed class ConfigParser {
     Warn(node, $"{where}: use 'random' or 'sequential', got '{value}'");
     order = default;
     return false;
-  }
-
-  void ParseEnemyLists(YamlNode node, Dictionary<string, EntryList> target) {
-    if (IsNull(node)) {
-      return;
-    }
-
-    if (node is not YamlMappingNode mapping) {
-      Warn(node, "'death.enemy' must be a mapping of creature prefab names to entries");
-      return;
-    }
-
-    foreach (KeyValuePair<YamlNode, YamlNode> pair in mapping.Children) {
-      string name = Name(pair.Key);
-      string key = DeathCauses.EnemyKey(name);
-
-      if (target.ContainsKey(key)) {
-        Warn(pair.Key, $"duplicate death.enemy name '{name}', ignored");
-        continue;
-      }
-
-      target[key] = ParseEntryList($"death.enemy.{name}", pair.Value);
-    }
   }
 
   EntryList ParseEntryList(string name, YamlNode node) {
@@ -553,7 +519,7 @@ public sealed class ConfigParser {
       Voice = ParseAudio(Child(mapping, "voice"), listName, "voice"),
       Text = text,
       LayoutName = Scalar(Child(mapping, "layout")),
-      Place = IsNull(place) ? new() : ParsePlacement(place, _placementKeys, $"{listName}: 'place'"),
+      Place = ParsePlacement(place, $"{listName}: 'place'"),
     };
     foreach (KeyValuePair<string, string> translation in translations) {
       entry.Translations[translation.Key] = translation.Value;
@@ -611,58 +577,81 @@ public sealed class ConfigParser {
 
   ScreenDefaults ParseDefaults(YamlNode node) {
     ScreenDefaults defaults = new();
-    Placement placement = ParsePlacement(node, _defaultKeys, "defaults");
-    defaults.Fit = placement.Fit;
-    defaults.Anchor = placement.Anchor;
-    defaults.X = placement.X;
-    defaults.Y = placement.Y;
-    defaults.Opacity = placement.Opacity;
-    defaults.Fade = placement.Fade;
-    defaults.Animate = placement.Animate;
-
+    if (IsNull(node)) {
+      return defaults;
+    }
     if (node is not YamlMappingNode mapping) {
+      Warn(node, "defaults: expected a mapping");
       return defaults;
     }
 
+    WarnUnknownKeys(mapping, _defaultKeys, "defaults");
+    ParsePlacement(Child(mapping, "place"), "defaults.place", defaults);
     defaults.Background = ParseDefaultColor(Child(mapping, "background"), "defaults.background", defaults.Background);
     defaults.Tint = ParseDefaultColor(Child(mapping, "tint"), "defaults.tint", defaults.Tint);
     defaults.Vignette = ParseVignette(Child(mapping, "vignette"), "defaults.vignette");
     defaults.Mask = ParseMask(Child(mapping, "mask"), "defaults.mask");
-
-    if (DefaultMap(Child(mapping, "zoom"), "zoom", ["enabled", "amount", "seconds"]) is { } zoom) {
-      defaults.Zoom.Enabled = ParseDefaultBool(Child(zoom, "enabled"), "zoom.enabled", defaults.Zoom.Enabled);
-      defaults.Zoom.Amount = ParseDefaultFloat(Child(zoom, "amount"), "zoom.amount", defaults.Zoom.Amount, 0.5f, 1.5f);
-      defaults.Zoom.Seconds = ParseDefaultFloat(Child(zoom, "seconds"), "zoom.seconds", defaults.Zoom.Seconds, float.Epsilon, float.MaxValue);
-    }
-
-    if (DefaultMap(Child(mapping, "tip"), "tip", ["x", "bottom", "size", "color"]) is { } tip) {
-      defaults.Tip.X = ParseDefaultFloat(Child(tip, "x"), "tip.x", defaults.Tip.X);
-      defaults.Tip.Bottom = ParseDefaultFloat(Child(tip, "bottom"), "tip.bottom", defaults.Tip.Bottom);
-      defaults.Tip.Size = ParseDefaultInt(Child(tip, "size"), "tip.size", defaults.Tip.Size, 0, 64);
-      defaults.Tip.Color = ParseDefaultColor(Child(tip, "color"), "tip.color", defaults.Tip.Color);
-    }
-
-    if (DefaultMap(Child(mapping, "continueprompt"), "continuePrompt", ["x", "bottom", "size", "color"]) is { } prompt) {
-      defaults.ContinuePrompt.X = ParseDefaultFloat(Child(prompt, "x"), "continuePrompt.x", defaults.ContinuePrompt.X);
-      defaults.ContinuePrompt.Bottom = ParseDefaultFloat(Child(prompt, "bottom"), "continuePrompt.bottom", defaults.ContinuePrompt.Bottom);
-      defaults.ContinuePrompt.Size = ParseDefaultInt(Child(prompt, "size"), "continuePrompt.size", defaults.ContinuePrompt.Size, 0, 64);
-      defaults.ContinuePrompt.Color = ParseDefaultColor(Child(prompt, "color"), "continuePrompt.color", defaults.ContinuePrompt.Color);
-    }
-
-    if (DefaultMap(Child(mapping, "separator"), "separator", ["show", "x", "bottom", "onlayouts"]) is { } separator) {
-      defaults.Separator.Show = ParseDefaultBool(Child(separator, "show"), "separator.show", defaults.Separator.Show);
-      defaults.Separator.X = ParseDefaultFloat(Child(separator, "x"), "separator.x", defaults.Separator.X);
-      defaults.Separator.Bottom = ParseDefaultFloat(Child(separator, "bottom"), "separator.bottom", defaults.Separator.Bottom);
-      defaults.Separator.OnLayouts = ParseDefaultBool(Child(separator, "onlayouts"), "separator.onLayouts", defaults.Separator.OnLayouts);
-    }
-
-    if (DefaultMap(Child(mapping, "spinner"), "spinner", ["center", "x", "bottom"]) is { } spinner) {
-      defaults.Spinner.Center = ParseDefaultBool(Child(spinner, "center"), "spinner.center", defaults.Spinner.Center);
-      defaults.Spinner.X = ParseDefaultFloat(Child(spinner, "x"), "spinner.x", defaults.Spinner.X);
-      defaults.Spinner.Bottom = ParseDefaultFloat(Child(spinner, "bottom"), "spinner.bottom", defaults.Spinner.Bottom);
-    }
+    ParseDefaultSection(Child(mapping, "zoom"), "zoom", defaults.Zoom,
+        new Dictionary<string, (float Min, float Max)> { ["Amount"] = (0.5f, 1.5f), ["Seconds"] = (float.Epsilon, float.MaxValue) });
+    ParseDefaultSection(Child(mapping, "tip"), "tip", defaults.Tip,
+        new Dictionary<string, (float Min, float Max)> { ["Size"] = (0f, 64f) });
+    ParseDefaultSection(Child(mapping, "continueprompt"), "continuePrompt", defaults.ContinuePrompt,
+        new Dictionary<string, (float Min, float Max)> { ["Size"] = (0f, 64f) });
+    ParseDefaultSection(Child(mapping, "separator"), "separator", defaults.Separator);
+    ParseDefaultSection(Child(mapping, "spinner"), "spinner", defaults.Spinner);
 
     return defaults;
+  }
+
+  void ParseDefaultSection<T>(
+      YamlNode node, string section, T target, IReadOnlyDictionary<string, (float Min, float Max)> ranges = null) {
+    if (node == null) {
+      return;
+    }
+
+    if (node is not YamlMappingNode mapping) {
+      Warn(node, $"defaults.{section}: expected a mapping; built-in values used");
+      return;
+    }
+
+    PropertyInfo[] properties = typeof(T).GetProperties(BindingFlags.Instance | BindingFlags.Public);
+
+    foreach (KeyValuePair<YamlNode, YamlNode> pair in mapping.Children) {
+      string key = Name(pair.Key);
+      PropertyInfo property = properties.FirstOrDefault(
+          candidate => string.Equals(candidate.Name, key, StringComparison.OrdinalIgnoreCase));
+
+      if (property == null) {
+        Warn(pair.Key, $"defaults.{section}: unknown key '{key}'");
+        continue;
+      }
+
+      string where = $"{section}.{key}";
+      object fallback = property.GetValue(target);
+      object value = property.PropertyType == typeof(bool)
+          ? ParseDefaultBool(pair.Value, where, (bool) fallback)
+          : property.PropertyType == typeof(ColorValue)
+              ? ParseDefaultColor(pair.Value, where, (ColorValue) fallback)
+              : ParseDefaultNumber(pair.Value, where, property, fallback, ranges);
+      property.SetValue(target, value);
+    }
+  }
+
+  object ParseDefaultNumber(
+      YamlNode node, string where, PropertyInfo property, object fallback,
+      IReadOnlyDictionary<string, (float Min, float Max)> ranges) {
+    float min = float.MinValue;
+    float max = float.MaxValue;
+    if (ranges != null && ranges.TryGetValue(property.Name, out var bounds)) {
+      min = bounds.Min;
+      max = bounds.Max;
+    }
+
+    if (property.PropertyType == typeof(int)) {
+      return ParseDefaultInt(node, where, (int) fallback, (int) min, (int) max);
+    }
+
+    return ParseDefaultFloat(node, where, (float) fallback, min, max);
   }
 
   VignetteSettings ParseVignette(YamlNode node, string where) {
@@ -712,20 +701,6 @@ public sealed class ConfigParser {
 
     Warn(node, $"{where}: '{key}' must be a number from 0 to 1");
     return null;
-  }
-
-  YamlMappingNode DefaultMap(YamlNode node, string key, IReadOnlyCollection<string> allowedKeys) {
-    if (node == null) {
-      return null;
-    }
-
-    if (node is not YamlMappingNode mapping) {
-      Warn(node, $"defaults.{key}: expected a mapping; built-in values used");
-      return null;
-    }
-
-    WarnUnknownKeys(mapping, allowedKeys, $"defaults.{key}");
-    return mapping;
   }
 
   ColorValue ParseDefaultColor(YamlNode node, string key, ColorValue fallback) {
@@ -782,8 +757,8 @@ public sealed class ConfigParser {
     return fallback;
   }
 
-  Placement ParsePlacement(YamlNode node, IReadOnlyCollection<string> allowedKeys, string where) {
-    Placement placement = new();
+  Placement ParsePlacement(YamlNode node, string where, Placement placement = null) {
+    placement ??= new Placement();
 
     if (IsNull(node)) {
       return placement;
@@ -794,7 +769,7 @@ public sealed class ConfigParser {
       return placement;
     }
 
-    WarnUnknownKeys(mapping, allowedKeys, where);
+    WarnUnknownKeys(mapping, _placementKeys, where);
 
     placement.Fit = ParseFit(Child(mapping, "fit"), where);
     ParsePosition(Child(mapping, "position"), placement, where);
@@ -1078,7 +1053,7 @@ public sealed class ConfigParser {
 
     foreach (Layout layout in config.Layouts.Values) {
       if (!layout.ShowsEntryImage) {
-        Warn(0, $"layout '{layout.Name}' has no 'source: entry' layer, so entry images are not shown with it");
+        Warn(0, $"layout '{layout.Name}' has no 'image: entry' layer, so entry images are not shown with it");
       }
     }
   }

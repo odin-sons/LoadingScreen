@@ -168,13 +168,19 @@ public static class PluginConfig {
         config.BindInOrder(Sound, "Mute game sounds on loading screens", GameSounds.None,
             "Game sounds to fade out while a loading screen is visible: None, or Effects (such as the portal hum), Music, or both separated by a comma.");
 
+    sync.Register(ChangeImageEverySeconds);
+    sync.Register(ChangeTipEverySeconds);
     sync.Register(ShowLoadingScreenOnTeleport);
+    sync.Register(ShowLoadingScreenWhileSleeping);
+    sync.Register(HoldLoadingScreen);
+    sync.Register(MaximumHoldSeconds);
     sync.Register(ShowLoadingScreenImmediatelyOnDeath);
     sync.Register(CaptionUseTipWhenNoText);
     sync.RegisterLock(LockSyncedSettings);
 
     sync.Register(IsModEnabled, clientControlled: true);
     sync.Register(ImageFolder, clientControlled: true);
+    sync.Register(TextLanguage, clientControlled: true);
     sync.Register(SceneLoaderUseLoadingImages, clientControlled: true);
     sync.Register(SceneLoaderShowProgressText, clientControlled: true);
     sync.Register(ServeImagesToClients, clientControlled: true);

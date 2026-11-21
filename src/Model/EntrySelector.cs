@@ -14,10 +14,12 @@ public enum SituationKind {
 public readonly struct Situation {
   public SituationKind Kind { get; }
   public IReadOnlyList<string> Keys { get; }
+  public string AttackerPrefab { get; }
 
-  Situation(SituationKind kind, IReadOnlyList<string> keys) {
+  Situation(SituationKind kind, IReadOnlyList<string> keys, string attackerPrefab = null) {
     Kind = kind;
     Keys = keys ?? [];
+    AttackerPrefab = attackerPrefab;
   }
 
   public static Situation General => new(SituationKind.General, []);
@@ -28,7 +30,14 @@ public readonly struct Situation {
 
   public static Situation Death(params string[] causes) => new(SituationKind.Death, causes);
 
+  public static Situation Death(IReadOnlyList<string> causes, string attackerPrefab) =>
+      new(SituationKind.Death, causes, attackerPrefab);
+
   public override string ToString() {
+    if (Kind == SituationKind.Death && AttackerPrefab != null) {
+      return $"{Kind}({AttackerPrefab}, {string.Join(", ", Keys)})";
+    }
+
     return Keys.Count == 0 ? Kind.ToString() : $"{Kind}({string.Join(", ", Keys)})";
   }
 }
@@ -86,6 +95,11 @@ public sealed class EntrySelector {
   IEnumerable<EntryList> Candidates(Situation situation) {
     if (situation.Kind == SituationKind.Sleep) {
       yield return _config.Sleep;
+    }
+
+    if (situation.Kind == SituationKind.Death && situation.AttackerPrefab != null
+        && _config.Enemy.TryGetValue(situation.AttackerPrefab, out EntryList enemy)) {
+      yield return enemy;
     }
 
     Dictionary<string, EntryList> specific = situation.Kind switch {

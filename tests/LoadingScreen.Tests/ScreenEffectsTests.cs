@@ -14,7 +14,7 @@ public class ScreenEffectsTests {
           night:
             vignette: { strength: 0.9 }
             mask: { color: "#708090" }
-            layers: [ { source: entry } ]
+            layers: [ { image: entry } ]
         """;
     ConfigLoadResult result = new ConfigParser(_ => true).Parse(yaml);
     Layout layout = result.Config.Layouts["night"];
@@ -30,7 +30,7 @@ public class ScreenEffectsTests {
 
   [Fact]
   public void EffectsAreOffUnlessConfigured() {
-    ConfigLoadResult result = new ConfigParser(_ => true).Parse("layouts: { plain: { layers: [ { source: entry } ] } }");
+    ConfigLoadResult result = new ConfigParser(_ => true).Parse("layouts: { plain: { layers: [ { image: entry } ] } }");
     Assert.Null(ScreenEffects.ResolveVignette(result.Config.Defaults.Vignette, result.Config.Layouts["plain"].Vignette));
     Assert.Null(ScreenEffects.ResolveMask(result.Config.Defaults.Mask, result.Config.Layouts["plain"].Mask));
   }
@@ -45,7 +45,7 @@ public class ScreenEffectsTests {
           plain:
             vignette: { strength: 0 }
             mask: { opacity: 0 }
-            layers: [ { source: entry } ]
+            layers: [ { image: entry } ]
         """;
     ConfigLoadResult result = new ConfigParser(_ => true).Parse(yaml);
     Layout layout = result.Config.Layouts["plain"];
@@ -65,7 +65,7 @@ public class ScreenEffectsTests {
           night:
             vignette: []
             mask: false
-            layers: [ { source: entry } ]
+            layers: [ { image: entry } ]
         """;
     ConfigLoadResult result = new ConfigParser(_ => true).Parse(yaml);
     VignetteSettings vignette = ScreenEffects.ResolveVignette(result.Config.Defaults.Vignette, result.Config.Layouts["night"].Vignette);
