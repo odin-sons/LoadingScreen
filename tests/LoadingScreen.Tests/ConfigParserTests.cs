@@ -18,13 +18,21 @@ public class ConfigParserTests {
   }
 
   [Fact]
+  public void OldSituationsKeyIsNotAccepted() {
+    ConfigLoadResult result = Parse("situations: { general: [ general/a.jpg ] }");
+
+    Assert.True(result.Config.IsEmpty);
+    Assert.Contains(result.Warnings, warning => warning.Contains("unknown top-level key 'situations'"));
+  }
+
+  [Fact]
   public void ParsesMusicAtEachScopeAndEntryVoice() {
     const string yaml = """
         layouts:
           forest:
             sound: music/forest.ogg
             layers: [ { image: entry } ]
-        situations:
+        when:
           general:
             layout: forest
             sound: music/list.wav
@@ -47,7 +55,7 @@ public class ConfigParserTests {
   [Fact]
   public void InvalidAudioPathsWarnAndAreIgnoredWithoutLosingEntries() {
     const string yaml = """
-        situations:
+        when:
           general:
             sound: ../outside.ogg
             entries:
@@ -87,7 +95,7 @@ public class ConfigParserTests {
             layers:
               - image: entry
               - text: caption
-        situations:
+        when:
           sleep:
             layout: dream
             entries: [ sleep/night.jpg ]
@@ -234,7 +242,7 @@ public class ConfigParserTests {
 
   [Fact]
   public void InvalidYamlIsReportedNotThrown() {
-    ConfigLoadResult result = Parse("situations: [unclosed");
+    ConfigLoadResult result = Parse("when: [unclosed");
 
     Assert.True(result.Config.IsEmpty);
     Assert.Single(result.Warnings);
@@ -257,7 +265,7 @@ public class ConfigParserTests {
               - image: common/logo.png
                 place: { fit: { width: 30% }, position: { anchor: top, y: 8% }, opacity: 0.9, animate: false }
 
-        situations:
+        when:
           general:
             layout: logo-over-backdrops
             entries:
@@ -315,7 +323,7 @@ public class ConfigParserTests {
   [Fact]
   public void SkipsMissingUnsafeAndUnsupportedImages() {
     const string yaml = """
-        situations:
+        when:
           general:
             - general/missing.jpg
             - ../outside.jpg
@@ -337,7 +345,7 @@ public class ConfigParserTests {
   public void ReportsUnknownNamesAndKeys() {
     const string yaml = """
         colour: red
-        situations:
+        when:
           teleport:
             Narnia: [ general/a.jpg ]
           death:
@@ -359,7 +367,7 @@ public class ConfigParserTests {
 
   [Fact]
   public void AcceptsAnyCauseWhenCauseListIsUnknown() {
-    ConfigLoadResult result = Parse("situations: { death: { Whatever: [ death/fall.jpg ] } }");
+    ConfigLoadResult result = Parse("when: { death: { Whatever: [ death/fall.jpg ] } }");
 
     Assert.Empty(result.Warnings);
     Assert.True(result.Config.Death.ContainsKey("whatever"));
@@ -368,7 +376,7 @@ public class ConfigParserTests {
   [Fact]
   public void UnknownLayoutFallsBackToDefault() {
     const string yaml = """
-        situations:
+        when:
           general:
             layout: nope
             entries:
@@ -460,7 +468,7 @@ public class ConfigParserTests {
   public void ParsesEnemyListsAndOrder() {
     const string yaml = """
         order: sequential
-        situations:
+        when:
           general:
             order: random
             entries: [ general/a.jpg ]
@@ -501,7 +509,7 @@ public class ConfigParserTests {
               - image: separator
                 color: "#FFFFFF80"
                 place: { fit: { width: 40% }, position: { anchor: bottom, y: -20% } }
-        situations:
+        when:
           general:
             layout: lined
             entries: [ general/a.jpg ]
@@ -547,7 +555,7 @@ public class ConfigParserTests {
               - source: entry
               - images: [common/logo.png]
               - image: entry
-        situations:
+        when:
           death:
             enemy: { Troll: [death/fall.jpg] }
         """;
@@ -602,7 +610,7 @@ public class ConfigParserTests {
               - image: entry
                 place: { opacity: 0.7 }
                 animate: false
-        situations:
+        when:
           general:
             layout: placed
             entries:
@@ -739,7 +747,7 @@ public class TextLayerTests {
 public class YamlLimitsTests {
   [Fact]
   public void RejectsDeepNesting() {
-    string yaml = "situations: " + new string('[', 5000) + new string(']', 5000);
+    string yaml = "when: " + new string('[', 5000) + new string(']', 5000);
     ConfigLoadResult result = new ConfigParser(_ => true).Parse(yaml);
 
     Assert.False(result.IsValid);
@@ -749,7 +757,7 @@ public class YamlLimitsTests {
   [Fact]
   public void RejectsAliases() {
     const string yaml = """
-        situations:
+        when:
           general: &list [ a.jpg ]
           death: { Fall: *list }
         """;

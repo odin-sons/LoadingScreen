@@ -2,10 +2,15 @@
 
 ### Unreleased
 
+  * Reorganized the cfg into General, When to show, Timing, Game start screen and Sound. Each setting now states
+    whether it is synchronized; server settings and the lock now actually synchronize, while personal settings stay
+    local. `Mod enabled` applies without a restart, and one synced `Share screens with players` switch controls transfer.
+  * Renamed the YAML top-level `situations` key to `when`; existing YAML files must use `when`.
+
 ### 0.6.0
 
   * Simplified YAML layer content to `image`, `text` or `color`; `image` accepts a path, path list, `entry` or `separator`.
-    Enemy prefab lists now live under `situations.enemy`, and placement at every scope uses `place`.
+    Enemy prefab lists now live under `when.enemy`, and placement at every scope uses `place`.
   * A server join keeps the same loading image, caption and zoom across the menu, scene loader and HUD. Music and
     voice continue through host handovers without replaying the entry voice or dipping in volume during the fade.
 
@@ -13,11 +18,11 @@
     `tips.<code>.txt` files take precedence over `tips.txt`; entry `text` also accepts ISO-keyed translations.
   * Optional hold after HUD loading finishes, dismissed by a key or mouse click and capped at 30 seconds by default.
     Disabled on dedicated servers and during cinematics; `defaults.continuePrompt` styles the prompt line.
-  * Optional loading image and tip while sleeping, with a `situations.sleep` list that falls back to `general`.
+  * Optional loading image and tip while sleeping, with a `when.sleep` list that falls back to `general`.
     Layouts can hide the game's sleep text and spinner with `showSleepUi: false`.
-  * Optional tip rotation on HUD and main-menu loading screens: `[1 - General] Change tip every N seconds` (default
+  * Optional tip rotation on HUD and main-menu loading screens: `[3 - Timing] Change tip every N seconds` (default
     0, off). Tips from `tips.txt` advance without repeating the previous tip when possible; entry text stays fixed.
-  * Optional slideshow on HUD and game start loading screens: `[1 - General] Change image every N seconds` (default
+  * Optional slideshow on HUD and game start loading screens: `[3 - Timing] Change image every N seconds` (default
     0, off). Situational entries cycle within their selected list and respect `order`; zoom restarts per image.
 
 ### 0.5.0
@@ -33,7 +38,7 @@
 
   * Optional config synchronization: Conditional Config Sync 1.0.10+ takes priority when installed; otherwise
     ServerSync is merged into the plugin. Slideshow timing and situation settings can follow the server, with a
-    server lock; machine, language, game start, and server-screen preference settings remain local.
+    server lock; machine, language, game start, sound and key-hold settings remain local.
 
 ### 0.3.0
 
@@ -48,7 +53,7 @@
   * Entry conditions: `when` with `knownItem`, `hasItem`, `knownRecipe`, `knownBiome`, `globalKey` and `playerKey`,
     each also as `not...`; an entry is shown only when every condition holds.
   * Entries may have only a `text`; it is shown over a random plain image.
-  * Death screens per enemy: `situations.enemy.<creature prefab>` is tried before the damage type and the hit type.
+  * Death screens per enemy: `when.enemy.<creature prefab>` is tried before the damage type and the hit type.
   * `order: random | sequential`, for the whole file or one list.
   * `image: separator` layer and the setting to keep or hide the built-in separator on layout screens.
   * Settings renamed to plain names in numbered sections, each with a description. Old settings are not migrated.
@@ -63,7 +68,7 @@
   * Layered layouts: color layers, fixed images, random image pools, the entry image and a caption text layer, each
     with fit, anchor, offsets, opacity, gradient edges and the scale animation; placement falls back from the entry
     to the layer, the layout and the global defaults.
-  * Entry captions replace the tip; new setting `[Situations] useTipWhenNoText`.
+  * Entry captions replace the tip; new setting `[When to show] useTipWhenNoText`.
   * Server images: a server running the mod shares its config and images; clients download them in the background
     into `BepInEx/cache/LoadingScreen/` with size, path and hash checks. New settings `[ServerImages] serveToClients`
     and `downloadFromServer`.

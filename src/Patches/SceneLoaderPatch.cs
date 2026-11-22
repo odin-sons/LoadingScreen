@@ -16,10 +16,15 @@ static class SceneLoaderPatch {
   [HarmonyPrefix]
   [HarmonyPatch(nameof(SceneLoader.Start))]
   static void StartPrefix(SceneLoader __instance) {
-    SetupSceneLoader(__instance);
+    if (IsModEnabled.Value) SetupSceneLoader(__instance);
   }
 
   static Image _loadingImage;
+  static SceneLoader _sceneLoader;
+  static GameObject _originalGameLogo;
+  static bool _originalShowLogos;
+  static bool _originalShowSaveNotification;
+  static bool _originalShowHealthWarning;
   static LayerHost _host;
   static TMP_Text _loadingText;
   static LoadingIndicator _indicator;
@@ -31,8 +36,44 @@ static class SceneLoaderPatch {
 
   static float _startTime;
   static float _lastImageTime;
+  static bool _wasEnabled;
+
+  internal static void Disable() {
+    if (_host) _host.Hide();
+    if (_loadingText) _loadingText.gameObject.SetActive(false);
+    if (_sceneLoader) {
+      _sceneLoader.gameLogo = _originalGameLogo;
+      _sceneLoader._showLogos = _originalShowLogos;
+      _sceneLoader._showSaveNotification = _originalShowSaveNotification;
+      _sceneLoader._showHealthWarning = _originalShowHealthWarning;
+    }
+    if (_indicator) {
+      RectTransform rect = _indicator.transform.GetComponent<RectTransform>();
+      _indicator.m_showProgressIndicator = _indicatorShowsProgress;
+      rect.anchorMin = _indicatorAnchorMin;
+      rect.anchorMax = _indicatorAnchorMax;
+      rect.pivot = _indicatorPivot;
+      rect.anchoredPosition = _indicatorPosition;
+    }
+    _wasEnabled = false;
+  }
+
+  internal static void Enable() {
+    if (!_sceneLoader || !_host || !SceneLoaderUseLoadingImages.Value || !HasImages()) return;
+    _sceneLoader._showLogos = false;
+    _sceneLoader._showSaveNotification = false;
+    _sceneLoader._showHealthWarning = false;
+    _sceneLoader.gameLogo = _loadingImage.gameObject;
+    RefreshAppearance();
+  }
 
   static void SetupSceneLoader(SceneLoader sceneLoader) {
+    _wasEnabled = true;
+    _sceneLoader = sceneLoader;
+    _originalGameLogo = sceneLoader.gameLogo;
+    _originalShowLogos = sceneLoader._showLogos;
+    _originalShowSaveNotification = sceneLoader._showSaveNotification;
+    _originalShowHealthWarning = sceneLoader._showHealthWarning;
     _loadingImage = sceneLoader.gameLogo.transform.parent.Find("Bkg").GetComponent<Image>();
     _host = null;
 
@@ -87,6 +128,13 @@ static class SceneLoaderPatch {
   [HarmonyPostfix]
   [HarmonyPatch(nameof(SceneLoader.Update))]
   static void UpdatePostfix(SceneLoader __instance) {
+    if (!IsModEnabled.Value) return;
+    if (!_indicator) SetupSceneLoader(__instance);
+    if (!_wasEnabled) {
+      _wasEnabled = true;
+      if (_loadingText) _loadingText.gameObject.SetActive(true);
+      if (_host && SceneLoaderUseLoadingImages.Value && HasImages()) ShowNextImage(__instance);
+    }
     float time = Time.time;
 
     float now = Time.realtimeSinceStartup;

@@ -16,7 +16,7 @@ static class FejdStartupPatch {
   [HarmonyPostfix]
   [HarmonyPatch(nameof(FejdStartup.Awake))]
   static void AwakePostfix(FejdStartup __instance) {
-    LoadingManager.SetupFejdStartup(__instance);
+    if (IsModEnabled.Value) LoadingManager.SetupFejdStartup(__instance);
     _loadingWasVisible = __instance.m_loading.activeInHierarchy;
     _lastTipTime = Time.realtimeSinceStartup;
     if (_loadingWasVisible) LoadingManager.Session.MarkVisible(_lastTipTime);
@@ -25,14 +25,28 @@ static class FejdStartupPatch {
   [HarmonyPostfix]
   [HarmonyPatch(nameof(FejdStartup.Update))]
   static void UpdatePostfix(FejdStartup __instance) {
+    if (!IsModEnabled.Value) {
+      _loadingWasVisible = false;
+      return;
+    }
+
+    if (!LoadingManager.FejdStartupHost) {
+      LoadingManager.SetupFejdStartup(__instance);
+      _loadingWasVisible = __instance.m_loading.activeInHierarchy;
+      if (_loadingWasVisible) LoadingManager.Session.MarkVisible(Time.realtimeSinceStartup);
+    }
+    LoadingManager.HideOriginalMenuText();
     bool visible = __instance.m_loading.activeInHierarchy;
     float now = Time.realtimeSinceStartup;
 
     if (visible && !_loadingWasVisible) {
       _lastTipTime = now;
-      if (LoadingManager.Session.WasVisible) {
-        LoadingManager.ShowSituation(
-            LoadingManager.FejdStartupHost, LoadingStage.Menu, Situation.General,
+      if (!LoadingManager.ShowSituation(
+              LoadingManager.FejdStartupHost, LoadingStage.Menu, Situation.General,
+              LoadingManager.FejdStartupTipText)) {
+        LoadingManager.ShowFallback(
+            LoadingManager.FejdStartupHost,
+            __instance.m_loading.transform.Find("Bkg").GetComponent<UnityEngine.UI.Image>(),
             LoadingManager.FejdStartupTipText);
       }
       LoadingManager.Session.MarkVisible(now);

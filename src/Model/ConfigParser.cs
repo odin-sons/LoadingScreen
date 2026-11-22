@@ -92,8 +92,8 @@ public sealed class ConfigParser {
 
           break;
 
-        case "situations":
-          ParseSituations(pair.Value);
+        case "when":
+          ParseWhen(pair.Value);
           break;
 
         default:
@@ -348,13 +348,13 @@ public sealed class ConfigParser {
     return null;
   }
 
-  void ParseSituations(YamlNode node) {
+  void ParseWhen(YamlNode node) {
     if (IsNull(node)) {
       return;
     }
 
     if (node is not YamlMappingNode mapping) {
-      Warn(node, "'situations' must be a mapping");
+      Warn(node, "'when' must be a mapping");
       return;
     }
 

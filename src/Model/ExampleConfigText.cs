@@ -11,8 +11,8 @@ public static class ExampleConfigText {
       # An entry can set voice: voice/tip.ogg; it plays once when that entry's own text is shown.
       # Reload in game with the console command: loadingscreen reload
       #
-      # Selection: sleep uses situations.sleep, a portal teleport uses situations.teleport.<destination biome>,
-      # and a respawn uses situations.death.<cause>; if that list is missing or empty, situations.general is used; if that is
+      # Selection: sleep uses when.sleep, a portal teleport uses when.teleport.<destination biome>,
+      # and a respawn uses when.death.<cause>; if that list is missing or empty, when.general is used; if that is
       # empty too, the plain images in this folder are shown.
       #
       # Biomes: Meadows, BlackForest, Swamp, Mountain, Plains, Mistlands, AshLands, DeepNorth, Ocean
@@ -21,7 +21,7 @@ public static class ExampleConfigText {
       #   Catapult, CinderFire, AshlandsOcean, AshlandsLava, Incinerator, DrawBridge
       # Damage types (checked first for EnemyHit, PlayerHit, Turret, Catapult, Undefined): Blunt, Slash, Pierce,
       #   Chop, Pickaxe, Fire, Frost, Lightning, Poison, Spirit
-      # A kill by a creature tries situations.enemy.<prefab name> first (enemy: { Troll: [...] }).
+      # A kill by a creature tries when.enemy.<prefab name> first (enemy: { Troll: [...] }).
       # Prefab names are free-form, including modded creatures.
       #
       # Order: entries are picked at random; "order: sequential" (top level or on a list) uses config order.
@@ -94,7 +94,7 @@ public static class ExampleConfigText {
       #         background: "#00000099"
       #         place: { fit: { width: 50% }, position: { anchor: bottom, y: -6% } }
 
-      # situations:
+      # when:
       #   general:
       #     layout: logo-over-backdrops
       #     sound: music/forest.ogg
