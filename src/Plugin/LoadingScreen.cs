@@ -25,7 +25,7 @@ public sealed class LoadingScreen : BaseUnityPlugin {
 
   void Awake() {
     _logger = Logger;
-    BindConfig(Config, new ConfigSynchronization(Logger));
+    BindConfig(Config, new ConfigSynchronization());
     LoadingAudio.Initialize(gameObject);
 
     try {
@@ -51,14 +51,24 @@ public sealed class LoadingScreen : BaseUnityPlugin {
   }
 
   public static void LogInfo(object obj) {
-    _logger.LogInfo($"[{DateTime.Now.ToString(DateTimeFormatInfo.InvariantInfo)}] {obj}");
+    if (ModLogFilter.Allows(PluginConfig.LogLevel?.Value ?? ModLogLevel.Warning, ModLogLevel.Info))
+      _logger.LogInfo(FormatLog(obj));
   }
 
   public static void LogWarning(object obj) {
-    _logger.LogWarning($"[{DateTime.Now.ToString(DateTimeFormatInfo.InvariantInfo)}] {obj}");
+    if (ModLogFilter.Allows(PluginConfig.LogLevel?.Value ?? ModLogLevel.Warning, ModLogLevel.Warning))
+      _logger.LogWarning(FormatLog(obj));
   }
 
   public static void LogError(object obj) {
-    _logger.LogError($"[{DateTime.Now.ToString(DateTimeFormatInfo.InvariantInfo)}] {obj}");
+    if (ModLogFilter.Allows(PluginConfig.LogLevel?.Value ?? ModLogLevel.Warning, ModLogLevel.Error))
+      _logger.LogError(FormatLog(obj));
   }
+
+  public static void LogDebug(object obj) {
+    if (ModLogFilter.Allows(PluginConfig.LogLevel?.Value ?? ModLogLevel.Warning, ModLogLevel.Debug))
+      _logger.LogDebug(FormatLog(obj));
+  }
+
+  static string FormatLog(object obj) => $"[{DateTime.Now.ToString(DateTimeFormatInfo.InvariantInfo)}] {obj}";
 }

@@ -557,7 +557,7 @@ Behavior switches in `Odin_Sons.LoadingScreen.cfg`; each has a description in th
 
 | Section | Settings |
 |---|---|
-| `1 - General` | Lock Configuration, Mod enabled, Image folder, Text language, Share screens with players |
+| `1 - General` | Lock Configuration, Mod enabled, Image folder, Text language, Log level, Share screens with players |
 | `2 - When to show` | Loading screen on portal teleport, Loading screen while sleeping, Loading screen right after death, Random tip when an entry has no text |
 | `3 - Timing` | Change image every N seconds, Change tip every N seconds, Hold loading screen until a key is pressed, Maximum hold time in seconds |
 | `4 - Game start screen` | Use loading images, Show progress |
@@ -575,7 +575,7 @@ The following cfg settings are server controlled by default with ServerSync, or 
 admin can choose ownership in `ConditionalConfigSync.SyncPolicy.cfg`:
 `Mod enabled`, `Share screens with players`, all settings in `2 - When to show`, and all settings in `3 - Timing`
 except `Hold loading screen until a key is pressed`. `Lock Configuration` controls the lock itself.
-The remaining settings are client controlled: `Image folder`, `Text language`, the key hold, both game start settings,
+The remaining settings are client controlled: `Image folder`, `Text language`, `Log level`, the key hold, both game start settings,
 and sound settings. Each cfg description ends with its sync status. The server's
 `loadingscreen.yaml` already carries appearance defaults (tint, zoom, tip style, separator, background) through
 the existing screen transfer; they are not cfg settings.
@@ -586,6 +586,9 @@ CCS admins can also override `Conditional` ownership in
 `BepInEx/config/shudnal.ConditionalConfigSync/ConditionalConfigSync.SyncPolicy.cfg`.
 Received cfg values, including `Mod enabled`, take effect without restarting the game.
 Settings marked as requiring a restart remain local.
+
+`[1 - General] Log level` defaults to `Warning`. Choose `Error`, `Warning`, `Info`, or `Debug` to control
+LoadingScreen's messages. `Debug` includes screen selection reasons, audio volumes, file transfers, and image load timings.
 
 ### Console
 

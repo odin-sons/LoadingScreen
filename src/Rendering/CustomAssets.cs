@@ -111,7 +111,7 @@ public static class CustomAssets {
 
     System.Diagnostics.Stopwatch stopwatch = System.Diagnostics.Stopwatch.StartNew();
     _loadImageMethod.Invoke(obj: null, [texture, data, true]);
-    LoadingScreen.LogInfo(
+    LoadingScreen.LogDebug(
         $"Loaded image {Path.GetFileName(imageFile)} ({texture.width}x{texture.height}) "
             + $"in {stopwatch.ElapsedMilliseconds} ms.");
 

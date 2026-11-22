@@ -2,6 +2,9 @@
 
 ### Unreleased
 
+  * Added a client-controlled `Log level` setting (Error, Warning by default, Info, Debug). Detailed screen selection,
+    audio volume, server transfer, and image timing messages are available at Debug.
+
   * Reorganized the cfg into General, When to show, Timing, Game start screen and Sound. Each setting now states
     whether it is synchronized; server settings and the lock now actually synchronize, while personal settings stay
     local. `Mod enabled` applies without a restart, and one synced `Share screens with players` switch controls transfer.
