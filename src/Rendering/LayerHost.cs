@@ -668,6 +668,12 @@ public sealed class LayerHost : MonoBehaviour {
     }
   }
 
+  static readonly Vector2 Center = new(0.5f, 0.5f);
+
+  static Vector2 CenteredOffset(LayerRect rect) => new(
+      rect.OffsetX + ((0.5f - rect.AnchorX) * rect.Width),
+      rect.OffsetY + ((0.5f - rect.AnchorY) * rect.Height));
+
   void Relayout() {
     Vector2 size = _root.rect.size;
     _lastSize = size;
@@ -689,8 +695,8 @@ public sealed class LayerHost : MonoBehaviour {
 
       placed.Rect.anchorMin = textAnchor;
       placed.Rect.anchorMax = textAnchor;
-      placed.Rect.pivot = textAnchor;
-      placed.Rect.anchoredPosition = new(textRect.OffsetX, textRect.OffsetY);
+      placed.Rect.pivot = Center;
+      placed.Rect.anchoredPosition = CenteredOffset(textRect);
       placed.Rect.sizeDelta = new(textRect.Width, textRect.Height);
     }
 
@@ -701,8 +707,8 @@ public sealed class LayerHost : MonoBehaviour {
       Vector2 anchor = new(layerRect.AnchorX, layerRect.AnchorY);
       placed.Rect.anchorMin = anchor;
       placed.Rect.anchorMax = anchor;
-      placed.Rect.pivot = anchor;
-      placed.Rect.anchoredPosition = new(layerRect.OffsetX, layerRect.OffsetY);
+      placed.Rect.pivot = Center;
+      placed.Rect.anchoredPosition = CenteredOffset(layerRect);
       placed.Rect.sizeDelta = new(layerRect.Width, layerRect.Height);
 
       foreach ((Sides side, RectTransform fade, Length? fadeSize) in placed.Fades) {
