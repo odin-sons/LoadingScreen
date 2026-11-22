@@ -229,8 +229,10 @@ public sealed class LayerHost : MonoBehaviour {
   }
 
   void LateUpdate() {
-    if (IsShowing && _root.rect.size != _lastSize) {
-      Relayout();
+    if (!IsShowing) return;
+    if (_root.rect.size != _lastSize) Relayout();
+    if (CurrentSelection == LoadingManager.Session.Selection) {
+      LoadingManager.Session.Tick(Time.realtimeSinceStartup - _animationStartedAt);
     }
   }
 

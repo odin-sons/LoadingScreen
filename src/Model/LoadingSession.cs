@@ -11,6 +11,7 @@ public sealed class LoadingSession {
   public string Caption { get; private set; }
   public string CurrentCaption { get; private set; }
   public float StartedAt { get; private set; }
+  public float AnimationElapsed { get; private set; }
   public LoadingStage Stage { get; private set; }
   public bool WasVisible { get; private set; }
 
@@ -26,8 +27,11 @@ public sealed class LoadingSession {
     Caption = caption;
     CurrentCaption = currentCaption;
     StartedAt = now;
+    AnimationElapsed = 0f;
     WasVisible = stage != LoadingStage.Menu;
   }
+
+  public void Tick(float animationElapsed) => AnimationElapsed = animationElapsed;
 
   public void Continue(LoadingStage stage) => Stage = stage;
 
@@ -35,6 +39,7 @@ public sealed class LoadingSession {
     if (Stage != LoadingStage.Menu || WasVisible) return;
     WasVisible = true;
     StartedAt = now;
+    AnimationElapsed = 0f;
   }
 
   public void SetCaption(string caption) => Caption = caption;
@@ -53,6 +58,7 @@ public sealed class LoadingSession {
     Caption = null;
     CurrentCaption = null;
     StartedAt = 0f;
+    AnimationElapsed = 0f;
     WasVisible = false;
     _images.Clear();
   }
