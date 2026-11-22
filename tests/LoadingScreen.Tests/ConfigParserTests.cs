@@ -643,6 +643,9 @@ public class ConfigParserTests {
     Assert.Equal(Anchor.Bottom, layer.Placement.Anchor);
     Assert.Equal(-5f, layer.Placement.X.Value.Value);
     Assert.Equal(-180f, layer.Placement.Y.Value.Value);
+    Layer centered = result.Config.Defaults.Spinner.ToLayer(centerX: 2f, centerY: 60f, height: 40f);
+    Assert.Equal(-3f, centered.Placement.X.Value.Value);
+    Assert.Equal(-220f, centered.Placement.Y.Value.Value);
     Assert.Null(Parse("defaults: { spinner: { center: false } }").Config.Defaults.Spinner.ToLayer());
   }
 

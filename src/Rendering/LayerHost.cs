@@ -213,7 +213,8 @@ public sealed class LayerHost : MonoBehaviour {
     }
 
     if (gameStart && !layout.ShowsSpinner) {
-      Layer legacySpinner = config.Defaults.Spinner.ToLayer();
+      Vector2 center = SceneLoaderPatch.SpinnerCenter;
+      Layer legacySpinner = config.Defaults.Spinner.ToLayer(center.x, center.y, SceneLoaderPatch.SpinnerSize.y);
       if (legacySpinner != null) AddSpinnerLayer(legacySpinner, layout);
     }
     HasExplicitSpinner = gameStart && layout.ShowsSpinner && HasSpinner;

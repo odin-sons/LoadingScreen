@@ -130,15 +130,15 @@ public sealed class SpinnerDefaults {
   public float X { get; set; }
   public float Bottom { get; set; } = 200f;
 
-  public Layer ToLayer() => !Center ? null : new() {
+  public Layer ToLayer(float centerX = 0f, float centerY = 0f, float height = 0f) => !Center ? null : new() {
     Kind = LayerKind.Spinner,
     SpinnerStyle = SpinnerStyle.Hammer,
     Animation = new() { Enter = "none", Idle = "spin", Exit = "none" },
     Placement = new() {
       Fit = new() { Mode = FitMode.None },
       Anchor = Anchor.Bottom,
-      X = new(X, LengthUnit.Pixels),
-      Y = new(-Bottom, LengthUnit.Pixels),
+      X = new(X + centerX, LengthUnit.Pixels),
+      Y = new(-(Bottom + centerY - (height / 2f)), LengthUnit.Pixels),
     },
   };
 }
