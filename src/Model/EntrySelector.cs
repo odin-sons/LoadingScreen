@@ -73,10 +73,13 @@ public sealed class EntrySelector {
     foreach ((EntryList list, string reason) in Candidates(situation)) {
       Selection selection = SelectFromList(list);
       if (selection != null) {
-        _debug?.Invoke($"Selected {selection.Entry.Image} from {list.Name}: {reason}; order {list.Order ?? _config.Order}.");
+        _debug?.Invoke(LogContext.Message("Selected loading screen entry.", ("screen", situation.Kind),
+            ("list", list.Name), ("image", selection.Entry.Image), ("layout", selection.LayoutName),
+            ("reason", reason), ("order", list.Order ?? _config.Order)));
         return selection;
       }
-      _debug?.Invoke($"Skipped {list.Name}: no usable entries for {situation}.");
+      _debug?.Invoke(LogContext.Message("Skipped loading screen list with no usable entries.",
+          ("screen", situation.Kind), ("list", list.Name), ("situation", situation)));
     }
 
     return null;
@@ -85,7 +88,9 @@ public sealed class EntrySelector {
   public Selection SelectNext(Selection current, Situation situation) {
     if (current != null && Candidates(situation).Any(candidate => ReferenceEquals(candidate.List, current.List))) {
       Selection next = SelectFromList(current.List);
-      if (next != null) _debug?.Invoke($"Selected {next.Entry.Image} from {current.List.Name}: continuing the same list.");
+      if (next != null) _debug?.Invoke(LogContext.Message("Selected next loading screen entry.",
+          ("screen", situation.Kind), ("list", current.List.Name), ("image", next.Entry.Image),
+          ("layout", next.LayoutName)));
       return next;
     }
 
@@ -114,14 +119,16 @@ public sealed class EntrySelector {
         && _config.Enemy.TryGetValue(situation.AttackerPrefab, out EntryList enemy)) {
       yield return (enemy, $"attacker {situation.AttackerPrefab}");
     } else if (situation.Kind == SituationKind.Death && situation.AttackerPrefab != null) {
-      _debug?.Invoke($"No enemy list for attacker {situation.AttackerPrefab}.");
+      _debug?.Invoke(LogContext.Message("No enemy loading screen list matched.",
+          ("screen", "death"), ("prefab", situation.AttackerPrefab)));
     }
 
     if (situation.Kind == SituationKind.Death) {
       foreach (string key in situation.Keys) {
         if (key == null) continue;
         if (_config.Death.TryGetValue(key, out EntryList list)) yield return (list, $"death cause {key}");
-        else _debug?.Invoke($"No death list for cause {key}.");
+        else _debug?.Invoke(LogContext.Message("No death loading screen list matched.",
+            ("screen", "death"), ("cause", key)));
       }
     }
 
@@ -137,7 +144,8 @@ public sealed class EntrySelector {
       foreach (string key in situation.Keys) {
         if (key == null) continue;
         if (_config.Biome.TryGetValue(key, out EntryList list)) yield return (list, $"destination biome {key}");
-        else _debug?.Invoke($"No biome list for destination {key}.");
+        else _debug?.Invoke(LogContext.Message("No biome loading screen list matched.",
+            ("screen", "portal"), ("biome", key)));
       }
     }
 

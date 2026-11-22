@@ -10,9 +10,11 @@ public static class ExampleConfig {
     try {
       Directory.CreateDirectory(Path.GetDirectoryName(path));
       File.WriteAllText(path, ExampleConfigText.Text.Replace("\r\n", "\n"));
-      LoadingScreen.LogInfo($"Created example config: {path}");
+      LoadingScreen.LogInfo(LogContext.Message("Created example configuration.", ("file", LogContext.File(path))));
     } catch (Exception exception) {
-      LoadingScreen.LogWarning($"Could not create example config {path}: {exception.Message}");
+      LoadingScreen.LogWarning(LogContext.Message("Could not create example configuration.",
+          ("file", LogContext.File(path)), ("error", exception.Message)));
+      LoadingScreen.LogDebug(exception);
     }
   }
 }

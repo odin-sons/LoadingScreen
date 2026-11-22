@@ -42,8 +42,10 @@ public class EntrySelectorTests {
     Selection selected = selector.Select(Situation.Sleep);
 
     Assert.Equal("general", selected.List.Name);
-    Assert.Contains(messages, message => message.Contains("Skipped sleep: no usable entries"));
-    Assert.Contains(messages, message => message.Contains("general fallback"));
+    Assert.Contains(messages, message => message.Contains("Skipped loading screen list")
+        && message.Contains("screen=Sleep") && message.Contains("list=sleep"));
+    Assert.Contains(messages, message => message.Contains("list=general")
+        && message.Contains("reason=\"general fallback for Sleep\""));
   }
 
   [Fact]
@@ -53,8 +55,9 @@ public class EntrySelectorTests {
 
     selector.Select(Situation.Teleport("Plains"));
 
-    Assert.Contains(messages, message => message.Contains("No biome list for destination Plains"));
-    Assert.Contains(messages, message => message.Contains("general fallback for Teleport(Plains)"));
+    Assert.Contains(messages, message => message.Contains("No biome loading screen list matched.")
+        && message.Contains("biome=Plains"));
+    Assert.Contains(messages, message => message.Contains("reason=\"general fallback for Teleport(Plains)\""));
   }
 
   [Fact]

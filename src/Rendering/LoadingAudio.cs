@@ -223,31 +223,36 @@ public sealed class LoadingAudio : MonoBehaviour {
 
     StopMusic();
     _musicPath = path;
-    if (CanLoadClip(path)) _musicLoad = StartCoroutine(LoadClip(path, _music, true));
+    if (CanLoadClip(path, relativePath, "music")) _musicLoad = StartCoroutine(LoadClip(path, relativePath, _music, true));
   }
 
   void StartVoice(string relativePath) {
     StopVoice();
     string path = ScreenConfigLoader.ResolveImagePath(relativePath);
-    if (CanLoadClip(path)) _voiceLoad = StartCoroutine(LoadClip(path, _voice, false));
+    if (CanLoadClip(path, relativePath, "voice")) _voiceLoad = StartCoroutine(LoadClip(path, relativePath, _voice, false));
   }
 
-  static bool CanLoadClip(string path) {
+  static bool CanLoadClip(string path, string relativePath, string kind) {
     if (path == null) return false;
-    if (!File.Exists(path) || new FileInfo(path).Length > AudioFile.MaxBytes) {
-      LoadingScreen.LogWarning($"Loading screen audio unavailable or over {AudioFile.MaxBytes / 1024 / 1024} MiB: {path}");
+    long size = File.Exists(path) ? new FileInfo(path).Length : -1;
+    if (size < 0 || size > AudioFile.MaxBytes) {
+      LoadingScreen.LogWarningOnce($"audio:{kind}:{relativePath}:{size}", LogContext.Message(
+          "Could not load loading screen audio.", ("kind", kind), ("file", relativePath),
+          ("bytes", size), ("maxBytes", AudioFile.MaxBytes)));
       return false;
     }
     return true;
   }
 
-  IEnumerator LoadClip(string path, AudioSource source, bool music) {
+  IEnumerator LoadClip(string path, string relativePath, AudioSource source, bool music) {
     AudioType type = path.EndsWith(".ogg", StringComparison.OrdinalIgnoreCase) ? AudioType.OGGVORBIS : AudioType.WAV;
     using UnityWebRequest request = UnityWebRequestMultimedia.GetAudioClip(new Uri(path).AbsoluteUri, type);
     yield return request.SendWebRequest();
 
     if (request.result != UnityWebRequest.Result.Success) {
-      LoadingScreen.LogWarning($"Could not load audio {path}: {request.error}");
+      LoadingScreen.LogWarningOnce($"audio-load:{relativePath}:{request.error}", LogContext.Message(
+          "Could not load loading screen audio.", ("kind", music ? "music" : "voice"),
+          ("file", relativePath), ("error", request.error)));
       if (music) _musicLoad = null;
       else _voiceLoad = null;
       yield break;
@@ -266,14 +271,19 @@ public sealed class LoadingAudio : MonoBehaviour {
 
     AudioClip clip = DownloadHandlerAudioClip.GetContent(request);
     if (!clip) {
-      LoadingScreen.LogWarning($"Could not decode audio {path}.");
+      LoadingScreen.LogWarningOnce($"audio-decode:{relativePath}", LogContext.Message(
+          "Could not decode loading screen audio.", ("kind", music ? "music" : "voice"),
+          ("file", relativePath)));
       if (music) _musicLoad = null;
       else _voiceLoad = null;
       yield break;
     }
     _fade = _handover.Opacity(ScreenOpacity());
     source.volume = music ? MusicVolume() : VoiceVolume();
-    LoadingScreen.LogDebug($"Playing {(music ? "music" : "voice")} {path} at volume {source.volume:0.###} (configured {(music ? MusicVolumePercent.Value : VoiceVolumePercent.Value)}%).");
+    LoadingScreen.LogDebug(LogContext.Message("Playing loading screen audio.",
+        ("kind", music ? "music" : "voice"), ("file", relativePath),
+        ("volume", source.volume),
+        ("configuredPercent", music ? MusicVolumePercent.Value : VoiceVolumePercent.Value)));
     source.clip = clip;
     source.Play();
     if (music) {

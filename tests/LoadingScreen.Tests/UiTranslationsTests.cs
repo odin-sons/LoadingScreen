@@ -56,7 +56,10 @@ public class UiTranslationsTests {
     Assert.Equal("Нажмите любую клавишу, чтобы продолжить", translations.Get("Russian", "continuePrompt"));
     Assert.Equal("с", translations.Get("Russian", "secondsUnit"));
     Assert.Equal("Press any key to continue", translations.Get("Unknown", "continuePrompt"));
-    Assert.NotEmpty(translations.Warnings);
+    Assert.Contains(translations.Warnings, warning => warning.StartsWith(
+        "Unknown translation key ignored. file=translations.yaml line=") && warning.Contains("key=unknownKey"));
+    Assert.Contains(translations.Warnings, warning =>
+        warning.StartsWith("Unknown translation language ignored.") && warning.Contains("language=Unknown"));
   }
 
   [Fact]

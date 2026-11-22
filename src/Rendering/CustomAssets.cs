@@ -59,11 +59,13 @@ public static class CustomAssets {
   public static IEnumerable<string> ReadLoadingTips(string path) {
     if (File.Exists(path)) {
       string[] loadingTips = File.ReadAllLines(path);
-      LoadingScreen.LogInfo($"Found {loadingTips.Length} custom tips in file: {path}");
+      LoadingScreen.LogInfo(LogContext.Message("Loaded custom loading tips.",
+          ("file", LogContext.File(path, _tipFolder)), ("count", loadingTips.Length)));
 
       return loadingTips;
     } else {
-      LoadingScreen.LogInfo($"Creating new empty custom tips file: {path}");
+      LoadingScreen.LogInfo(LogContext.Message("Creating an empty custom tips file.",
+          ("file", LogContext.File(path, _tipFolder))));
       Directory.CreateDirectory(Path.GetDirectoryName(path));
       File.Create(path).Dispose();
 
@@ -76,8 +78,8 @@ public static class CustomAssets {
 
     string[] loadingImageFiles = Directory.GetFiles(path, $"*{extension}", SearchOption.TopDirectoryOnly);
 
-    LoadingScreen.LogInfo(
-        $"Found {loadingImageFiles.Length} custom loading images ({extension}) in directory: {path}");
+    LoadingScreen.LogInfo(LogContext.Message("Found custom loading images.",
+        ("folder", LogContext.File(path, _tipFolder)), ("extension", extension), ("count", loadingImageFiles.Length)));
 
     return loadingImageFiles;
   }
@@ -93,7 +95,9 @@ public static class CustomAssets {
     }
 
     if (!File.Exists(imageFile)) {
-      LoadingScreen.LogError($"Could not find custom loading image: {imageFile}");
+      LoadingScreen.LogWarningOnce($"missing-image:{imageFile}", LogContext.Message(
+          "Could not load loading screen image because the file is missing.",
+          ("file", LogContext.File(imageFile, ScreenConfigLoader.PluginDir))));
       return null;
     }
 
@@ -101,9 +105,10 @@ public static class CustomAssets {
 
     if (!ImageHeader.TryRead(data, out int headerWidth, out int headerHeight)
         || !ImageHeader.IsAllowed(headerWidth, headerHeight)) {
-      LoadingScreen.LogError(
-          $"Skipping {Path.GetFileName(imageFile)}: not a PNG or JPEG file, or larger than "
-              + $"{ImageHeader.MaxSide} px per side or {ImageHeader.MaxPixels / 1000000} megapixels.");
+      LoadingScreen.LogWarningOnce($"invalid-image:{imageFile}", LogContext.Message(
+          "Rejected loading screen image header.", ("file", LogContext.File(imageFile, ScreenConfigLoader.PluginDir)),
+          ("width", headerWidth), ("height", headerHeight), ("formats", "PNG,JPEG"),
+          ("maxSidePixels", ImageHeader.MaxSide), ("maxPixels", ImageHeader.MaxPixels)));
       return null;
     }
 
@@ -142,9 +147,9 @@ public static class CustomAssets {
           (byte) (blue[i] / counts[i]), (byte) (alpha[i] / counts[i]));
     }
     texture.Apply(updateMipmaps: false, makeNoLongerReadable: true);
-    LoadingScreen.LogDebug(
-        $"Loaded image {Path.GetFileName(imageFile)} ({texture.width}x{texture.height}) "
-            + $"in {stopwatch.ElapsedMilliseconds} ms.");
+    LoadingScreen.LogDebug(LogContext.Message("Decoded loading screen image.",
+        ("file", LogContext.File(imageFile, ScreenConfigLoader.PluginDir)),
+        ("width", texture.width), ("height", texture.height), ("elapsedMs", stopwatch.ElapsedMilliseconds)));
 
     sprite = Sprite.Create(texture, new(0, 0, texture.width, texture.height), Vector2.zero, 1);
     sprite.name = $"loadingscreen.sprite-{Path.GetFileName(imageFile)}";
