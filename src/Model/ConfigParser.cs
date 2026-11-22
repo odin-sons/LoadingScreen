@@ -21,8 +21,10 @@ public sealed class ConfigParser {
   const int MaxNestingDepth = 32;
 
   static readonly string[] _placementKeys = ["fit", "position", "opacity", "fade"];
+  static readonly string[] _animatedPlacementKeys = [.. _placementKeys, "animate"];
   static readonly string[] _defaultKeys = [
-    "place", "background", "tint", "vignette", "mask", "animation", "tip", "continueprompt", "separator", "spinner"
+    "place", "background", "tint", "vignette", "mask", "animation", "tip", "continueprompt", "separator", "spinner",
+    "zoom"
   ];
   static readonly string[] _layerKeys = [
     "id", "color", "image", "text", "spinner", "progress", "size", "align", "background", "place", "animation"
@@ -211,9 +213,10 @@ public sealed class ConfigParser {
     WarnUnknownKeys(mapping, _layerKeys, where);
     Layer layer = new() {
       Id = Scalar(Child(mapping, "id")),
-      Placement = ParsePlacement(Child(mapping, "place"), $"{where}: 'place'"),
+      Placement = ParsePlacement(Child(mapping, "place"), $"{where}: 'place'", keys: _animatedPlacementKeys),
       Animation = ParseAnimation(Child(mapping, "animation"), $"{where}.animation"),
     };
+    layer.Animation ??= LegacyAnimate(Child(mapping, "place"), $"{where}: 'place'");
 
     YamlNode color = Child(mapping, "color");
     YamlNode image = Child(mapping, "image");
@@ -639,12 +642,14 @@ public sealed class ConfigParser {
     }
 
     WarnUnknownKeys(mapping, _defaultKeys, "defaults");
-    ParsePlacement(Child(mapping, "place"), "defaults.place", defaults);
+    ParsePlacement(Child(mapping, "place"), "defaults.place", defaults, _animatedPlacementKeys);
     defaults.Background = ParseDefaultColor(Child(mapping, "background"), "defaults.background", defaults.Background);
     defaults.Tint = ParseDefaultColor(Child(mapping, "tint"), "defaults.tint", defaults.Tint);
     defaults.Vignette = ParseVignette(Child(mapping, "vignette"), "defaults.vignette");
     defaults.Mask = ParseMask(Child(mapping, "mask"), "defaults.mask");
-    defaults.Animation = ParseAnimation(Child(mapping, "animation"), "defaults.animation");
+    defaults.Animation = ParseAnimation(Child(mapping, "animation"), "defaults.animation")
+        ?? LegacyAnimate(Child(mapping, "place"), "defaults.place")
+        ?? LegacyZoom(Child(mapping, "zoom"));
     ParseDefaultSection(Child(mapping, "tip"), "tip", defaults.Tip,
         new Dictionary<string, (float Min, float Max)> { ["Size"] = (0f, 64f) });
     ParseDefaultSection(Child(mapping, "continueprompt"), "continuePrompt", defaults.ContinuePrompt,
@@ -809,7 +814,8 @@ public sealed class ConfigParser {
     return fallback;
   }
 
-  Placement ParsePlacement(YamlNode node, string where, Placement placement = null) {
+  Placement ParsePlacement(
+      YamlNode node, string where, Placement placement = null, IReadOnlyCollection<string> keys = null) {
     placement ??= new Placement();
 
     if (IsNull(node)) {
@@ -821,7 +827,7 @@ public sealed class ConfigParser {
       return placement;
     }
 
-    WarnUnknownKeys(mapping, _placementKeys, where);
+    WarnUnknownKeys(mapping, keys ?? _placementKeys, where);
 
     placement.Fit = ParseFit(Child(mapping, "fit"), where);
     ParsePosition(Child(mapping, "position"), placement, where);
@@ -829,6 +835,31 @@ public sealed class ConfigParser {
     placement.Fade = ParseFade(Child(mapping, "fade"), where);
 
     return placement;
+  }
+
+  AnimationSpec LegacyAnimate(YamlNode place, string where) {
+    if (place is not YamlMappingNode mapping) return null;
+    bool? animate = ParseBool(Child(mapping, "animate"), where, "animate");
+    return animate.HasValue ? new() { Idle = animate.Value ? "zoom-in" : "none" } : null;
+  }
+
+  AnimationSpec LegacyZoom(YamlNode node) {
+    if (IsNull(node)) return null;
+    if (node is not YamlMappingNode mapping) {
+      Warn(node, "defaults.zoom: expected a mapping");
+      return null;
+    }
+    WarnUnknownKeys(mapping, ["enabled", "amount", "seconds"], "defaults.zoom");
+    bool? enabled = ParseBool(Child(mapping, "enabled"), "defaults.zoom", "enabled");
+    if (enabled == false) return new() { Idle = "none" };
+    YamlNode secondsNode = Child(mapping, "seconds");
+    if (IsNull(secondsNode)) return null;
+    if (float.TryParse(Scalar(secondsNode), NumberStyles.Float, CultureInfo.InvariantCulture, out float seconds)
+        && !float.IsNaN(seconds) && !float.IsInfinity(seconds) && seconds > 0f) {
+      return new() { Speed = 15f / seconds };
+    }
+    Warn(secondsNode, "defaults.zoom: 'seconds' must be positive");
+    return null;
   }
 
   AnimationSpec ParseAnimation(YamlNode node, string where) {
