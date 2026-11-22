@@ -705,6 +705,8 @@ Settings marked as requiring a restart remain local.
 
 `[1 - General] Log level` defaults to `Warning`. Choose `Error`, `Warning`, `Info`, or `Debug` to control
 LoadingScreen's messages. `Debug` includes screen selection reasons, audio volumes, file transfers, and image load timings.
+The configuration summary after each load is written at BepInEx `Message` level; it is shown from `Warning` when it
+reports problems and from `Info` otherwise.
 
 ### Console
 

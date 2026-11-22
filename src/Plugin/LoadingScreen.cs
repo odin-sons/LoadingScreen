@@ -80,8 +80,12 @@ public sealed class LoadingScreen : BaseUnityPlugin {
 
   public static void LogDebug(object obj) => Write(BepInEx.Logging.LogLevel.Debug, LogSeverity.Debug, obj);
 
-  static void Write(BepInEx.Logging.LogLevel level, LogSeverity severity, object obj) {
-    if (ModLogFilter.Allows(PluginConfig.LogLevel?.Value ?? ModLogLevel.Warning, severity)) _logger.Log(level, obj);
+  public static void LogMessage(object obj, int problems) =>
+      Write(BepInEx.Logging.LogLevel.Message, LogSeverity.Message, obj, problems);
+
+  static void Write(BepInEx.Logging.LogLevel level, LogSeverity severity, object obj, int problems = 0) {
+    if (ModLogFilter.Allows(PluginConfig.LogLevel?.Value ?? ModLogLevel.Warning, severity, problems))
+      _logger.Log(level, obj);
   }
 
   static void WarnIfDebugIsFiltered() {
