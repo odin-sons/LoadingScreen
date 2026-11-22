@@ -34,12 +34,15 @@ public static class PluginConfig {
   public static ConfigEntry<bool> ReadableText { get; private set; }
   public static ConfigEntry<int> MinimumTextSize { get; private set; }
 
+  public static ConfigEntry<bool> LoadWorldInBackground { get; private set; }
+
   const string General = "1 - General";
   const string Screens = "2 - When to show";
   const string Timing = "3 - Timing";
   const string StartScreen = "4 - Game start screen";
   const string Sound = "5 - Sound";
   const string Accessibility = "6 - Accessibility";
+  const string Experimental = "7 - Experimental";
 
   internal static void BindConfig(ConfigFile config, ConfigSynchronization sync) {
     LockSyncedSettings =
@@ -193,6 +196,10 @@ public static class PluginConfig {
             "Smallest font size for text layers, tips and captions. 0 turns the minimum off. [Not Synced with Server]",
             new AcceptableValueRange<int>(0, 200));
 
+    LoadWorldInBackground =
+        config.BindInOrder(Experimental, "Load world in background", false,
+            "Load the world scene in the background when starting or joining a world, so the loading screen keeps animating. Menu input is blocked meanwhile. Load timings are logged at Info. [Not Synced with Server]");
+
     sync.Register(ChangeImageEverySeconds);
     sync.Register(ChangeTipEverySeconds);
     sync.Register(ShowLoadingScreenOnTeleport);
@@ -218,5 +225,6 @@ public static class PluginConfig {
     sync.Register(MuteGameSounds, clientControlled: true);
     sync.Register(ReadableText, clientControlled: true);
     sync.Register(MinimumTextSize, clientControlled: true);
+    sync.Register(LoadWorldInBackground, clientControlled: true);
   }
 }

@@ -43,6 +43,10 @@ cfg and clearer logs.
     `animations.yaml` or `translations.yaml`, the console shows one line with the problem count per file and points
     to LogOutput.log; the main menu shows it once in a dismissible popup when the console is closed. The text uses the
     new `configProblems` translation key.
+  * **Background world load.** Experimental `[7 - Experimental] Load world in background`, off by default, loads the
+    world scene asynchronously when starting or joining a world so the loading screen keeps animating, with high
+    background loading priority and menu input blocked meanwhile. Falls back to the game's synchronous load with a
+    warning if the background load cannot start. Each world load logs its read, activation and total time at Info.
 
 #### Changes
 

@@ -26,6 +26,7 @@ public sealed class LoadingScreen : BaseUnityPlugin {
     Log.Attach(Logger);
     BindConfig(Config, new ConfigSynchronization());
     LoadingAudio.Initialize(gameObject);
+    WorldSceneLoad.Host = this;
 
     try {
       string imageFolder = ImageFolderPath.Resolve(ImageFolder.Value, Paths.BepInExRootPath);
