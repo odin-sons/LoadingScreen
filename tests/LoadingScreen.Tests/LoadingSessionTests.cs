@@ -24,6 +24,20 @@ public class LoadingSessionTests {
   }
 
   [Fact]
+  public void HandoverKeepsTheLastRenderedAnimationTime() {
+    LoadingSession session = new();
+    session.Record(LoadingStage.Menu, new Selection { Entry = new Entry() }, null, null, 3f);
+    session.MarkVisible(3f);
+    session.Tick(1.2f);
+    session.Continue(LoadingStage.Hud);
+
+    Assert.Equal(1.2f, session.AnimationElapsed);
+
+    session.Record(LoadingStage.Hud, new Selection { Entry = new Entry() }, null, null, 20f);
+    Assert.Equal(0f, session.AnimationElapsed);
+  }
+
+  [Fact]
   public void NewSituationOrSeparateLoadCannotContinue() {
     LoadingSession session = new();
     session.Record(LoadingStage.Scene, new Selection { Entry = new Entry() }, "old", null, 1f);
