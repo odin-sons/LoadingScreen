@@ -84,14 +84,14 @@ public class AnimationTests {
   public void ShortAndFullAnimationFormsMergeWithDefaults() {
     ConfigLoadResult result = new ConfigParser(_ => true).Parse("""
         defaults:
-          animation: { enter: fade-in, exit: fly-out-left, speed: 2 }
+          animation: { enter: fade-in, exit: fly-out-left, speed: 2, origin: top-left }
         layouts:
           sample:
             layers:
               - image: entry
                 animation: zoom-in
               - color: "#FFFFFF"
-                animation: { enter: fly-in-left, idle: breathe, exit: fly-out-right, speed: 1.5 }
+                animation: { enter: fly-in-left, idle: breathe, exit: fly-out-right, speed: 1.5, origin: bottom }
         """);
 
     Assert.Empty(result.Warnings);
@@ -101,11 +101,14 @@ public class AnimationTests {
     Assert.Equal("zoom-in", shortForm.Idle);
     Assert.Equal("fly-out-left", shortForm.Exit);
     Assert.Equal(2f, shortForm.Speed);
+    Assert.Equal(Anchor.TopLeft, shortForm.Origin);
     AnimationSpec full = result.Config.Layouts["sample"].Layers[1].Animation;
     Assert.Equal("fly-in-left", full.Enter);
     Assert.Equal("breathe", full.Idle);
     Assert.Equal("fly-out-right", full.Exit);
     Assert.Equal(1.5f, full.Speed);
+    Assert.Equal(Anchor.Bottom, full.Origin);
+    Assert.Equal(Anchor.Center, AnimationSpec.Merge(null, null).Origin);
   }
 
   [Fact]

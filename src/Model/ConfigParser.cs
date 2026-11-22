@@ -874,11 +874,12 @@ public sealed class ConfigParser {
       Warn(node, $"{where}: expected a preset name or phase mapping");
       return null;
     }
-    WarnUnknownKeys(map, ["enter", "idle", "exit", "speed"], where);
+    WarnUnknownKeys(map, ["enter", "idle", "exit", "speed", "origin"], where);
     AnimationSpec spec = new() {
       Enter = Phase("enter"),
       Idle = Phase("idle"),
       Exit = Phase("exit"),
+      Origin = ParseAnchor(Child(map, "origin"), $"{where}: 'origin'"),
     };
     YamlNode speedNode = Child(map, "speed");
     if (!IsNull(speedNode)) {
