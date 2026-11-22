@@ -8,6 +8,9 @@
   * Added YAML `color: auto` and `background: auto` for text layers, based on the image area behind the text box.
     Added personal `Readable text` and `Minimum text size` accessibility settings (off by default).
 
+  * Added a server-synced `Wait for the voice to finish` timing setting (off by default). A HUD loading screen can
+    stay visible until its entry voice ends, with the existing maximum hold time as a cap.
+
   * Added a client-controlled `Log level` setting (Error, Warning by default, Info, Debug). Detailed screen selection,
     audio volume, server transfer, and image timing messages are available at Debug.
 

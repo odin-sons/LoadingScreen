@@ -48,21 +48,22 @@ static class HudPatch {
     _loadingScreenState = __instance.m_loadingProgress.activeInHierarchy;
     bool ready = player && !player.IsDead() && !player.IsTeleporting() && !player.IsSleeping()
         && Game.instance && !Game.instance.IsShuttingDown();
-    bool allowed = HoldLoadingScreen.Value && !Application.isBatchMode && !CinematicsManager.IsPlaying()
-        && !stillSleeping;
+    bool allowed = !Application.isBatchMode && !CinematicsManager.IsPlaying() && !stillSleeping;
+    bool voiceActive = WaitForVoice.Value && LoadingAudio.IsVoicePlayingOrLoading(LoadingManager.HudHost);
     bool dismissed = Input.anyKeyDown || ZInput.GetMouseButtonDown(0) || ZInput.GetMouseButtonDown(1)
         || ZInput.GetMouseButtonDown(2);
-    bool holding = _holdState.Update(
-        _loadingScreenState, ready, allowed, dismissed, Time.realtimeSinceStartup, MaximumHoldSeconds.Value);
-    LoadingManager.ShowContinuePrompt(__instance, holding);
+    LoadingHoldDecision hold = _holdState.Update(
+        _loadingScreenState, ready, allowed, HoldLoadingScreen.Value, voiceActive, dismissed,
+        Time.realtimeSinceStartup, MaximumHoldSeconds.Value);
+    LoadingManager.ShowContinuePrompt(__instance, hold.ShowContinuePrompt);
 
-    if (holding) {
+    if (hold.Holding) {
       __instance.m_loadingScreen.gameObject.SetActive(true);
       __instance.m_loadingScreen.alpha = 1f;
       __instance.m_loadingProgress.SetActive(true);
     }
 
-    return !holding;
+    return !hold.Holding;
   }
 
   [HarmonyPostfix]

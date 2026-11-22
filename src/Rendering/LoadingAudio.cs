@@ -51,6 +51,11 @@ public sealed class LoadingAudio : MonoBehaviour {
     if (_instance && _instance._host == host) _instance.EndScreen();
   }
 
+  public static bool IsVoicePlayingOrLoading(LayerHost host) {
+    return _instance && host && _instance._host == host && PlayLoadingSounds.Value && GameVolumeReady
+        && (_instance._voiceLoad != null || _instance._voice.isPlaying);
+  }
+
   public static void StopAllSounds() {
     if (!_instance) return;
     _instance.ApplyGameMute(0f);
@@ -218,21 +223,25 @@ public sealed class LoadingAudio : MonoBehaviour {
 
     StopMusic();
     _musicPath = path;
-    if (path != null) _musicLoad = StartCoroutine(LoadClip(path, _music, true));
+    if (CanLoadClip(path)) _musicLoad = StartCoroutine(LoadClip(path, _music, true));
   }
 
   void StartVoice(string relativePath) {
     StopVoice();
     string path = ScreenConfigLoader.ResolveImagePath(relativePath);
-    if (path != null) _voiceLoad = StartCoroutine(LoadClip(path, _voice, false));
+    if (CanLoadClip(path)) _voiceLoad = StartCoroutine(LoadClip(path, _voice, false));
+  }
+
+  static bool CanLoadClip(string path) {
+    if (path == null) return false;
+    if (!File.Exists(path) || new FileInfo(path).Length > AudioFile.MaxBytes) {
+      LoadingScreen.LogWarning($"Loading screen audio unavailable or over {AudioFile.MaxBytes / 1024 / 1024} MiB: {path}");
+      return false;
+    }
+    return true;
   }
 
   IEnumerator LoadClip(string path, AudioSource source, bool music) {
-    if (!File.Exists(path) || new FileInfo(path).Length > AudioFile.MaxBytes) {
-      LoadingScreen.LogWarning($"Loading screen audio unavailable or over {AudioFile.MaxBytes / 1024 / 1024} MiB: {path}");
-      yield break;
-    }
-
     AudioType type = path.EndsWith(".ogg", StringComparison.OrdinalIgnoreCase) ? AudioType.OGGVORBIS : AudioType.WAV;
     using UnityWebRequest request = UnityWebRequestMultimedia.GetAudioClip(new Uri(path).AbsoluteUri, type);
     yield return request.SendWebRequest();
