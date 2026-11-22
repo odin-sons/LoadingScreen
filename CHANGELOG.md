@@ -45,6 +45,8 @@ cfg and clearer logs.
     `defaults.zoom` fields.
   * **Cfg layout.** The cfg is reorganized into General, When to show, Timing, Game start screen and Sound. Each
     setting states whether it is synchronized. One synced `Share screens with players` switch controls transfer.
+  * **Fatal startup errors.** Failures that disable the mod (configuration or image folder setup, Harmony patching)
+    are logged at BepInEx `Fatal` level with their context and stack trace; other errors stay at `Error`.
 
 #### Fixes
 

@@ -17,4 +17,19 @@ public class ModLogLevelTests {
     Assert.Equal(info, ModLogFilter.Allows(configured, ModLogLevel.Info));
     Assert.Equal(debug, ModLogFilter.Allows(configured, ModLogLevel.Debug));
   }
+
+  [Theory]
+  [InlineData(LogSeverity.Fatal, ModLogLevel.Error)]
+  [InlineData(LogSeverity.Error, ModLogLevel.Error)]
+  [InlineData(LogSeverity.Warning, ModLogLevel.Warning)]
+  [InlineData(LogSeverity.Info, ModLogLevel.Info)]
+  [InlineData(LogSeverity.Debug, ModLogLevel.Debug)]
+  public void SeverityMapsOntoModLevel(LogSeverity severity, ModLogLevel expected) {
+    Assert.Equal(expected, ModLogFilter.Threshold(severity));
+  }
+
+  [Fact]
+  public void FatalPassesTheStrictestFilter() {
+    Assert.True(ModLogFilter.Allows(ModLogLevel.Error, LogSeverity.Fatal));
+  }
 }
