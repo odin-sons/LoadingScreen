@@ -2,6 +2,11 @@
 
 ### Unreleased
 
+  * Added `spinner` layers for game start, portal, death and sleep layouts, with Valheim's hammer sprite,
+    generated ring and dots, or a custom image. Spinners use `place` and spin by default; layer animations can
+    replace the spin. Existing `defaults.spinner` settings keep their game start behavior through an implicit
+    hammer layer when centered; an explicit spinner layer takes precedence.
+
   * `when.biome` replaces `when.teleport` for destination biome lists and death biome tips. Death tries
     enemy, dominant damage type, hit type, death biome, custom biome's base biome, then general. Expand World Data
     custom biomes use their `biome:` identifiers in these lists and `knownBiome` conditions; unresolved names warn

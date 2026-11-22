@@ -7,7 +7,15 @@ using System.Linq;
 public enum LayerKind {
   Image,
   Color,
-  Text
+  Text,
+  Spinner
+}
+
+public enum SpinnerStyle {
+  Hammer,
+  Ring,
+  Dots,
+  Image
 }
 
 public enum TextAlign {
@@ -31,6 +39,7 @@ public sealed class Layer {
   public bool FromEntry { get; set; }
   public bool GameSeparator { get; set; }
   public bool HasTint { get; set; }
+  public SpinnerStyle SpinnerStyle { get; set; }
   public AnimationSpec Animation { get; set; }
   public List<string> Images { get; } = [];
   public ColorValue Color { get; set; }
@@ -52,6 +61,8 @@ public sealed class Layout {
   public bool ShowsText => Layers.Any(layer => layer.Kind == LayerKind.Text);
 
   public bool ShowsSeparator => Layers.Any(layer => layer.GameSeparator);
+
+  public bool ShowsSpinner => Layers.Any(layer => layer.Kind == LayerKind.Spinner);
 }
 
 public sealed class Entry {
@@ -109,6 +120,18 @@ public sealed class SpinnerDefaults {
   public bool Center { get; set; } = true;
   public float X { get; set; }
   public float Bottom { get; set; } = 200f;
+
+  public Layer ToLayer() => !Center ? null : new() {
+    Kind = LayerKind.Spinner,
+    SpinnerStyle = SpinnerStyle.Hammer,
+    Animation = new() { Enter = "none", Idle = "spin", Exit = "none" },
+    Placement = new() {
+      Fit = new() { Mode = FitMode.None },
+      Anchor = Anchor.Bottom,
+      X = new(X, LengthUnit.Pixels),
+      Y = new(-Bottom, LengthUnit.Pixels),
+    },
+  };
 }
 
 public sealed class ScreenDefaults : Placement {

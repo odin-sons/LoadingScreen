@@ -31,7 +31,7 @@ on Unity, but **the mod has not been tested in the game yet**. See the
 - **Situational screens.** A portal teleport shows an image chosen for the destination biome; a respawn first tries
   the cause of death, then the biome where the player died; everything else uses the general list. Within a list,
   one entry is picked at random without immediate repeats.
-- **Layered layouts.** A screen is a stack of layers (solid colors, fixed images, random image pools, the chosen
+- **Layered layouts.** A screen is a stack of layers (solid colors, fixed images, random image pools, spinners, the chosen
   entry's image, the caption), each sized and positioned on its own, with gradient edges and enter, idle and exit animations.
   Two presets are included in the example config.
 - **Captions.** An entry can carry plain or translated text; without it, a tip from the selected language's tip file is shown.
@@ -509,6 +509,8 @@ layouts:
           fade: { sides: [bottom], color: "#000000", size: 25% }
       - image: common/logo.png # one fixed image; "image: [a.png, b.png]" picks one per screen
         place: { fit: { width: 30% }, position: { anchor: top, y: 8% } }
+      - spinner: ring        # also accepts hammer, dots, or a relative image path
+        place: { fit: { width: 48px }, position: { anchor: bottom, y: -20% } }
       - text: caption          # the entry text or a tip
         size: 28
         color: "#FFFFFF"
@@ -526,7 +528,14 @@ value wins: entry, then layer, then layout, then defaults. For example, `default
 Layer `image` accepts one path, a list of paths (one picked per screen), `entry` (the selected entry's image), or
 `separator` (the game's ornament line). The exact extensionless values `entry` and `separator` are keywords;
 use `entry.png` or `separator.png` for files with those names. A layer has one content key: `image`, `text`, or
-`color`. On an `image: separator` layer, `color` is an optional tint.
+`color`, or `spinner`. On an `image: separator` layer, `color` is an optional tint.
+
+A `spinner` layer works in layouts selected for game start, portal, death, and sleep screens. Use `spinner: hammer`
+for Valheim's loading indicator sprite, `spinner: ring` or `spinner: dots` for generated graphics, or
+`spinner: common/indicator.png` for a custom image. Custom images use the same path rules and server transfer as
+image layers. Spinner layers use `place` like images and keep their native size unless `fit` is set. They use
+`spin` as their idle animation by default; `animation: pulse` or an `animation` phase mapping replaces it.
+An explicit spinner layer on the game start layout replaces the legacy game start indicator.
 
 | Option | Values |
 |---|---|
@@ -613,7 +622,11 @@ layered screens and plain-image fallbacks.
 `continuePrompt` positions and styles the line shown when the optional loading hold is active; its `size` accepts
 `0` to `64`.
 `separator.onLayouts` keeps the built-in line on layout screens unless a layout has its own `image: separator`
-layer. `spinner` applies to the game start screen.
+layer. The legacy `defaults.spinner` setting still applies to game start: with `center: true`, it becomes an
+implicit `spinner: hammer` layer after the layout's other layers, positioned at
+`{ anchor: bottom, x: <x>px, y: -<bottom>px }`. A layout's explicit spinner replaces it. With `center: false`,
+Valheim's original indicator remains at its original position. For new layouts, move the setting into an explicit
+spinner layer to control its order, style, placement, and animation.
 
 A text layer accepts `place` with `position`, `opacity`, and `fit: { width }` (the text box width, default 80% of the screen), plus
 `size`, `color`, `align` (`left`, `center`, `right`), `background` (a color box behind the text). Without a text

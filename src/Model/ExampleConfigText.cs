@@ -55,9 +55,12 @@ public static class ExampleConfigText {
       #   mask: { color: "#000000", opacity: 0.25 }  (a full-screen color tint; opacity is 0..1)
       #
       # Layers: "color" (solid fill), "image" (one file, a list of files, "entry", or "separator"),
+      # "spinner" (hammer, ring, dots, or a relative image path),
       # "image: entry" (the chosen entry's image), "image: separator" (the game's ornament line,
       # takes placement and a "color" tint, replaces the built-in separator) and "text: caption" (the entry text or a tip).
       # Exact extensionless "entry" and "separator" are keywords; files named entry.png or separator.png work normally.
+      # A spinner spins by default; animation: pulse or another preset replaces that motion.
+      # Place a spinner like an image. Without place.fit it uses the sprite's native size.
       # A text layer takes place (position, opacity, fit: { width }) and: size, color, align (left | center | right),
       # background (a color box behind the text). color and background also accept auto;
       # auto picks light or dark from the image behind the text box (auto background uses 60% opacity).
@@ -74,7 +77,7 @@ public static class ExampleConfigText {
       #   tip: { x: 0, bottom: 90, size: 24, color: "#FFFFFF" }
       #   continuePrompt: { x: 0, bottom: 30, size: 20, color: "#FFFFFF" }
       #   separator: { show: true, x: 0, bottom: 150, onLayouts: true }
-      #   spinner: { center: true, x: 0, bottom: 200 }
+      #   spinner: { center: true, x: 0, bottom: 200 }  # legacy game-start hammer placement
 
       # layouts:
       #   backdrop-art:
@@ -100,6 +103,8 @@ public static class ExampleConfigText {
       #         place: { fit: cover, fade: { sides: [bottom], color: "#000000", size: 25% } }
       #       - image: common/logo.png
       #         place: { fit: { width: 30% }, position: { anchor: top, y: 8% } }
+      #       - spinner: ring
+      #         place: { fit: { width: 48px }, position: { anchor: bottom, y: -20% } }
       #       - text: caption
       #         size: 28
       #         color: auto
