@@ -170,7 +170,7 @@ public static class LoadingManager {
 
     float startedAt = continueSession ? Session.StartedAt : Time.realtimeSinceStartup;
     if (!continueSession) Session.ResetImages();
-    if (!host.Show(selection, caption, tipText, continueSession ? Session.AnimationElapsed : 0f)) {
+    if (!host.Show(selection, caption, tipText, continueSession ? Session.AnimationElapsed : 0f, continueSession)) {
       return false;
     }
 

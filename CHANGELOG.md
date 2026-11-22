@@ -2,6 +2,12 @@
 
 ### Unreleased
 
+  * Added enter, idle and exit animations for YAML layers, built-in motion presets, and custom presets in
+    `animations.yaml`. Server screen sharing and reload include custom presets. The default entry image keeps its
+    existing slow zoom without the old `animate` and `defaults.zoom` fields.
+  * Added the server-synced `Wait for the exit animation to finish` timing setting, off by default. Exit playback
+    uses the existing maximum hold time as a cap.
+
   * Localized the mod's continue prompt and integer game-start progress display for Valheim's 36 languages, with
     per-key `translations.yaml` overrides in the local config folder and English fallback.
 

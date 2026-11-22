@@ -31,6 +31,7 @@ public sealed class Layer {
   public bool FromEntry { get; set; }
   public bool GameSeparator { get; set; }
   public bool HasTint { get; set; }
+  public AnimationSpec Animation { get; set; }
   public List<string> Images { get; } = [];
   public ColorValue Color { get; set; }
   public TextStyle Text { get; set; }
@@ -83,12 +84,6 @@ public sealed class EntryList {
   public List<Entry> Entries { get; } = [];
 }
 
-public sealed class ZoomDefaults {
-  public bool Enabled { get; set; } = true;
-  public float Amount { get; set; } = 1.05f;
-  public float Seconds { get; set; } = 15f;
-}
-
 public sealed class TipDefaults {
   public float X { get; set; }
   public float Bottom { get; set; } = 90f;
@@ -121,7 +116,8 @@ public sealed class ScreenDefaults : Placement {
   public ColorValue Tint { get; set; } = new(255, 255, 255);
   public VignetteSettings Vignette { get; set; }
   public MaskSettings Mask { get; set; }
-  public ZoomDefaults Zoom { get; } = new();
+  public AnimationSpec Animation { get; set; }
+  public AnimationCatalog Animations { get; set; } = new();
   public TipDefaults Tip { get; } = new();
   public ContinuePromptDefaults ContinuePrompt { get; } = new();
   public SeparatorDefaults Separator { get; } = new();

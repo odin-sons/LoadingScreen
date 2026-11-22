@@ -57,10 +57,9 @@ public class Placement {
   public Length? Y { get; set; }
   public float? Opacity { get; set; }
   public Fade Fade { get; set; }
-  public bool? Animate { get; set; }
 
   public bool IsEmpty =>
-      Fit == null && Anchor == null && X == null && Y == null && Opacity == null && Fade == null && Animate == null;
+      Fit == null && Anchor == null && X == null && Y == null && Opacity == null && Fade == null;
 
   public static Placement Merge(params Placement[] mostSpecificFirst) {
     Placement result = new();
@@ -76,7 +75,6 @@ public class Placement {
       result.Y ??= placement.Y;
       result.Opacity ??= placement.Opacity;
       result.Fade ??= placement.Fade;
-      result.Animate ??= placement.Animate;
     }
 
     return result;

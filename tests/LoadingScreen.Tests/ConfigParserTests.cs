@@ -144,7 +144,7 @@ public class ConfigParserTests {
         defaults:
           background: "#10203040"
           tint: "#ABCDEF"
-          zoom: { enabled: false, amount: 1.25, seconds: 8.5 }
+          animation: { enter: fade-in, idle: breathe, exit: fly-out-left, speed: 1.25 }
           tip: { x: -12, bottom: 75, size: 32, color: "#112233" }
           continuePrompt: { x: 8, bottom: 45, size: 18, color: "#445566" }
           separator: { show: false, x: 14, bottom: 120, onLayouts: false }
@@ -157,9 +157,10 @@ public class ConfigParserTests {
     Assert.Empty(result.Warnings);
     Assert.Equal(new ColorValue(0x10, 0x20, 0x30, 0x40), defaults.Background);
     Assert.Equal(new ColorValue(0xAB, 0xCD, 0xEF), defaults.Tint);
-    Assert.False(defaults.Zoom.Enabled);
-    Assert.Equal(1.25f, defaults.Zoom.Amount);
-    Assert.Equal(8.5f, defaults.Zoom.Seconds);
+    Assert.Equal("fade-in", defaults.Animation.Enter);
+    Assert.Equal("breathe", defaults.Animation.Idle);
+    Assert.Equal("fly-out-left", defaults.Animation.Exit);
+    Assert.Equal(1.25f, defaults.Animation.Speed);
     Assert.Equal(-12f, defaults.Tip.X);
     Assert.Equal(75f, defaults.Tip.Bottom);
     Assert.Equal(32, defaults.Tip.Size);
@@ -193,7 +194,7 @@ public class ConfigParserTests {
         defaults:
           background: wrong
           tint: "#123"
-          zoom: { enabled: sometimes, amount: 1.6, seconds: 0, extra: true }
+          animation: { speed: 0, extra: true }
           tip: { x: nope, bottom: .nan, size: 65, color: bad, other: 1 }
           separator: { show: maybe, x: false, bottom: {}, onLayouts: null, unknown: 2 }
           spinner: { center: nope, x: .inf, bottom: [] , unknown: 3 }
@@ -202,9 +203,9 @@ public class ConfigParserTests {
     ConfigLoadResult result = Parse(yaml);
 
     AssertBuiltInAppearance(result.Config.Defaults);
-    Assert.Equal(20, result.Warnings.Count);
+    Assert.Equal(18, result.Warnings.Count);
     Assert.All(result.Warnings, warning => Assert.Contains("line ", warning));
-    Assert.Contains(result.Warnings, warning => warning.Contains("zoom: unknown key 'extra'"));
+    Assert.Contains(result.Warnings, warning => warning.Contains("animation: unknown key 'extra'"));
     Assert.Contains(result.Warnings, warning => warning.Contains("tip: unknown key 'other'"));
     Assert.Contains(result.Warnings, warning => warning.Contains("separator: unknown key 'unknown'"));
     Assert.Contains(result.Warnings, warning => warning.Contains("spinner: unknown key 'unknown'"));
@@ -214,7 +215,7 @@ public class ConfigParserTests {
   public void InvalidAppearanceMapsWarnAndUseBuiltIns() {
     const string yaml = """
         defaults:
-          zoom: false
+          animation: []
           tip: null
           separator: []
           spinner: wrong
@@ -242,9 +243,6 @@ public class ConfigParserTests {
   static void AssertBuiltInAppearance(ScreenDefaults defaults) {
     Assert.Equal(new ColorValue(0, 0, 0), defaults.Background);
     Assert.Equal(new ColorValue(255, 255, 255), defaults.Tint);
-    Assert.True(defaults.Zoom.Enabled);
-    Assert.Equal(1.05f, defaults.Zoom.Amount);
-    Assert.Equal(15f, defaults.Zoom.Seconds);
     Assert.Equal(90f, defaults.Tip.Bottom);
     Assert.Equal(24, defaults.Tip.Size);
     Assert.Equal(new ColorValue(255, 255, 255), defaults.Tip.Color);
@@ -284,7 +282,8 @@ public class ConfigParserTests {
                 image: entry
                 place: { fade: { sides: [bottom, left], color: "#00000080", size: 25%, curve: smooth } }
               - image: common/logo.png
-                place: { fit: { width: 30% }, position: { anchor: top, y: 8% }, opacity: 0.9, animate: false }
+                animation: none
+                place: { fit: { width: 30% }, position: { anchor: top, y: 8% }, opacity: 0.9 }
 
         when:
           general:
@@ -324,7 +323,7 @@ public class ConfigParserTests {
     Assert.Null(logo.Placement.Fit.Height);
     Assert.Equal(Anchor.Top, logo.Placement.Anchor);
     Assert.Equal(0.9f, logo.Placement.Opacity);
-    Assert.False(logo.Placement.Animate);
+    Assert.Equal("none", logo.Animation.Idle);
 
     Assert.Equal("logo-over-backdrops", config.General.LayoutName);
     Assert.Equal(2, config.General.Entries.Count);
@@ -630,7 +629,7 @@ public class ConfigParserTests {
             layers:
               - image: entry
                 place: { opacity: 0.7 }
-                animate: false
+                animation: none
         when:
           general:
             layout: placed
@@ -644,7 +643,7 @@ public class ConfigParserTests {
     Assert.Equal(FitMode.Contain, result.Config.Defaults.Fit.Mode);
     Assert.Equal(Anchor.Top, result.Config.Layouts["placed"].Placement.Anchor);
     Assert.Equal(0.7f, result.Config.Layouts["placed"].Layers[0].Placement.Opacity);
-    Assert.True(result.Config.General.Entries[0].Place.Animate);
+    Assert.Equal("none", result.Config.Layouts["placed"].Layers[0].Animation.Idle);
     Assert.Equal(3, result.Warnings.Count);
     Assert.Contains(result.Warnings, warning => warning.Contains("unknown key 'fit'"));
     Assert.Contains(result.Warnings, warning => warning.Contains("unknown key 'opacity'"));
@@ -655,7 +654,7 @@ public class ConfigParserTests {
   public void GenericDefaultsKeepValidFieldsAndWarnForInvalidAndUnknownFields() {
     const string yaml = """
         defaults:
-          zoom: { enabled: false, amount: 1.6, seconds: 9, surprise: 1 }
+          animation: { speed: 0, surprise: 1 }
           tip: { x: 4, size: 65, color: bad, extra: true }
           continuePrompt: { size: 18, bottom: .nan }
           separator: { show: false, onLayouts: wrong }
@@ -665,9 +664,7 @@ public class ConfigParserTests {
     ConfigLoadResult result = Parse(yaml);
     ScreenDefaults defaults = result.Config.Defaults;
 
-    Assert.False(defaults.Zoom.Enabled);
-    Assert.Equal(1.05f, defaults.Zoom.Amount);
-    Assert.Equal(9f, defaults.Zoom.Seconds);
+    Assert.Null(defaults.Animation.Speed);
     Assert.Equal(4f, defaults.Tip.X);
     Assert.Equal(24, defaults.Tip.Size);
     Assert.Equal(18, defaults.ContinuePrompt.Size);

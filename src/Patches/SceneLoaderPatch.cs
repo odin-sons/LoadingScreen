@@ -1,5 +1,7 @@
 namespace LoadingScreen;
 
+using System.Collections;
+
 using HarmonyLib;
 
 using global::LoadingScreen.Model;
@@ -37,6 +39,31 @@ static class SceneLoaderPatch {
   static float _startTime;
   static float _lastImageTime;
   static bool _wasEnabled;
+
+  [HarmonyPostfix]
+  [HarmonyPatch("LoadSceneAsync")]
+  static void LoadSceneAsyncPostfix(SceneLoader __instance, ref IEnumerator __result) {
+    __result = WaitForExit(__instance, __result);
+  }
+
+  static IEnumerator WaitForExit(SceneLoader loader, IEnumerator loading) {
+    bool exitPlayed = false;
+    while (true) {
+      if (!exitPlayed && loader == _sceneLoader && IsModEnabled.Value
+          && WaitForExitAnimation.Value && _host && _host.IsShowing
+          && loader.gameLogo.activeInHierarchy && loader._sceneLoadOperation != null
+          && loader._sceneLoadOperation.IsLoadedButNotActivated
+          && !loader.loadingIndicator.IsVisible && !PlatformInitializer.WaitingForInputDevice
+          && (!StartupMessages.Instance || !StartupMessages.Instance.StartupMessageDisplayed)) {
+        exitPlayed = true;
+        float startedAt = Time.realtimeSinceStartup;
+        while (_host.BeginExit(Time.realtimeSinceStartup)
+            && Time.realtimeSinceStartup - startedAt < MaximumHoldSeconds.Value) yield return null;
+      }
+      if (!loading.MoveNext()) yield break;
+      yield return loading.Current;
+    }
+  }
 
   internal static void Disable() {
     if (_host) _host.Hide();

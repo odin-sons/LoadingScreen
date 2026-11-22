@@ -24,6 +24,7 @@ static class HudPatch {
 
   static bool _loadingScreenState;
   static bool _wasSleeping;
+  static bool _sleepExitHolding;
   static float _lastImageTime;
   static float _lastTipTime;
   static Situation _currentSituation;
@@ -36,31 +37,35 @@ static class HudPatch {
       _holdState.Reset();
       _loadingScreenState = false;
       _wasSleeping = false;
+      _sleepExitHolding = false;
       return true;
     }
 
     if (!LoadingManager.HudHost) LoadingManager.SetupHud(__instance);
     bool stillSleeping = ShowLoadingScreenWhileSleeping.Value && Player.m_localPlayer && Player.m_localPlayer.IsSleeping();
-    if (_wasSleeping && !stillSleeping) {
-      __instance.m_loadingProgress.SetActive(false);
-    }
-
     _loadingScreenState = __instance.m_loadingProgress.activeInHierarchy;
     bool ready = player && !player.IsDead() && !player.IsTeleporting() && !player.IsSleeping()
         && Game.instance && !Game.instance.IsShuttingDown();
     bool allowed = !Application.isBatchMode && !CinematicsManager.IsPlaying() && !stillSleeping;
     bool voiceActive = WaitForVoice.Value && LoadingAudio.IsVoicePlayingOrLoading(LoadingManager.HudHost);
+    bool exitActive = ready && allowed && WaitForExitAnimation.Value && LoadingManager.HudHost
+        && LoadingManager.HudHost.BeginExit(Time.realtimeSinceStartup);
     bool dismissed = Input.anyKeyDown || ZInput.GetMouseButtonDown(0) || ZInput.GetMouseButtonDown(1)
         || ZInput.GetMouseButtonDown(2);
     LoadingHoldDecision hold = _holdState.Update(
         _loadingScreenState, ready, allowed, HoldLoadingScreen.Value, voiceActive, dismissed,
-        Time.realtimeSinceStartup, MaximumHoldSeconds.Value);
+        Time.realtimeSinceStartup, MaximumHoldSeconds.Value, exitActive);
     LoadingManager.ShowContinuePrompt(__instance, hold.ShowContinuePrompt);
+    _sleepExitHolding = _wasSleeping && !stillSleeping && hold.Holding;
 
     if (hold.Holding) {
       __instance.m_loadingScreen.gameObject.SetActive(true);
       __instance.m_loadingScreen.alpha = 1f;
       __instance.m_loadingProgress.SetActive(true);
+    }
+
+    if (_wasSleeping && !stillSleeping && !hold.Holding) {
+      __instance.m_loadingProgress.SetActive(false);
     }
 
     return !hold.Holding;
@@ -69,7 +74,7 @@ static class HudPatch {
   [HarmonyPostfix]
   [HarmonyPatch(nameof(Hud.UpdateBlackScreen))]
   static void UpdateBlackScreenPostfix(Hud __instance) {
-    if (!IsModEnabled.Value) return;
+    if (!IsModEnabled.Value || _sleepExitHolding) return;
     bool sleeping = ShowLoadingScreenWhileSleeping.Value && Player.m_localPlayer && Player.m_localPlayer.IsSleeping();
     bool newScreen = !_loadingScreenState || sleeping != _wasSleeping;
     _wasSleeping = sleeping;

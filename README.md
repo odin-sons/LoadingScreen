@@ -32,7 +32,7 @@ on Unity, but **the mod has not been tested in the game yet**. See the
   image chosen for the cause of death; everything else uses the general list. Within a list, one entry is picked at
   random without immediate repeats.
 - **Layered layouts.** A screen is a stack of layers (solid colors, fixed images, random image pools, the chosen
-  entry's image, the caption), each sized and positioned on its own, with gradient edges and an optional slow zoom.
+  entry's image, the caption), each sized and positioned on its own, with gradient edges and enter, idle and exit animations.
   Two presets are included in the example config.
 - **Captions.** An entry can carry plain or translated text; without it, a tip from the selected language's tip file is shown.
 - **Loading sounds.** Loop music for a layout, list or entry; play an entry's voiced tip once when its text appears.
@@ -103,7 +103,7 @@ native speakers.
 
 Set `[3 - Timing] Change image every N seconds` to a positive number to change images while the HUD or game start
 loading screen stays visible. The default `0` turns the slideshow off. When a situational entry is showing, each
-change picks another usable entry from that same list and follows its `order` setting. The image zoom starts again
+change picks another usable entry from that same list and follows its `order` setting. The entry animation starts again
 on each change.
 
 Set `[3 - Timing] Change tip every N seconds` to a positive number to show another line from `tips.txt` while a HUD
@@ -121,8 +121,10 @@ visible after loading finishes (default: off). A separate "Press any key to cont
 click dismisses the key hold. Set `[3 - Timing] Wait for the voice to finish` to `true` to keep the HUD screen
 visible while its entry voice is loading or playing after loading finishes (default: off). It releases when the voice
 ends or fails to load; no voice or disabled sounds do not cause a hold. A key press does not skip the voice, and when
-both settings are on, the screen closes after both the voice and key hold are done. `[3 - Timing] Maximum hold time in
-seconds` closes either hold automatically after 30 seconds by default (allowed: 1 to 300). Neither hold runs on
+both settings are on, the screen closes after both the voice and key hold are done. Set `Wait for the exit animation
+to finish` to play the layer exit phases before closing (default: off); otherwise the screen closes immediately and
+the exit phases are skipped. This also applies when sleep or the game start scene loader ends. `[3 - Timing] Maximum hold time in
+seconds` closes any hold automatically after 30 seconds by default (allowed: 1 to 300). Holds do not run on
 dedicated servers or during cinematics. Style the key prompt with `defaults.continuePrompt` in `loadingscreen.yaml`.
 
 ### Selection
@@ -496,6 +498,7 @@ layouts:
       - color: "#000000"       # solid fill
       - id: backdrop
         image: entry          # the chosen entry's image
+        animation: { enter: fade-in, idle: zoom-in, exit: fly-out-left }
         place:
           fit: cover
           fade: { sides: [bottom], color: "#000000", size: 25% }
@@ -526,7 +529,55 @@ use `entry.png` or `separator.png` for files with those names. A layer has one c
 | `position` | `{ anchor, x, y }`. Anchors: `center`, `left`, `right`, `top`, `bottom`, `top-left`, `top-right`, `bottom-left`, `bottom-right`. `x` moves right, `y` moves down, in `%` of the screen or `px`. A plain anchor name also works: `position: top`. |
 | `opacity` | `0` to `1` |
 | `fade` | `{ sides, color, size, curve }`: a gradient from the color to transparent drawn over the image edges. `sides`: any of `left`, `right`, `top`, `bottom`, or `all`. `size`: `%` of the image size or `px` (default 15%). `curve`: `smooth` (default) or `linear`. |
-| `animate` | `true` or `false`: the slow zoom; defaults to `defaults.zoom.enabled`. |
+
+Set `animation` on any layer or in `defaults`. A short value such as `animation: zoom-in` sets only the idle
+phase. The full form is `animation: { enter: fly-in-left, idle: breathe, exit: fly-out-left, speed: 1.5 }`.
+Layer values override the corresponding `defaults.animation` phase; omitted phases use `none`. The default
+entry image uses `zoom-in` when no animation is configured, matching the previous 1.05 scale over 15 seconds.
+Enter plays once, idle starts after all layer enter phases finish, and exit plays once when the screen closes.
+A continued menu, scene loader or HUD handover resumes idle at the last drawn time without replaying enter.
+Animation time uses real time, so a blocked world load advances the phase clock.
+
+| Built-in preset | Motion |
+|---|---|
+| `none` | No transform or opacity change. |
+| `zoom-in` | Scale 1 to 1.05 over 15 seconds with smoothstep easing. |
+| `zoom-out` | Scale 1.05 to 1 over 15 seconds. |
+| `pan` | Horizontal pan from -3% to 3%, then back. |
+| `ken-burns` | Gentle scale and diagonal pan, then back. |
+| `fade-in` | Opacity 0 to 1. |
+| `pulse` | Scale 1 to 1.06, then back. |
+| `breathe` | Slow scale 1 to 1.025, then back. |
+| `spin` | Continuous full rotation. |
+| `sway` | Rotation from -4 to 4 degrees, then back. |
+| `drift` | Gentle diagonal motion, then back. |
+| `fly-in-left`, `fly-in-right`, `fly-in-top`, `fly-in-bottom` | Start beyond that screen edge, pass the destination slightly, then settle with `back-out`. |
+| `fly-out-left`, `fly-out-right`, `fly-out-top`, `fly-out-bottom` | End beyond that screen edge. |
+
+Create `animations.yaml` beside `loadingscreen.yaml` to add or replace presets:
+
+```yaml
+presets:
+  gentle-reveal:
+    duration: 1.2
+    easing: cubic-bezier(0.22, 1, 0.36, 1)
+    overshoot: 1.7
+    repeat: once
+    speed: 1
+    keyframes:
+      - { at: 0, scale: 0.9, rotation: -3, x: -20px, y: 5%, opacity: 0 }
+      - { at: 1, scale: 1, rotation: 0, x: 0px, y: 0px, opacity: 1 }
+```
+
+`duration` is seconds and `speed` multiplies playback speed, including the layer's `speed` when both are set.
+`easing` accepts `linear`, `ease-in`, `ease-out`, `ease-in-out`, `back-out`, `elastic-out`,
+`bounce-out`, or `cubic-bezier(x1, y1, x2, y2)`; the cubic Bézier x controls must be from 0 to 1.
+`overshoot` controls `back-out` (default 1.70158). `repeat` is `once`, `loop`, or `pingpong`;
+`pingpong` repeats a forward and backward cycle. Keyframes require increasing `at` positions from 0 to 1.
+`scale` defaults to 1, `rotation` degrees and `x`/`y` offsets default to 0, and `opacity` defaults to 1.
+Positive `x` moves right; positive `y` moves down. Offsets accept `px` or percent of the screen size.
+Custom names override built-ins. Unknown names warn once and use `none`. Reloading the screens also reloads
+`animations.yaml`; servers share it with their screen config.
 
 The YAML `defaults` section also sets appearance for the normal screen, layout entry images and game start screen.
 All keys are optional. Missing or invalid values use the built-in values shown here. Colors accept `#RRGGBB` or
@@ -539,14 +590,14 @@ defaults:
   tint: "#FFFFFF"                  # color multiplied over entry and plain images
   vignette: { color: "#000000", size: 25%, strength: 0.5 }
   mask: { color: "#000000", opacity: 0.25 }
-  zoom: { enabled: true, amount: 1.05, seconds: 15 }
+  animation: { enter: fade-in, idle: breathe, exit: fly-out-left }
   tip: { x: 0, bottom: 90, size: 24, color: "#FFFFFF" }
   continuePrompt: { x: 0, bottom: 30, size: 20, color: "#FFFFFF" }
   separator: { show: true, x: 0, bottom: 150, onLayouts: true }
   spinner: { center: true, x: 0, bottom: 200 }
 ```
 
-`zoom.amount` accepts `0.5` to `1.5`; `zoom.seconds` must be positive. `tip.size` accepts `0` to `64`.
+`tip.size` accepts `0` to `64`.
 `vignette` darkens the outer screen area with a radial gradient. `size` is the outer `0%` to `100%` of the
 distance from the center to the screen edge; `strength` is `0` to `1`. `mask` tints the whole screen with
 `opacity` from `0` to `1`. Both effects are off when omitted. Once enabled, missing values use the shown
@@ -557,7 +608,7 @@ layered screens and plain-image fallbacks.
 `continuePrompt` positions and styles the line shown when the optional loading hold is active; its `size` accepts
 `0` to `64`.
 `separator.onLayouts` keeps the built-in line on layout screens unless a layout has its own `image: separator`
-layer. `spinner` applies to the game start screen. A layer's `animate` overrides `zoom.enabled`.
+layer. `spinner` applies to the game start screen.
 
 A text layer accepts `place` with `position`, `opacity`, and `fit: { width }` (the text box width, default 80% of the screen), plus
 `size`, `color`, `align` (`left`, `center`, `right`), `background` (a color box behind the text). Without a text
@@ -590,7 +641,7 @@ Behavior switches in `Odin_Sons.LoadingScreen.cfg`; each has a description in th
 |---|---|
 | `1 - General` | Lock Configuration, Mod enabled, Image folder, Text language, Log level, Share screens with players |
 | `2 - When to show` | Loading screen on portal teleport, Loading screen while sleeping, Loading screen right after death, Random tip when an entry has no text |
-| `3 - Timing` | Change image every N seconds, Change tip every N seconds, Hold loading screen until a key is pressed, Wait for the voice to finish, Maximum hold time in seconds |
+| `3 - Timing` | Change image every N seconds, Change tip every N seconds, Hold loading screen until a key is pressed, Wait for the voice to finish, Wait for the exit animation to finish, Maximum hold time in seconds |
 | `4 - Game start screen` | Use loading images, Show progress |
 | `5 - Sound` | Play loading screen sounds, Music volume percent, Voice volume percent, Mute game sounds on loading screens |
 
@@ -608,7 +659,7 @@ admin can choose ownership in `ConditionalConfigSync.SyncPolicy.cfg`:
 except `Hold loading screen until a key is pressed`. `Lock Configuration` controls the lock itself.
 The remaining settings are client controlled: `Image folder`, `Text language`, `Log level`, the key hold, both game start settings,
 and sound settings. Each cfg description ends with its sync status. The server's
-`loadingscreen.yaml` already carries appearance defaults (tint, zoom, tip style, separator, background) through
+`loadingscreen.yaml` and `animations.yaml` carry appearance defaults and presets through
 the existing screen transfer; they are not cfg settings.
 
 Set `[1 - General] Lock Configuration` to `true` on the server (the default) to restrict changes

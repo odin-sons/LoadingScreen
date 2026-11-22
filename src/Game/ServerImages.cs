@@ -22,7 +22,7 @@ public static class ServerImages {
   const string RpcRequestChunk = "LoadingScreen_RequestChunk";
   const string RpcChunk = "LoadingScreen_Chunk";
 
-  const int ProtocolVersion = 2;
+  const int ProtocolVersion = 3;
   const int ChunkSize = 32 * 1024;
   const int NotAvailable = -1;
   const long MaxFileSize = 16L * 1024 * 1024;
@@ -209,13 +209,14 @@ public static class ServerImages {
 
     ScreenConfig config = ScreenConfigLoader.LocalConfig;
     string yaml = ScreenConfigLoader.ReadLocalYaml();
+    string animationsYaml = ScreenConfigLoader.ReadLocalAnimationsYaml();
 
     if (config.IsEmpty) {
       return;
     }
 
-    if (yaml.Length > MaxYamlLength) {
-      LoadingScreen.LogWarning($"{ScreenConfigLoader.ConfigFileName} is over {MaxYamlLength / 1024} KiB; not shared.");
+    if (yaml.Length > MaxYamlLength || animationsYaml.Length > MaxYamlLength) {
+      LoadingScreen.LogWarning($"A loading screen YAML file is over {MaxYamlLength / 1024} KiB; screens not shared.");
       return;
     }
 
@@ -267,6 +268,7 @@ public static class ServerImages {
     ZPackage manifest = new();
     manifest.Write(ProtocolVersion);
     manifest.Write(yaml);
+    manifest.Write(animationsYaml);
     manifest.Write(_servedByPath.Count);
 
     foreach (ServedFile file in _servedByPath.Values) {
@@ -361,15 +363,16 @@ public static class ServerImages {
       }
 
       string yaml = manifest.ReadString();
+      string animationsYaml = manifest.ReadString();
       int count = manifest.ReadInt();
 
-      if (yaml.Length > MaxYamlLength || count <= 0 || count > MaxFiles) {
+      if (yaml.Length > MaxYamlLength || animationsYaml.Length > MaxYamlLength || count <= 0 || count > MaxFiles) {
         LoadingScreen.LogWarning("Loading screen manifest from server is empty or over the limits; ignored.");
         return;
       }
 
       ReadListedFiles(manifest, count);
-      ApplyServerConfig(yaml);
+      ApplyServerConfig(yaml, animationsYaml);
     } catch (Exception exception) {
       LoadingScreen.LogError($"Invalid loading screen manifest from server: {exception.Message}");
       _listedByPath.Clear();
@@ -407,8 +410,9 @@ public static class ServerImages {
     }
   }
 
-  static void ApplyServerConfig(string yaml) {
-    ConfigLoadResult result = ScreenConfigLoader.ParseServerYaml(yaml, path => _listedByPath.ContainsKey(path));
+  static void ApplyServerConfig(string yaml, string animationsYaml) {
+    ConfigLoadResult result = ScreenConfigLoader.ParseServerYaml(
+        yaml, animationsYaml, path => _listedByPath.ContainsKey(path));
 
     if (result == null || !result.IsValid || result.Config.IsEmpty) {
       LoadingScreen.LogWarning("Server loading screen config is empty or invalid; using the local one.");

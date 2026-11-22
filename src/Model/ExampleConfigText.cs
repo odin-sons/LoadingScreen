@@ -9,7 +9,8 @@ public static class ExampleConfigText {
       # Audio paths are also relative to this folder. Supported: .ogg and .wav, up to 8 MiB per clip.
       # A layout, list or entry can set sound: music/forest.ogg; the entry wins over the list, then the layout.
       # An entry can set voice: voice/tip.ogg; it plays once when that entry's own text is shown.
-      # Reload in game with the console command: loadingscreen reload
+      # Custom animation presets belong in animations.yaml beside this file.
+      # Reload both files in game with: loadingscreen reload
       #
       # Selection: sleep uses when.sleep, a portal teleport uses when.teleport.<destination biome>,
       # and a respawn uses when.death.<cause>; if that list is missing or empty, when.general is used; if that is
@@ -39,7 +40,9 @@ public static class ExampleConfigText {
       #   opacity: 0..1
       #   fade: { sides: [left, bottom], color: "#000000", size: 15%, curve: smooth | linear }
       #        (gradient from the color into the image; size is % of the image size or px)
-      #   animate: true | false   (slow zoom, defaults to defaults.zoom.enabled)
+      # Layer animation: zoom-in is idle-only. Use animation: { enter: fly-in-left, idle: breathe,
+      #   exit: fly-out-left, speed: 1.5 } for phases. defaults.animation supplies missing phases.
+      # With no animation setting, the default entry image zooms from 1 to 1.05 over 15 seconds.
       # Screen effects cover the whole loading screen. Set them in defaults or override individual values
       # on a layout. Omit a block to leave that effect off unless defaults enables it.
       #   vignette: { color: "#000000", size: 25%, strength: 0.5 }
@@ -62,7 +65,7 @@ public static class ExampleConfigText {
       #   tint: "#FFFFFF"
       #   vignette: { color: "#000000", size: 25%, strength: 0.5 }
       #   mask: { color: "#000000", opacity: 0.25 }
-      #   zoom: { enabled: true, amount: 1.05, seconds: 15 }
+      #   animation: { enter: fade-in, idle: breathe, exit: fly-out-left }
       #   tip: { x: 0, bottom: 90, size: 24, color: "#FFFFFF" }
       #   continuePrompt: { x: 0, bottom: 30, size: 20, color: "#FFFFFF" }
       #   separator: { show: true, x: 0, bottom: 150, onLayouts: true }
@@ -77,6 +80,7 @@ public static class ExampleConfigText {
       #         place: { fit: stretch }
       #       - id: art
       #         image: entry
+      #         animation: { enter: fly-in-left, idle: breathe, exit: fly-out-left, speed: 1.5 }
       #         place:
       #           fit: { width: 45%, height: 80% }
       #           position: { anchor: left, x: 5% }
