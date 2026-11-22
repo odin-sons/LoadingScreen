@@ -69,6 +69,7 @@ cfg and clearer logs.
 
 #### Fixes
 
+  * **Above HUD mods.** The loading screen now paints above canvases added by HUD mods instead of under them.
   * **Setting sync.** Server settings and the lock now actually synchronize, while personal settings stay local.
   * **Log format.** Log lines follow the plain BepInEx format without the mod's own timestamp.
 
