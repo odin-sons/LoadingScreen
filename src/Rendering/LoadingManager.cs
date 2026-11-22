@@ -32,6 +32,10 @@ public static class LoadingManager {
   static TMP_Text _originalFejdStartupText;
   static Transform _fejdStartupSeparator;
   static Image _createdLoadingBackground;
+  static Canvas _loadingCanvas;
+  static bool _loadingCanvasOverride;
+  static int _loadingCanvasOrder;
+  const int LoadingSortingOrder = 30000;
   public static LoadingSession Session { get; } = new();
 
   static TMP_Text _cachedTipText;
@@ -101,6 +105,10 @@ public static class LoadingManager {
     if (_fejdStartupSeparator) _fejdStartupSeparator.gameObject.SetActive(false);
     if (_createdLoadingBackground) _createdLoadingBackground.gameObject.SetActive(false);
     if (_continuePrompt) _continuePrompt.gameObject.SetActive(false);
+    if (_loadingCanvas) {
+      _loadingCanvas.overrideSorting = _loadingCanvasOverride;
+      _loadingCanvas.sortingOrder = _loadingCanvasOrder;
+    }
   }
 
   public static void Enable() {
@@ -109,6 +117,7 @@ public static class LoadingManager {
     if (FejdStartupTipText) FejdStartupTipText.gameObject.SetActive(true);
     if (_fejdStartupSeparator) _fejdStartupSeparator.gameObject.SetActive(true);
     if (_createdLoadingBackground) _createdLoadingBackground.gameObject.SetActive(true);
+    if (_loadingCanvas) RaiseAboveHud(_loadingCanvas);
     foreach (GameObject hidden in _hiddenObjects.Keys) {
       if (hidden) hidden.SetActive(false);
     }
@@ -576,6 +585,29 @@ public static class LoadingManager {
     HideForMod(loadingProgress.Find("text_darken"));
 
     SetupLoadingBackground(hud.transform.Find("LoadingBlack/Bkg").GetComponent<Image>());
+    SetupLoadingCanvas(hud.m_loadingScreen);
+  }
+
+  static void SetupLoadingCanvas(CanvasGroup loadingScreen) {
+    if (!loadingScreen) return;
+    GameObject gameObject = loadingScreen.gameObject;
+    Canvas canvas = gameObject.GetComponent<Canvas>();
+    if (canvas) {
+      _loadingCanvasOverride = canvas.overrideSorting;
+      _loadingCanvasOrder = canvas.sortingOrder;
+    } else {
+      canvas = gameObject.AddComponent<Canvas>();
+      _loadingCanvasOverride = false;
+      _loadingCanvasOrder = 0;
+    }
+    if (!gameObject.GetComponent<GraphicRaycaster>()) gameObject.AddComponent<GraphicRaycaster>();
+    _loadingCanvas = canvas;
+    RaiseAboveHud(canvas);
+  }
+
+  static void RaiseAboveHud(Canvas canvas) {
+    canvas.overrideSorting = true;
+    canvas.sortingOrder = LoadingSortingOrder;
   }
 
   static void HideForMod(Transform transform) {
