@@ -28,6 +28,18 @@ public class UiTranslationsTests {
   }
 
   [Fact]
+  public void VolumeSliderLabelsFallBackToEnglishAndAcceptOverrides() {
+    UiTranslations translations = UiTranslations.Parse("""
+        Russian:
+          musicVolumeSlider: "Музыка экрана загрузки"
+        """);
+
+    Assert.Equal("Музыка экрана загрузки", translations.Get("Russian", "musicVolumeSlider"));
+    Assert.Equal("Loading screen voice", translations.Get("Russian", "voiceVolumeSlider"));
+    Assert.Equal("Loading screen music", translations.Get("German", "musicVolumeSlider"));
+  }
+
+  [Fact]
   public void OverridesOneKeyWithoutReplacingOtherKeysOrLanguages() {
     UiTranslations translations = UiTranslations.Parse("""
         Russian:

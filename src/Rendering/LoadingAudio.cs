@@ -152,12 +152,12 @@ public sealed class LoadingAudio : MonoBehaviour {
       _fade = hostShowing ? _handover.Opacity(ScreenOpacity()) : _fade;
     }
 
-    if (_music) _music.volume = MusicVolume();
-    if (_voice) _voice.volume = VoiceVolume();
     ApplyGameMute(_visible ? _fade : 0f);
   }
 
   void LateUpdate() {
+    ApplySourceVolume(_music, MusicVolume());
+    ApplySourceVolume(_voice, VoiceVolume());
     if (_appliedMute <= 0f || !MusicMan.instance || !Mutes(GameSounds.Music)) return;
     AudioSource music = MusicMan.instance.m_musicSource;
     if (!music || (music == _mutedMusicSource && Mathf.Approximately(music.volume, _mutedMusicVolume))) return;
@@ -165,6 +165,12 @@ public sealed class LoadingAudio : MonoBehaviour {
     _mutedMusicSource = music;
     _mutedMusicVolume = music.volume * (1f - _appliedMute);
     music.volume = _mutedMusicVolume;
+  }
+
+  static void ApplySourceVolume(AudioSource source, float volume) {
+    if (!source) return;
+    source.volume = volume;
+    if (source.outputAudioMixerGroup) source.outputAudioMixerGroup = null;
   }
 
   static bool Mutes(GameSounds sounds) => (MuteGameSounds.Value & sounds) != 0;
@@ -286,6 +292,7 @@ public sealed class LoadingAudio : MonoBehaviour {
         ("configuredPercent", music ? MusicVolumePercent.Value : VoiceVolumePercent.Value)));
     source.clip = clip;
     source.Play();
+    ApplySourceVolume(source, music ? MusicVolume() : VoiceVolume());
     if (music) {
       _musicClip = clip;
       _musicLoad = null;

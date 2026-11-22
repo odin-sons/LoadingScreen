@@ -78,6 +78,22 @@ as soon as the screen closes. `Mute game sounds on loading screens` (`None` by d
 `Effects` (such as the portal hum), `Music`, or both (`Effects, Music`) while a loading screen is visible, and restores them when it closes. Audio paths are relative to the config folder, with `.ogg` and `.wav` supported. Each
 clip is limited to 8 MiB.
 
+The game's Audio settings show `Loading screen music` and `Loading screen voice` sliders below the game's own controls.
+They edit `Music volume percent` and `Voice volume percent`: the sliders start from the cfg values, `OK` saves them to
+the cfg, and `Back` discards the change. Changes made in the cfg while the menu is open show on the sliders.
+
+With other audio mods:
+
+- [NotSoLoud](https://thunderstore.io/c/valheim/p/OdinPlus/NotSoLoud/) routes audio sources without a mixer group into
+  the game's effects group and caps their volume. The mod keeps its music and voice sources out of that group and
+  sets their volume every frame, so they are neither scaled twice by the effects slider nor faded by
+  `Mute game sounds on loading screens`.
+- [ValheimAudioControl](https://thunderstore.io/c/valheim/p/XineladaLendaria/ValheimAudioControl/) rebuilds the Audio
+  tab, so the two sliders are not added while it is installed; use the cfg or a configuration manager instead.
+  ValheimAudioControl keeps the game's effects volume at 100%, so voices then follow the master volume only. The mod
+  sets its music and voice volume every frame, so ValheimAudioControl's category and per-object sliders are not
+  meant for loading screen audio; leave any entry for it at 100% or below.
+
 `[1 - General] Text language` defaults to `Game`, following Valheim's selected language. Set an ISO language code,
 such as `ru` or `pt-BR`, to force a language for tips and entry text. Unknown codes use the game language. The mod
 looks for `tips.<code>.txt` first, then `tips.txt`. Each file has one tip per line; a missing plain file is created
@@ -97,7 +113,7 @@ German:
 ```
 
 The keys are `continuePrompt`, `gameStartProgress`, `secondsUnit`, `connectingStage`, `passwordStage`,
-`receivingWorldStage`, and `configProblems`. The progress template accepts `{percent}`,
+`receivingWorldStage`, `configProblems`, `musicVolumeSlider`, and `voiceVolumeSlider`. The progress template accepts `{percent}`,
 `{seconds}`, and `{unit}`; percent and elapsed seconds are integers. The game-start percentage now follows the
 real scene load operation. Missing or invalid entries keep their built-in
 translations. `loadingscreen reload` re-reads the file. Translations for less common languages welcome review from
