@@ -1,8 +1,8 @@
 namespace LoadingScreen;
 
 using System;
-using System.Globalization;
 using System.IO;
+using System.Linq;
 using System.Reflection;
 
 using BepInEx;
@@ -46,6 +46,8 @@ public sealed class LoadingScreen : BaseUnityPlugin {
       if (!IsModEnabled.Value) LoadingManager.Disable();
     };
     ShareScreensWithPlayers.SettingChanged += (_, _) => ServerImages.OnSettingsChanged();
+    PluginConfig.LogLevel.SettingChanged += (_, _) => WarnIfDebugIsFiltered();
+    WarnIfDebugIsFiltered();
     ReadableText.SettingChanged += (_, _) => LoadingManager.RefreshAppearance();
     MinimumTextSize.SettingChanged += (_, _) => LoadingManager.RefreshAppearance();
     Harmony.CreateAndPatchAll(Assembly.GetExecutingAssembly(), harmonyInstanceId: PluginGuid);
@@ -59,12 +61,12 @@ public sealed class LoadingScreen : BaseUnityPlugin {
 
   public static void LogInfo(object obj) {
     if (ModLogFilter.Allows(PluginConfig.LogLevel?.Value ?? ModLogLevel.Warning, ModLogLevel.Info))
-      _logger.LogInfo(FormatLog(obj));
+      _logger.LogInfo(obj);
   }
 
   public static void LogWarning(object obj) {
     if (ModLogFilter.Allows(PluginConfig.LogLevel?.Value ?? ModLogLevel.Warning, ModLogLevel.Warning))
-      _logger.LogWarning(FormatLog(obj));
+      _logger.LogWarning(obj);
   }
 
   public static void LogWarningOnce(string key, string message) {
@@ -73,13 +75,20 @@ public sealed class LoadingScreen : BaseUnityPlugin {
 
   public static void LogError(object obj) {
     if (ModLogFilter.Allows(PluginConfig.LogLevel?.Value ?? ModLogLevel.Warning, ModLogLevel.Error))
-      _logger.LogError(FormatLog(obj));
+      _logger.LogError(obj);
   }
 
   public static void LogDebug(object obj) {
     if (ModLogFilter.Allows(PluginConfig.LogLevel?.Value ?? ModLogLevel.Warning, ModLogLevel.Debug))
-      _logger.LogDebug(FormatLog(obj));
+      _logger.LogDebug(obj);
   }
 
-  static string FormatLog(object obj) => $"[{DateTime.Now.ToString(DateTimeFormatInfo.InvariantInfo)}] {obj}";
+  static void WarnIfDebugIsFiltered() {
+    if (PluginConfig.LogLevel.Value != ModLogLevel.Debug) return;
+    DiskLogListener disk = BepInEx.Logging.Logger.Listeners.OfType<DiskLogListener>().FirstOrDefault();
+    if (disk == null || (disk.DisplayedLogLevel & BepInEx.Logging.LogLevel.Debug) != 0) return;
+    LogWarningOnce("log-level-debug-filtered", LogContext.Message(
+        "Debug messages are hidden by BepInEx; add Debug to LogLevels under [Logging.Disk] in BepInEx/config/BepInEx.cfg.",
+        ("setting", "Log level"), ("bepinex", disk.DisplayedLogLevel)));
+  }
 }
