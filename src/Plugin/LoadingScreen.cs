@@ -22,11 +22,8 @@ public sealed class LoadingScreen : BaseUnityPlugin {
   public const string PluginName = "LoadingScreen";
   public const string PluginVersion = "0.6.0";
 
-  static ManualLogSource _logger;
-  static readonly LogOnce ReportedWarnings = new();
-
   void Awake() {
-    _logger = Logger;
+    Log.Attach(Logger);
     BindConfig(Config, new ConfigSynchronization());
     LoadingAudio.Initialize(gameObject);
 
@@ -35,9 +32,9 @@ public sealed class LoadingScreen : BaseUnityPlugin {
       CustomAssets.Initialize(imageFolder);
       ScreenConfigLoader.Load(imageFolder);
     } catch (Exception exception) {
-      LogFatal(LogContext.Message("Loading screen configuration failed to initialize.",
+      Log.Plugin.Fatal(LogContext.Message("Loading screen configuration failed to initialize.",
           ("folder", LogContext.File(ImageFolder.Value, Paths.BepInExRootPath)), ("error", exception.Message)));
-      LogFatal(exception);
+      Log.Plugin.Fatal(exception);
     }
 
     IsModEnabled.SettingChanged += (_, _) => {
@@ -54,9 +51,9 @@ public sealed class LoadingScreen : BaseUnityPlugin {
     try {
       Harmony.CreateAndPatchAll(Assembly.GetExecutingAssembly(), harmonyInstanceId: PluginGuid);
     } catch (Exception exception) {
-      LogFatal(LogContext.Message("Harmony patching failed; the loading screen is disabled.",
+      Log.Plugin.Fatal(LogContext.Message("Harmony patching failed; the loading screen is disabled.",
           ("operation", "patch"), ("harmony", PluginGuid), ("error", exception.Message)));
-      LogFatal(exception);
+      Log.Plugin.Fatal(exception);
     }
   }
 
@@ -66,33 +63,11 @@ public sealed class LoadingScreen : BaseUnityPlugin {
     ScreenConfigLoader.TickBiomeWarnings();
   }
 
-  public static void LogInfo(object obj) => Write(BepInEx.Logging.LogLevel.Info, LogSeverity.Info, obj);
-
-  public static void LogWarning(object obj) => Write(BepInEx.Logging.LogLevel.Warning, LogSeverity.Warning, obj);
-
-  public static void LogWarningOnce(string key, string message) {
-    if (ReportedWarnings.First(key)) LogWarning(message);
-  }
-
-  public static void LogError(object obj) => Write(BepInEx.Logging.LogLevel.Error, LogSeverity.Error, obj);
-
-  public static void LogFatal(object obj) => Write(BepInEx.Logging.LogLevel.Fatal, LogSeverity.Fatal, obj);
-
-  public static void LogDebug(object obj) => Write(BepInEx.Logging.LogLevel.Debug, LogSeverity.Debug, obj);
-
-  public static void LogMessage(object obj, int problems) =>
-      Write(BepInEx.Logging.LogLevel.Message, LogSeverity.Message, obj, problems);
-
-  static void Write(BepInEx.Logging.LogLevel level, LogSeverity severity, object obj, int problems = 0) {
-    if (ModLogFilter.Allows(PluginConfig.LogLevel?.Value ?? ModLogLevel.Warning, severity, problems))
-      _logger.Log(level, obj);
-  }
-
   static void WarnIfDebugIsFiltered() {
     if (PluginConfig.LogLevel.Value != ModLogLevel.Debug) return;
     DiskLogListener disk = BepInEx.Logging.Logger.Listeners.OfType<DiskLogListener>().FirstOrDefault();
     if (disk == null || (disk.DisplayedLogLevel & BepInEx.Logging.LogLevel.Debug) != 0) return;
-    LogWarningOnce("log-level-debug-filtered", LogContext.Message(
+    Log.Plugin.WarningOnce("log-level-debug-filtered", LogContext.Message(
         "Debug messages are hidden by BepInEx; add Debug to LogLevels under [Logging.Disk] in BepInEx/config/BepInEx.cfg.",
         ("setting", "Log level"), ("bepinex", disk.DisplayedLogLevel)));
   }

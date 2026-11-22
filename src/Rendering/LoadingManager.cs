@@ -177,7 +177,7 @@ public static class LoadingManager {
 
     LoadingAudio.Play(host, selection, hasEntryText && tipText, continueSession);
 
-    LoadingScreen.LogInfo(LogContext.Message("Showing loading screen.", ("side", "client"),
+    Log.Render.Info(LogContext.Message("Showing loading screen.", ("side", "client"),
         ("screen", situation.Kind), ("stage", stage), ("situation", situation),
         ("entryList", selection.List.Name), ("image", selection.Entry.Image),
         ("layout", selection.LayoutName)));
@@ -325,7 +325,7 @@ public static class LoadingManager {
     } else if (_cachedLoadingImage) {
       loadingImage = _cachedLoadingImage;
     } else {
-      LoadingScreen.LogWarningOnce("ui:LoadingImage", LogContext.Message(
+      Log.Render.WarningOnce("ui:LoadingImage", LogContext.Message(
           "Could not apply loading image appearance; game UI element is unavailable.",
           ("side", "client"), ("element", "LoadingImage")));
       return;
@@ -400,7 +400,7 @@ public static class LoadingManager {
     } else if (_cachedLoadingBackground) {
       loadingBackground = _cachedLoadingBackground;
     } else {
-      LoadingScreen.LogWarningOnce("ui:LoadingBackground", LogContext.Message(
+      Log.Render.WarningOnce("ui:LoadingBackground", LogContext.Message(
           "Could not apply loading background appearance; game UI element is unavailable.",
           ("side", "client"), ("element", "LoadingBackground")));
     }
@@ -421,7 +421,7 @@ public static class LoadingManager {
     } else if (_cachedPanelSeparator) {
       panelSeparator = _cachedPanelSeparator;
     } else {
-      LoadingScreen.LogWarningOnce("ui:PanelSeparator", LogContext.Message(
+      Log.Render.WarningOnce("ui:PanelSeparator", LogContext.Message(
           "Could not apply separator appearance; game UI element is unavailable.",
           ("side", "client"), ("element", "PanelSeparator")));
       return;
@@ -467,7 +467,7 @@ public static class LoadingManager {
     } else if (_cachedTipText) {
       tipText = _cachedTipText;
     } else {
-      LoadingScreen.LogWarningOnce("ui:TipText", LogContext.Message(
+      Log.Render.WarningOnce("ui:TipText", LogContext.Message(
           "Could not apply tip appearance; game UI element is unavailable.",
           ("side", "client"), ("element", "TipText")));
     }

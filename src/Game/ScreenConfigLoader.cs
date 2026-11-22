@@ -13,7 +13,7 @@ public static class ScreenConfigLoader {
   public const string AnimationsFileName = "animations.yaml";
 
   public static ScreenConfig Current { get; private set; } = new();
-  public static EntrySelector Selector { get; private set; } = new(new ScreenConfig(), debug: LoadingScreen.LogDebug);
+  public static EntrySelector Selector { get; private set; } = new(new ScreenConfig(), debug: Log.Config.Debug);
   public static string PluginDir { get; private set; }
   public static ScreenConfig LocalConfig { get; private set; } = new();
   public static bool IsUsingServerConfig { get; private set; }
@@ -35,7 +35,7 @@ public static class ScreenConfigLoader {
 
     foreach (string name in names.Distinct(StringComparer.OrdinalIgnoreCase)) {
       if (!BiomeResolver.Instance.TryResolve(name, out _) && ReportedUnknownBiomes.Add(name)) {
-        LoadingScreen.LogWarning(LogContext.Message("Configuration biome was not found.",
+        Log.Config.Warning(LogContext.Message("Configuration biome was not found.",
             ("file", ConfigFileName), ("key", "when.biome or when.*.entries[].when.knownBiome"),
             ("biome", name), ("expected", "vanilla biome or EWD biome: identifier")));
       }
@@ -55,12 +55,12 @@ public static class ScreenConfigLoader {
 
   static bool IsEntryUsable(Entry entry) {
     if (entry.Image != null && !IsImageAvailable(entry.Image)) {
-      LoadingScreen.LogDebug(LogContext.Message("Skipped loading screen entry because its image is unavailable.",
+      Log.Config.Debug(LogContext.Message("Skipped loading screen entry because its image is unavailable.",
           ("image", entry.Image), ("source", IsUsingServerConfig ? "server" : "local")));
       return false;
     }
     if (!Conditions.AreMet(entry.Conditions, PlayerConditions.Instance)) {
-      LoadingScreen.LogDebug(LogContext.Message("Skipped loading screen entry because conditions are not met.",
+      Log.Config.Debug(LogContext.Message("Skipped loading screen entry because conditions are not met.",
           ("image", entry.Image), ("source", IsUsingServerConfig ? "server" : "local")));
       return false;
     }
@@ -74,7 +74,7 @@ public static class ScreenConfigLoader {
   public static void UseServerConfig(ScreenConfig config, Func<string, string> resolver, int warnings) {
     IsUsingServerConfig = true;
     Activate(config, resolver);
-    LoadingScreen.LogMessage(LogContext.Message("Activated loading screen configuration.",
+    Log.Config.Message(LogContext.Message("Activated loading screen configuration.",
         ("side", "client"), ("source", "server"), ("warnings", warnings), ("summary", Summary())), warnings);
   }
 
@@ -85,7 +85,7 @@ public static class ScreenConfigLoader {
 
     IsUsingServerConfig = false;
     Activate(LocalConfig, LocalImagePath);
-    LoadingScreen.LogInfo(LogContext.Message("Activated loading screen configuration.",
+    Log.Config.Info(LogContext.Message("Activated loading screen configuration.",
         ("side", "client"), ("source", "local"), ("file", ConfigFileName)));
   }
 
@@ -118,7 +118,7 @@ public static class ScreenConfigLoader {
     try {
       return LoadWithYaml(pluginDir);
     } catch (Exception exception) when (exception is FileNotFoundException or TypeLoadException) {
-      LoadingScreen.LogError(LogContext.Message("Could not parse local loading screen configuration; situational screens are disabled.",
+      Log.Config.Error(LogContext.Message("Could not parse local loading screen configuration; situational screens are disabled.",
           ("file", ConfigFileName), ("dependency", "ValheimModding-YamlDotNet"), ("error", exception)));
       return false;
     }
@@ -130,7 +130,7 @@ public static class ScreenConfigLoader {
       ApplyAnimations(result, animationsYaml);
       return result;
     } catch (Exception exception) when (exception is FileNotFoundException or TypeLoadException) {
-      LoadingScreen.LogError(LogContext.Message("Could not parse server loading screen configuration; server screens are disabled.",
+      Log.Config.Error(LogContext.Message("Could not parse server loading screen configuration; server screens are disabled.",
           ("side", "client"), ("file", ConfigFileName), ("dependency", "ValheimModding-YamlDotNet"),
           ("error", exception)));
       return null;
@@ -171,11 +171,11 @@ public static class ScreenConfigLoader {
     ApplyAnimations(result, ReadLocalAnimationsYaml());
 
     foreach (string warning in result.Warnings) {
-      LoadingScreen.LogWarning(warning);
+      Log.Config.Warning(warning);
     }
 
     if (!result.IsValid && !LocalConfig.IsEmpty) {
-      LoadingScreen.LogWarning(LogContext.Message("Kept the previous loading screen configuration after parsing failed.",
+      Log.Config.Warning(LogContext.Message("Kept the previous loading screen configuration after parsing failed.",
           ("file", ConfigFileName), ("source", "local"), ("warnings", result.Warnings.Count)));
       return false;
     }
@@ -187,7 +187,7 @@ public static class ScreenConfigLoader {
       Activate(LocalConfig, LocalImagePath);
     }
 
-    LoadingScreen.LogMessage(LogContext.Message("Loaded loading screen configuration.",
+    Log.Config.Message(LogContext.Message("Loaded loading screen configuration.",
         ("file", ConfigFileName), ("source", "local"), ("summary", Summary())), _lastWarningCount);
     ServerImages.OnLocalConfigLoaded();
 
@@ -204,7 +204,7 @@ public static class ScreenConfigLoader {
         Current,
         IsEntryUsable,
         biomes: BiomeResolver.Instance,
-        debug: LoadingScreen.LogDebug);
+        debug: Log.Config.Debug);
     TickBiomeWarnings();
     LoadingManager.RefreshAppearance();
     ImageScaleUtils.RefreshAppearance();

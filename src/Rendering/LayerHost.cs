@@ -613,7 +613,7 @@ public sealed class LayerHost : MonoBehaviour {
   }
 
   void LogAnimationWarning(string warning, string phase, Layer layer) =>
-      LoadingScreen.LogWarning(LogContext.Message(warning, ("phase", phase), ("screen", _progressSituation.Kind),
+      Log.Render.Warning(LogContext.Message(warning, ("phase", phase), ("screen", _progressSituation.Kind),
           ("layout", CurrentSelection?.LayoutName), ("layer", layer.Id)));
 
   float IdleElapsed(float now) =>

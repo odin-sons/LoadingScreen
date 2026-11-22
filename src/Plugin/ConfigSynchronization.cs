@@ -14,7 +14,7 @@ internal sealed class ConfigSynchronization {
             LoadingScreen.PluginGuid,
             LoadingScreen.PluginName,
             LoadingScreen.PluginVersion,
-            warningLogger: warning => LoadingScreen.LogWarning(LogContext.Message(
+            warningLogger: warning => Log.Server.Warning(LogContext.Message(
                 "Conditional config synchronization warning.", ("feature", "ConditionalConfigSync"),
                 ("detail", warning))));
 

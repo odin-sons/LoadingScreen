@@ -168,7 +168,7 @@ public static class ServerImages {
 
     if (++_retries > MaxChunkRetries) {
       _failedCount++;
-      LoadingScreen.LogWarning(LogContext.Message("Server file download timed out; skipped file.",
+      Log.Server.Warning(LogContext.Message("Server file download timed out; skipped file.",
           ("side", "client"), ("file", _downloading.Path), ("retries", _retries - 1),
           ("timeoutSeconds", ChunkTimeoutSeconds)));
       RequestNextFile();
@@ -218,7 +218,7 @@ public static class ServerImages {
     }
 
     if (yaml.Length > MaxYamlLength || animationsYaml.Length > MaxYamlLength) {
-      LoadingScreen.LogWarning(LogContext.Message("Loading screen configuration exceeds the sharing limit.",
+      Log.Server.Warning(LogContext.Message("Loading screen configuration exceeds the sharing limit.",
           ("side", "server"), ("file", yaml.Length > MaxYamlLength
               ? ScreenConfigLoader.ConfigFileName : ScreenConfigLoader.AnimationsFileName),
           ("bytes", Math.Max(yaml.Length, animationsYaml.Length)), ("maxBytes", MaxYamlLength)));
@@ -242,7 +242,7 @@ public static class ServerImages {
         bool audio = KnownNames.AudioExtensions.Contains(Path.GetExtension(relativePath).ToLowerInvariant());
         long limit = audio ? AudioFile.MaxBytes : MaxFileSize;
         if (new FileInfo(fullPath).Length > limit) {
-          LoadingScreen.LogWarning(LogContext.Message("Server file exceeds the sharing limit.",
+          Log.Server.Warning(LogContext.Message("Server file exceeds the sharing limit.",
               ("side", "server"), ("file", relativePath), ("bytes", new FileInfo(fullPath).Length),
               ("maxBytes", limit)));
           continue;
@@ -251,7 +251,7 @@ public static class ServerImages {
 
         if (data.LongLength == 0 || data.LongLength > limit || total + data.LongLength > MaxTotalSize
             || (audio && !AudioFile.IsValid(relativePath, data))) {
-          LoadingScreen.LogWarning(LogContext.Message("Server file was rejected for sharing.",
+          Log.Server.Warning(LogContext.Message("Server file was rejected for sharing.",
               ("side", "server"), ("file", relativePath), ("bytes", data.LongLength),
               ("maxFileBytes", limit), ("totalBytes", total + data.LongLength),
               ("maxTotalBytes", MaxTotalSize), ("validAudio", !audio || AudioFile.IsValid(relativePath, data))));
@@ -271,9 +271,9 @@ public static class ServerImages {
         _servedByPath[relativePath] = file;
         _servedByHash[file.Hash] = file;
       } catch (Exception exception) {
-        LoadingScreen.LogWarning(LogContext.Message("Could not read server file for sharing.",
+        Log.Server.Warning(LogContext.Message("Could not read server file for sharing.",
             ("side", "server"), ("file", relativePath), ("error", exception.Message)));
-        LoadingScreen.LogDebug(LogContext.Message("Server file sharing exception.",
+        Log.Server.Debug(LogContext.Message("Server file sharing exception.",
             ("side", "server"), ("file", relativePath), ("exception", exception)));
       }
     }
@@ -294,7 +294,7 @@ public static class ServerImages {
     }
 
     _manifestData = Utils.Compress(manifest.GetArray());
-    LoadingScreen.LogInfo(LogContext.Message("Sharing loading screen files with clients.",
+    Log.Server.Info(LogContext.Message("Sharing loading screen files with clients.",
         ("side", "server"), ("files", _servedByPath.Count), ("totalBytes", total)));
   }
 
@@ -358,7 +358,7 @@ public static class ServerImages {
       byte[] compressed = envelope.ReadByteArray();
 
       if (compressed.Length == 0) {
-        LoadingScreen.LogInfo(LogContext.Message("Server has no loading screen files to share.",
+        Log.Server.Info(LogContext.Message("Server has no loading screen files to share.",
             ("side", "client"), ("manifestBytes", compressed.Length)));
         return;
       }
@@ -366,7 +366,7 @@ public static class ServerImages {
       byte[] manifestData = BoundedDecompress(compressed, MaxManifestSize);
 
       if (manifestData == null) {
-        LoadingScreen.LogWarning(LogContext.Message("Server loading screen manifest exceeds the limit; server files ignored.",
+        Log.Server.Warning(LogContext.Message("Server loading screen manifest exceeds the limit; server files ignored.",
             ("side", "client"), ("compressedBytes", compressed.Length), ("maxBytes", MaxManifestSize)));
         return;
       }
@@ -375,7 +375,7 @@ public static class ServerImages {
 
       int protocol = manifest.ReadInt();
       if (protocol != ProtocolVersion) {
-        LoadingScreen.LogWarning(LogContext.Message("Server loading screen protocol is incompatible; server files ignored.",
+        Log.Server.Warning(LogContext.Message("Server loading screen protocol is incompatible; server files ignored.",
             ("side", "client"), ("serverVersion", protocol), ("supportedVersion", ProtocolVersion)));
         return;
       }
@@ -385,7 +385,7 @@ public static class ServerImages {
       int count = manifest.ReadInt();
 
       if (yaml.Length > MaxYamlLength || animationsYaml.Length > MaxYamlLength || count <= 0 || count > MaxFiles) {
-        LoadingScreen.LogWarning(LogContext.Message("Server loading screen manifest has invalid limits; server files ignored.",
+        Log.Server.Warning(LogContext.Message("Server loading screen manifest has invalid limits; server files ignored.",
             ("side", "client"), ("configBytes", yaml.Length), ("animationsBytes", animationsYaml.Length),
             ("files", count), ("maxYamlBytes", MaxYamlLength), ("allowedFiles", $"1..{MaxFiles}")));
         return;
@@ -394,9 +394,9 @@ public static class ServerImages {
       ReadListedFiles(manifest, count);
       ApplyServerConfig(yaml, animationsYaml);
     } catch (Exception exception) {
-      LoadingScreen.LogWarning(LogContext.Message("Could not read server loading screen manifest; server files ignored.",
+      Log.Server.Warning(LogContext.Message("Could not read server loading screen manifest; server files ignored.",
           ("side", "client"), ("input", "server manifest"), ("error", exception.Message)));
-      LoadingScreen.LogDebug(LogContext.Message("Server manifest parsing exception.",
+      Log.Server.Debug(LogContext.Message("Server manifest parsing exception.",
           ("side", "client"), ("input", "server manifest"), ("exception", exception)));
       _listedByPath.Clear();
     }
@@ -424,7 +424,7 @@ public static class ServerImages {
           && CacheExtension(file.Path) != null;
 
       if (!valid || total + file.Size > MaxTotalSize) {
-        LoadingScreen.LogWarning(LogContext.Message("Server file manifest entry was rejected.",
+        Log.Server.Warning(LogContext.Message("Server file manifest entry was rejected.",
             ("side", "client"), ("file", file.Path), ("bytes", file.Size),
             ("transferBytes", file.TransferSize), ("chunks", file.ChunkCount),
             ("maxFileBytes", FileLimit(file.Path)), ("maxTotalBytes", MaxTotalSize)));
@@ -441,14 +441,14 @@ public static class ServerImages {
         yaml, animationsYaml, path => _listedByPath.ContainsKey(path));
 
     if (result == null || !result.IsValid || result.Config.IsEmpty) {
-      LoadingScreen.LogWarning(LogContext.Message("Server loading screen configuration was rejected; using local screens.",
+      Log.Server.Warning(LogContext.Message("Server loading screen configuration was rejected; using local screens.",
           ("side", "client"), ("file", ScreenConfigLoader.ConfigFileName),
           ("reason", result == null ? "parser unavailable" : !result.IsValid ? "invalid YAML" : "no entries")));
       return;
     }
 
     foreach (string warning in result.Warnings.Take(50)) {
-      LoadingScreen.LogWarning(LogContext.Message(warning, ("source", "server"), ("side", "client")));
+      Log.Server.Warning(LogContext.Message(warning, ("source", "server"), ("side", "client")));
     }
 
     foreach (Entry entry in result.Config.AllLists.SelectMany(list => list.Entries)) {
@@ -471,7 +471,7 @@ public static class ServerImages {
       }
     }
 
-    LoadingScreen.LogInfo(LogContext.Message("Prepared server loading screen file downloads.",
+    Log.Server.Info(LogContext.Message("Prepared server loading screen file downloads.",
         ("side", "client"), ("pending", _downloadQueue.Count),
         ("cached", _listedByPath.Count - _downloadQueue.Count)));
     RequestNextFile();
@@ -511,9 +511,9 @@ public static class ServerImages {
         file.Delete();
       }
     } catch (Exception exception) {
-      LoadingScreen.LogWarning(LogContext.Message("Could not prune the server loading screen cache.",
+      Log.Server.Warning(LogContext.Message("Could not prune the server loading screen cache.",
           ("side", "client"), ("folder", "BepInEx/cache/LoadingScreen"), ("error", exception.Message)));
-      LoadingScreen.LogDebug(LogContext.Message("Server cache pruning exception.",
+      Log.Server.Debug(LogContext.Message("Server cache pruning exception.",
           ("side", "client"), ("folder", "BepInEx/cache/LoadingScreen"), ("exception", exception)));
     }
   }
@@ -538,7 +538,7 @@ public static class ServerImages {
 
       if (!File.Exists(CacheFile(next))) {
         _downloading = next;
-        LoadingScreen.LogDebug(LogContext.Message("Downloading server loading screen file.",
+        Log.Server.Debug(LogContext.Message("Downloading server loading screen file.",
             ("side", "client"), ("file", next.Path), ("bytes", next.Size), ("chunks", next.ChunkCount)));
         _downloadBuffer = new MemoryStream((int) next.TransferSize);
         _nextChunk = 0;
@@ -558,7 +558,7 @@ public static class ServerImages {
     ZPackage request = new();
     request.Write(_downloading.Hash);
     request.Write(_nextChunk);
-    LoadingScreen.LogDebug(LogContext.Message("Requesting server loading screen file chunk.",
+    Log.Server.Debug(LogContext.Message("Requesting server loading screen file chunk.",
         ("side", "client"), ("file", _downloading.Path), ("chunk", _nextChunk + 1),
         ("totalChunks", _downloading.ChunkCount)));
     _serverRpc.Invoke(RpcRequestChunk, request);
@@ -646,7 +646,7 @@ public static class ServerImages {
 
     if (index == NotAvailable) {
       _failedCount++;
-      LoadingScreen.LogWarning(LogContext.Message("Server file is no longer available; skipped download.",
+      Log.Server.Warning(LogContext.Message("Server file is no longer available; skipped download.",
           ("side", "client"), ("file", _downloading.Path), ("chunk", _nextChunk + 1)));
       RequestNextFile();
       return;
@@ -659,7 +659,7 @@ public static class ServerImages {
     }
 
     _downloadBuffer.Write(chunk, 0, chunk.Length);
-    LoadingScreen.LogDebug(LogContext.Message("Received server loading screen file chunk.",
+    Log.Server.Debug(LogContext.Message("Received server loading screen file chunk.",
         ("side", "client"), ("file", _downloading.Path), ("chunk", index + 1),
         ("totalChunks", _downloading.ChunkCount), ("bytes", chunk.Length)));
     _nextChunk++;
@@ -686,7 +686,7 @@ public static class ServerImages {
 
       if (data == null || data.LongLength != file.Size || Sha256(data) != file.Hash) {
         _failedCount++;
-        LoadingScreen.LogWarning(LogContext.Message("Server file failed size or hash verification; discarded.",
+        Log.Server.Warning(LogContext.Message("Server file failed size or hash verification; discarded.",
             ("side", "client"), ("file", file.Path), ("expectedBytes", file.Size),
             ("actualBytes", data?.LongLength ?? -1)));
         return;
@@ -696,7 +696,7 @@ public static class ServerImages {
       if (audio ? !AudioFile.IsValid(file.Path, data)
           : !ImageHeader.TryRead(data, out int width, out int height) || !ImageHeader.IsAllowed(width, height)) {
         _failedCount++;
-        LoadingScreen.LogWarning(LogContext.Message("Server file failed format or dimension validation; discarded.",
+        Log.Server.Warning(LogContext.Message("Server file failed format or dimension validation; discarded.",
             ("side", "client"), ("file", file.Path), ("kind", audio ? "audio" : "image"),
             ("maxAudioBytes", AudioFile.MaxBytes), ("maxImageSidePixels", ImageHeader.MaxSide),
             ("maxImagePixels", ImageHeader.MaxPixels)));
@@ -714,13 +714,13 @@ public static class ServerImages {
       }
 
       _downloadedCount++;
-      LoadingScreen.LogDebug(LogContext.Message("Saved server loading screen file.",
+      Log.Server.Debug(LogContext.Message("Saved server loading screen file.",
           ("side", "client"), ("file", file.Path), ("bytes", file.Size)));
     } catch (Exception exception) {
       _failedCount++;
-      LoadingScreen.LogWarning(LogContext.Message("Could not save server loading screen file.",
+      Log.Server.Warning(LogContext.Message("Could not save server loading screen file.",
           ("side", "client"), ("file", file.Path), ("error", exception.Message)));
-      LoadingScreen.LogDebug(LogContext.Message("Server file saving exception.",
+      Log.Server.Debug(LogContext.Message("Server file saving exception.",
           ("side", "client"), ("file", file.Path), ("exception", exception)));
     }
   }

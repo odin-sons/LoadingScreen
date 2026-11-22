@@ -20,7 +20,7 @@ public static class SituationTracker {
 
     int? biome = ResolveBiome(targetPosition);
     Set(biome.HasValue ? Situation.Teleport(biome.Value) : Situation.Teleport((string)null));
-    LoadingScreen.LogInfo(LogContext.Message("Selected portal loading screen.",
+    Log.Render.Info(LogContext.Message("Selected portal loading screen.",
         ("side", "client"), ("screen", "portal"), ("destination", targetPosition),
         ("biome", biome?.ToString() ?? "unknown")));
   }
@@ -50,7 +50,7 @@ public static class SituationTracker {
     Situation situation = Situation.Death(
         DeathCauses.Keys(lastHit.m_hitType.ToString(), damages), AttackerPrefab(lastHit), biome);
     Set(situation);
-    LoadingScreen.LogInfo(LogContext.Message("Selected death loading screen.",
+    Log.Render.Info(LogContext.Message("Selected death loading screen.",
         ("side", "client"), ("screen", "death"), ("situation", situation)));
   }
 
