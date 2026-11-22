@@ -57,7 +57,7 @@ By default, these files live in `BepInEx/config/LoadingScreen/`:
 
 | File | Purpose |
 |---|---|
-| `loadingscreen.yaml` | Situations, layouts, placement and appearance (below) |
+| `loadingscreen.yaml` | When to show, layouts, placement and appearance (below) |
 | `tips.txt` | One tip per line; fallback when a language-specific file is absent |
 | `tips.<code>.txt` | Optional translated tips, for example `tips.ru.txt` |
 | `*.png`, `*.jpg` at the top level | Plain images, used when no situational entry applies |
@@ -70,7 +70,7 @@ folder holds `loadingscreen.yaml`, tip files, images and audio clips.
 
 Behavior switches are in `BepInEx/config/Odin_Sons.LoadingScreen.cfg`; appearance is in the YAML `defaults` section.
 
-`[6 - Sound] Play loading screen sounds` turns configured music and voices on or off (on by default). `Music volume
+`[5 - Sound] Play loading screen sounds` turns configured music and voices on or off (on by default). `Music volume
 percent` and `Voice volume percent` each range from 0 to 100 and default to 100. Music also follows Valheim's master
 and music sliders; voices follow its master and effects sliders. Music follows the loading screen's fade and stops
 as soon as the screen closes. `Mute game sounds on loading screens` (`None` by default) fades out the game's
@@ -83,24 +83,24 @@ looks for `tips.<code>.txt` first, then `tips.txt`. Each file has one tip per li
 empty. Language changes take effect on the next tip or screen selection. The game's `Chinese` and `Chinese_Trad`
 use `zh-CN` and `zh-TW`; `Portuguese_European` and `Portuguese_Brazilian` use `pt` and `pt-BR`.
 
-Set `[1 - General] Change image every N seconds` to a positive number to change images while the HUD or game start
+Set `[3 - Timing] Change image every N seconds` to a positive number to change images while the HUD or game start
 loading screen stays visible. The default `0` turns the slideshow off. When a situational entry is showing, each
 change picks another usable entry from that same list and follows its `order` setting. The image zoom starts again
 on each change.
 
-Set `[1 - General] Change tip every N seconds` to a positive number to show another line from `tips.txt` while a HUD
+Set `[3 - Timing] Change tip every N seconds` to a positive number to show another line from `tips.txt` while a HUD
 or main-menu loading screen stays visible. The default `0` turns tip rotation off. An entry's own text stays fixed;
-entries without text rotate tips when `[2 - Situations] Random tip when an entry has no text` is on. Tip rotation also
+entries without text rotate tips when `[2 - When to show] Random tip when an entry has no text` is on. Tip rotation also
 works with a layout's `text: caption` layer. The game's arrow keys still advance tips manually. With more than one
 tip, the next pick differs from the previous one.
 
-Set `[2 - Situations] Loading screen while sleeping` to `true` to show an image and tip during sleep (default: off).
+Set `[2 - When to show] Loading screen while sleeping` to `true` to show an image and tip during sleep (default: off).
 The game's sleep text and spinner stay visible above the image. A sleep-specific layout can hide them with
 `showSleepUi: false` and use its own layers instead. Image slideshows and tip rotation also apply while sleeping.
 
-Set `[2 - Situations] Hold loading screen until a key is pressed` to `true` to keep the HUD loading screen and tip
+Set `[3 - Timing] Hold loading screen until a key is pressed` to `true` to keep the HUD loading screen and tip
 visible after loading finishes (default: off). A separate "Press any key to continue" line appears; any key or mouse
-click dismisses it. `[2 - Situations] Maximum hold time in seconds` closes it automatically after 30 seconds by
+click dismisses it. `[3 - Timing] Maximum hold time in seconds` closes it automatically after 30 seconds by
 default (allowed: 1 to 300). The hold never runs on dedicated servers or during cinematics. Style the prompt with
 `defaults.continuePrompt` in `loadingscreen.yaml`.
 
@@ -108,13 +108,13 @@ default (allowed: 1 to 300). The hold never runs on dedicated servers or during 
 
 | Loading screen | First choice | Then |
 |---|---|---|
-| Portal teleport | `situations.teleport.<destination biome>` | `situations.general`, then the plain images |
-| Respawn | `situations.death.<cause>` | `situations.general`, then the plain images |
-| Sleep (when enabled) | `situations.sleep` | `situations.general`, then the plain images |
-| Anything else, main menu, game start | `situations.general` | the plain images |
+| Portal teleport | `when.teleport.<destination biome>` | `when.general`, then the plain images |
+| Respawn | `when.death.<cause>` | `when.general`, then the plain images |
+| Sleep (when enabled) | `when.sleep` | `when.general`, then the plain images |
+| Anything else, main menu, game start | `when.general` | the plain images |
 
 - Biomes: `Meadows`, `BlackForest`, `Swamp`, `Mountain`, `Plains`, `Mistlands`, `AshLands`, `DeepNorth`, `Ocean`.
-  The biome is resolved from the destination position. Teleport screens need `[2 - Situations] Loading screen on portal teleport`
+  The biome is resolved from the destination position. Teleport screens need `[2 - When to show] Loading screen on portal teleport`
   (on by default); without it the game shows its own portal animation.
 - Causes are the game's own hit types: `Undefined`, `EnemyHit`, `PlayerHit`, `Fall`, `Drowning`, `Burning`,
   `Freezing`, `Poisoned`, `Water`, `Smoke`, `EdgeOfWorld`, `Impact`, `Cart`, `Tree`, `Self`, `Structural`,
@@ -123,7 +123,7 @@ default (allowed: 1 to 300). The hold never runs on dedicated servers or during 
 - For `EnemyHit`, `PlayerHit`, `Turret`, `Catapult` and `Undefined`, the dominant damage type of the killing hit is
   tried first: `Blunt`, `Slash`, `Pierce`, `Chop`, `Pickaxe`, `Fire`, `Frost`, `Lightning`, `Poison`, `Spirit`.
   Example: a frost drake kill uses `death.Frost` if it exists, then `death.EnemyHit`, then `general`.
-- A kill by a creature tries `situations.enemy.<prefab name>` before the damage and hit type lists, for example `enemy.Troll`
+- A kill by a creature tries `when.enemy.<prefab name>` before the damage and hit type lists, for example `enemy.Troll`
   or `enemy.Hatchling` (a drake; `Dragon` is Moder). Prefab names are free-form, including modded creatures. Each list is tried in turn until one has a
   usable entry, so `death.EnemyHit` still catches every enemy kill whose damage type has no list.
 - Within a list an entry is picked at random, never the same one twice in a row. `order: sequential` at the top of
@@ -135,7 +135,7 @@ default (allowed: 1 to 300). The hold never runs on dedicated servers or during 
 ### Entries
 
 ```yaml
-situations:
+when:
   general:                     # a list of entries, or { layout, entries }
     layout: logo-over-backdrops
     entries:
@@ -179,7 +179,7 @@ translation. A plain string is shown in every language. This also applies to tex
 `when` limits an entry to players for whom every condition holds:
 
 ```yaml
-situations:
+when:
   teleport:
     Mistlands:
       - text: The mist is thick. Craft a Wisplight to see further.
@@ -287,7 +287,7 @@ Build pieces are known by their token, so use `knownRecipe` with it. Ships: `$sh
 A tip for the next boss, shown on any loading screen while that boss is the next one:
 
 ```yaml
-situations:
+when:
   general:
     - text: Two deer trophies on the mystical altar call Eikthyr, the first of the Forsaken.
       when: { notGlobalKey: defeated_eikthyr }
@@ -310,7 +310,7 @@ situations:
 What to do after each boss, until the player has done it:
 
 ```yaml
-situations:
+when:
   general:
     - text: Eikthyr's hard antlers make a pickaxe. Copper and tin wait in the Black Forest.
       when: { globalKey: defeated_eikthyr, notKnownItem: PickaxeAntler }
@@ -341,7 +341,7 @@ situations:
 Biome tips for every biome, shown until the player has found the item the tip is about:
 
 ```yaml
-situations:
+when:
   teleport:
     Meadows:
       - text: Wood and stone make a hammer. Build a workbench under a roof.
@@ -557,12 +557,11 @@ Behavior switches in `Odin_Sons.LoadingScreen.cfg`; each has a description in th
 
 | Section | Settings |
 |---|---|
-| `1 - General` | Enabled, Image folder, Text language, Change image every N seconds, Change tip every N seconds |
-| `2 - Situations` | Loading screen on portal teleport, Loading screen while sleeping, Hold loading screen until a key is pressed, Maximum hold time in seconds, Loading screen right after death, Random tip when an entry has no text |
-| `3 - Game start screen` | Use loading images, Show progress |
-| `4 - Server images` | Share with players (server), Use screens from the server (player) |
-| `5 - Config synchronization` | Lock synced settings |
-| `6 - Sound` | Play loading screen sounds, Music volume percent, Voice volume percent, Mute game sounds on loading screens |
+| `1 - General` | Lock Configuration, Mod enabled, Image folder, Text language, Share screens with players |
+| `2 - When to show` | Loading screen on portal teleport, Loading screen while sleeping, Loading screen right after death, Random tip when an entry has no text |
+| `3 - Timing` | Change image every N seconds, Change tip every N seconds, Hold loading screen until a key is pressed, Maximum hold time in seconds |
+| `4 - Game start screen` | Use loading images, Show progress |
+| `5 - Sound` | Play loading screen sounds, Music volume percent, Voice volume percent, Mute game sounds on loading screens |
 
 ### Config synchronization
 
@@ -574,17 +573,18 @@ no matching server plugin or sync path, settings stay local.
 
 The following cfg settings are server controlled by default with ServerSync, or `Conditional` with CCS so a server
 admin can choose ownership in `ConditionalConfigSync.SyncPolicy.cfg`:
-`Change image every N seconds`, `Change tip every N seconds`, and all settings in `2 - Situations`.
-The remaining settings are client controlled, including `Enabled`, `Image folder`, `Text language`, both game
-start settings, sound settings, `Share with players (server)`, and `Use screens from the server (player)`. The server's
+`Mod enabled`, `Share screens with players`, all settings in `2 - When to show`, and all settings in `3 - Timing`
+except `Hold loading screen until a key is pressed`. `Lock Configuration` controls the lock itself.
+The remaining settings are client controlled: `Image folder`, `Text language`, the key hold, both game start settings,
+and sound settings. Each cfg description ends with its sync status. The server's
 `loadingscreen.yaml` already carries appearance defaults (tint, zoom, tip style, separator, background) through
 the existing screen transfer; they are not cfg settings.
 
-Set `[5 - Config synchronization] Lock synced settings` to `true` on the server (the default) to restrict changes
+Set `[1 - General] Lock Configuration` to `true` on the server (the default) to restrict changes
 to server admins. Set it to `false` to allow unlocked synchronized settings to be changed by clients.
 CCS admins can also override `Conditional` ownership in
 `BepInEx/config/shudnal.ConditionalConfigSync/ConditionalConfigSync.SyncPolicy.cfg`.
-Received cfg values take effect on the next relevant loading screen or update without restarting the game.
+Received cfg values, including `Mod enabled`, take effect without restarting the game.
 Settings marked as requiring a restart remain local.
 
 ### Console

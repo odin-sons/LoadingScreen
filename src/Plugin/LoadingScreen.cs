@@ -28,20 +28,25 @@ public sealed class LoadingScreen : BaseUnityPlugin {
     BindConfig(Config, new ConfigSynchronization(Logger));
     LoadingAudio.Initialize(gameObject);
 
-    if (IsModEnabled.Value) {
-      try {
-        string imageFolder = ImageFolderPath.Resolve(ImageFolder.Value, Paths.BepInExRootPath);
-        CustomAssets.Initialize(imageFolder);
-        ScreenConfigLoader.Load(imageFolder);
-      } catch (Exception exception) {
-        LogError($"Could not load the loading screen config: {exception}");
-      }
-
-      Harmony.CreateAndPatchAll(Assembly.GetExecutingAssembly(), harmonyInstanceId: PluginGuid);
+    try {
+      string imageFolder = ImageFolderPath.Resolve(ImageFolder.Value, Paths.BepInExRootPath);
+      CustomAssets.Initialize(imageFolder);
+      ScreenConfigLoader.Load(imageFolder);
+    } catch (Exception exception) {
+      LogError($"Could not load the loading screen config: {exception}");
     }
+
+    IsModEnabled.SettingChanged += (_, _) => {
+      if (IsModEnabled.Value) LoadingManager.Enable();
+      ServerImages.OnSettingsChanged();
+      if (!IsModEnabled.Value) LoadingManager.Disable();
+    };
+    ShareScreensWithPlayers.SettingChanged += (_, _) => ServerImages.OnSettingsChanged();
+    Harmony.CreateAndPatchAll(Assembly.GetExecutingAssembly(), harmonyInstanceId: PluginGuid);
   }
 
   void Update() {
+    if (!IsModEnabled.Value) return;
     ServerImages.Tick();
   }
 

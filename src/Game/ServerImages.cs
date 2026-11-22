@@ -74,6 +74,7 @@ public static class ServerImages {
   static int _nextChunk;
   static int _retries;
   static float _lastRequestTime;
+  static float _lastManifestRequestTime;
   static bool _manifestRequested;
   static bool _manifestReceived;
   static int _downloadedCount;
@@ -102,6 +103,25 @@ public static class ServerImages {
     }
   }
 
+  public static void OnSettingsChanged() {
+    if (!IsModEnabled.Value || !ShareScreensWithPlayers.Value) {
+      _manifestRequested = false;
+      _manifestReceived = false;
+      _listedByPath.Clear();
+      _downloadQueue.Clear();
+      _downloading = null;
+      _downloadBuffer = null;
+      _nextChunk = 0;
+      _retries = 0;
+      _downloadedCount = 0;
+      _failedCount = 0;
+      ScreenConfigLoader.UseLocalConfig();
+    }
+
+    OnGameStart();
+    if (IsModEnabled.Value && ShareScreensWithPlayers.Value) OnLocalPlayerSpawned();
+  }
+
   public static void OnLocalConfigLoaded() {
     if (ZNet.instance && ZNet.instance.IsServer()) {
       BuildServedFiles();
@@ -109,7 +129,8 @@ public static class ServerImages {
   }
 
   public static void OnLocalPlayerSpawned() {
-    if (_manifestRequested || !DownloadServerImages.Value || _serverRpc == null || !_serverRpc.IsConnected()) {
+    if (_manifestRequested || !IsModEnabled.Value || !ShareScreensWithPlayers.Value
+        || _serverRpc == null || !_serverRpc.IsConnected()) {
       return;
     }
 
@@ -118,13 +139,23 @@ public static class ServerImages {
     }
 
     _manifestRequested = true;
+    RequestManifest();
+  }
 
+  static void RequestManifest() {
+    _lastManifestRequestTime = Time.realtimeSinceStartup;
     ZPackage request = new();
     request.Write(ProtocolVersion);
     _serverRpc.Invoke(RpcRequestManifest, request);
   }
 
   public static void Tick() {
+    if (_manifestRequested && !_manifestReceived && IsModEnabled.Value && ShareScreensWithPlayers.Value
+        && _serverRpc != null && _serverRpc.IsConnected()
+        && Time.realtimeSinceStartup - _lastManifestRequestTime > ManifestRequestCooldownSeconds + 1f) {
+      RequestManifest();
+    }
+
     if (_downloading == null || Time.realtimeSinceStartup - _lastRequestTime < ChunkTimeoutSeconds) {
       return;
     }
@@ -172,7 +203,7 @@ public static class ServerImages {
     _servedByHash.Clear();
     _manifestData = null;
 
-    if (!ServeImagesToClients.Value) {
+    if (!IsModEnabled.Value || !ShareScreensWithPlayers.Value) {
       return;
     }
 
@@ -300,7 +331,8 @@ public static class ServerImages {
   }
 
   static void OnManifest(ZRpc rpc, ZPackage envelope) {
-    if (rpc != _serverRpc || !_manifestRequested || _manifestReceived || !DownloadServerImages.Value) {
+    if (rpc != _serverRpc || !_manifestRequested || _manifestReceived
+        || !IsModEnabled.Value || !ShareScreensWithPlayers.Value) {
       return;
     }
 

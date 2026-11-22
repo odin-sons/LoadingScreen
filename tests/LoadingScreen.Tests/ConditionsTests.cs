@@ -19,7 +19,7 @@ public class ConditionsTests {
   }
 
   const string MistTip = """
-      situations:
+      when:
         teleport:
           Mistlands:
             - text: Craft a Wisplight to push back the mist.
@@ -64,7 +64,7 @@ public class ConditionsTests {
   [InlineData("when: { knownItem: '' }", "needs a name")]
   [InlineData("when: [ knownItem ]", "expected a mapping")]
   public void RejectsEntriesWithInvalidConditions(string when, string warning) {
-    ConfigLoadResult result = Parse($"situations: {{ general: [ {{ text: Tip, {when} }} ] }}");
+    ConfigLoadResult result = Parse($"when: {{ general: [ {{ text: Tip, {when} }} ] }}");
 
     Assert.Empty(result.Config.General.Entries);
     Assert.Contains(result.Warnings, message => message.Contains(warning));
@@ -72,7 +72,7 @@ public class ConditionsTests {
 
   [Fact]
   public void EntryNeedsImageOrText() {
-    ConfigLoadResult result = Parse("situations: { general: [ { layout: x } ] }");
+    ConfigLoadResult result = Parse("when: { general: [ { layout: x } ] }");
 
     Assert.Empty(result.Config.General.Entries);
     Assert.Contains(result.Warnings, message => message.Contains("needs an 'image' or a 'text'"));
@@ -144,7 +144,7 @@ public class ReadmeConditionExamplesTests {
     List<string> blocks = System.Text.RegularExpressions.Regex
         .Matches(readme, "```yaml\r?\n(.*?)```", System.Text.RegularExpressions.RegexOptions.Singleline)
         .Select(match => match.Groups[1].Value)
-        .Where(block => block.Contains("when:"))
+        .Where(block => System.Text.RegularExpressions.Regex.IsMatch(block, @"(?m)^ {4,}.*\bwhen:"))
         .ToList();
 
     Assert.True(blocks.Count >= 3);

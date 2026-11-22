@@ -37,7 +37,7 @@ public class LanguageTextTests {
   [Fact]
   public void ParsesLocalizedTextAndKeepsTextOnlyEntries() {
     ConfigLoadResult result = new ConfigParser(_ => true).Parse("""
-        situations:
+        when:
           general:
             - text: { en: Welcome, ru: Привет }
         """);
@@ -52,7 +52,7 @@ public class LanguageTextTests {
   [Fact]
   public void InvalidTranslationDoesNotDiscardValidEntry() {
     ConfigLoadResult result = new ConfigParser(_ => true).Parse("""
-        situations:
+        when:
           general:
             - image: image.jpg
               text: { xx: Unknown, en: Welcome, ru: [wrong] }

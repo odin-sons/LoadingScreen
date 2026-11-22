@@ -19,7 +19,7 @@ static class HudPatch {
   [HarmonyPatch(nameof(Hud.Awake))]
   static void AwakePostfix(Hud __instance) {
     _holdState.Reset();
-    LoadingManager.SetupHud(__instance);
+    if (IsModEnabled.Value) LoadingManager.SetupHud(__instance);
   }
 
   static bool _loadingScreenState;
@@ -32,6 +32,14 @@ static class HudPatch {
   [HarmonyPrefix]
   [HarmonyPatch(nameof(Hud.UpdateBlackScreen))]
   static bool UpdateBlackScreenPrefix(Hud __instance, Player player) {
+    if (!IsModEnabled.Value) {
+      _holdState.Reset();
+      _loadingScreenState = false;
+      _wasSleeping = false;
+      return true;
+    }
+
+    if (!LoadingManager.HudHost) LoadingManager.SetupHud(__instance);
     bool stillSleeping = ShowLoadingScreenWhileSleeping.Value && Player.m_localPlayer && Player.m_localPlayer.IsSleeping();
     if (_wasSleeping && !stillSleeping) {
       __instance.m_loadingProgress.SetActive(false);
@@ -60,6 +68,7 @@ static class HudPatch {
   [HarmonyPostfix]
   [HarmonyPatch(nameof(Hud.UpdateBlackScreen))]
   static void UpdateBlackScreenPostfix(Hud __instance) {
+    if (!IsModEnabled.Value) return;
     bool sleeping = ShowLoadingScreenWhileSleeping.Value && Player.m_localPlayer && Player.m_localPlayer.IsSleeping();
     bool newScreen = !_loadingScreenState || sleeping != _wasSleeping;
     _wasSleeping = sleeping;
@@ -164,6 +173,7 @@ static class HudPatch {
   }
 
   static bool ShowTeleportAnimationDelegate(bool showTeleportAnimation, Hud hud) {
+    if (!IsModEnabled.Value) return showTeleportAnimation;
     if (!showTeleportAnimation) {
       return false;
     }
@@ -177,6 +187,7 @@ static class HudPatch {
   }
 
   static bool ShowLoadingProgressDelegate(bool _, Player player) {
+    if (!IsModEnabled.Value) return false;
     if (CinematicsManager.IsPlaying()) {
       return false;
     }
@@ -219,6 +230,7 @@ static class HudPatch {
   }
 
   static string LoadingTipSetTextDelegate(string text) {
+    if (!IsModEnabled.Value) return text;
     if (LoadingManager.CurrentCaption != null) {
       return LoadingManager.CurrentCaption;
     }
