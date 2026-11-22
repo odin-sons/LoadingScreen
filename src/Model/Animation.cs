@@ -182,7 +182,8 @@ public sealed class AnimationCatalog {
   public AnimationPreset Resolve(string name, Action<string> warn = null) {
     name ??= "none";
     if (_presets.TryGetValue(name, out AnimationPreset preset)) return preset;
-    if (_warned.Add(name)) warn?.Invoke($"Unknown animation preset '{name}'; using none.");
+    if (_warned.Add(name)) warn?.Invoke(LogContext.Message("Unknown animation preset; using none.",
+        ("preset", name), ("available", string.Join(",", _presets.Keys))));
     return _presets["none"];
   }
 

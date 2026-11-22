@@ -93,7 +93,7 @@ public class ConfigParserTests {
     Assert.Null(result.Config.General.Entries[0].Sound);
     Assert.Null(result.Config.General.Entries[0].Voice);
     Assert.Equal(3, result.Warnings.Count);
-    Assert.All(result.Warnings, warning => Assert.Contains("line ", warning));
+    Assert.All(result.Warnings, warning => Assert.Contains("line=", warning));
   }
 
   [Theory]
@@ -205,7 +205,7 @@ public class ConfigParserTests {
 
     AssertBuiltInAppearance(result.Config.Defaults);
     Assert.Equal(18, result.Warnings.Count);
-    Assert.All(result.Warnings, warning => Assert.Contains("line ", warning));
+    Assert.All(result.Warnings, warning => Assert.Contains("line=", warning));
     Assert.Contains(result.Warnings, warning => warning.Contains("animation: unknown key 'extra'"));
     Assert.Contains(result.Warnings, warning => warning.Contains("tip: unknown key 'other'"));
     Assert.Contains(result.Warnings, warning => warning.Contains("separator: unknown key 'unknown'"));
@@ -226,7 +226,7 @@ public class ConfigParserTests {
 
     AssertBuiltInAppearance(result.Config.Defaults);
     Assert.Equal(4, result.Warnings.Count);
-    Assert.All(result.Warnings, warning => Assert.Contains("line ", warning));
+    Assert.All(result.Warnings, warning => Assert.Contains("line=", warning));
   }
 
   [Fact]
@@ -383,7 +383,7 @@ public class ConfigParserTests {
     Assert.DoesNotContain(result.Warnings, warning => warning.Contains("'Narnia'"));
     Assert.Contains(result.Warnings, warning => warning.Contains("'Boredom'"));
     Assert.Contains(result.Warnings, warning => warning.Contains("'weather'"));
-    Assert.All(result.Warnings, warning => Assert.StartsWith("line ", warning));
+    Assert.All(result.Warnings, warning => Assert.StartsWith("Configuration warning. file=loadingscreen.yaml line=", warning));
   }
 
   [Fact]
@@ -628,7 +628,7 @@ public class ConfigParserTests {
 
     Assert.Contains(result.Warnings, warning => warning.Contains("unsupported image type 'unknown'"));
     Assert.Contains(result.Warnings, warning => warning.Contains("use only one of"));
-    Assert.All(result.Warnings, warning => Assert.Contains("line ", warning));
+    Assert.All(result.Warnings, warning => Assert.Contains("line=", warning));
     Assert.Equal(2, result.Config.Layouts["loading"].Layers.Count);
   }
 
@@ -773,7 +773,7 @@ public class ConfigParserTests {
     Assert.False(defaults.Spinner.Center);
     Assert.Equal(0f, defaults.Spinner.X);
     Assert.Equal(8, result.Warnings.Count);
-    Assert.All(result.Warnings, warning => Assert.Contains("line ", warning));
+    Assert.All(result.Warnings, warning => Assert.Contains("line=", warning));
   }
 }
 

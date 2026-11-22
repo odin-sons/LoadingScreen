@@ -76,7 +76,7 @@ public class ScreenEffectsTests {
     Assert.Equal(new ColorValue(0, 0, 0), mask.Color);
     Assert.Equal(0.25f, mask.Opacity);
     Assert.Equal(9, result.Warnings.Count);
-    Assert.All(result.Warnings, warning => Assert.Contains("line ", warning));
+    Assert.All(result.Warnings, warning => Assert.Contains("line=", warning));
   }
 
   [Theory]

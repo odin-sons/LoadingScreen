@@ -6,7 +6,7 @@ using System.IO;
 using global::LoadingScreen.Model;
 
 public static class UiText {
-  const string FileName = "translations.yaml";
+  const string FileName = UiTranslations.FileName;
   static UiTranslations _translations = new();
 
   public static string Get(string key) =>
@@ -20,9 +20,11 @@ public static class UiText {
     try {
       UiTranslations loaded = UiTranslations.Parse(File.Exists(path) ? File.ReadAllText(path) : string.Empty);
       _translations = loaded;
-      foreach (string warning in loaded.Warnings) LoadingScreen.LogWarning($"{FileName}: {warning}");
+      foreach (string warning in loaded.Warnings) LoadingScreen.LogWarning(warning);
     } catch (Exception exception) when (exception is IOException or UnauthorizedAccessException) {
-      LoadingScreen.LogWarning($"Could not read {FileName}: {exception.Message}");
+      LoadingScreen.LogWarning(LogContext.Message("Could not read translation overrides.",
+          ("file", FileName), ("error", exception.Message)));
+      LoadingScreen.LogDebug(exception);
     }
   }
 }

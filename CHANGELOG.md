@@ -2,6 +2,9 @@
 
 ### Unreleased
 
+  * Log messages now start with a short sentence followed by `key=value` details (file, YAML line, layer,
+    screen, side, rejected value), stack traces go to Debug, and repeated warnings are logged once.
+
   * Added `progress` layers with bar, ring, and percentage styles. Game start uses real scene-load progress;
     portal and death use destination-zone and nearby-object readiness; sleep uses game time. Server joining shows
     localized connection stages. Ready area progress stays at 100% with a soft pulse during game delays.

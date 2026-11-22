@@ -21,7 +21,8 @@ public static class AnimationPresetParser {
     AnimationCatalogLoadResult result = new();
     if (string.IsNullOrWhiteSpace(yaml)) return result;
     if (yaml.Length > 256 * 1024) {
-      result.Warnings.Add("animations.yaml: file is over 256 KiB");
+      result.Warnings.Add(LogContext.Message("Animation presets rejected.", ("file", "animations.yaml"),
+          ("bytes", yaml.Length), ("maxBytes", 256 * 1024)));
       result.IsValid = false;
       return result;
     }
@@ -32,12 +33,14 @@ public static class AnimationPresetParser {
       while (events.MoveNext()) {
         switch (events.Current) {
           case AnchorAlias:
-            result.Warnings.Add("animations.yaml: YAML aliases are not supported");
+            result.Warnings.Add(LogContext.Message("Animation presets rejected.", ("file", "animations.yaml"),
+                ("reason", "YAML aliases are not supported")));
             result.IsValid = false;
             return result;
           case MappingStart or SequenceStart:
             if (++depth <= 32) break;
-            result.Warnings.Add("animations.yaml: nesting exceeds 32 levels");
+            result.Warnings.Add(LogContext.Message("Animation presets rejected.", ("file", "animations.yaml"),
+                ("reason", "nesting exceeds 32 levels")));
             result.IsValid = false;
             return result;
           case MappingEnd or SequenceEnd:
@@ -47,19 +50,22 @@ public static class AnimationPresetParser {
       }
       stream.Load(new StringReader(yaml));
     } catch (YamlException exception) {
-      result.Warnings.Add($"line {exception.Start.Line}: invalid animations YAML: {exception.Message}");
+      result.Warnings.Add(LogContext.Message("Animation presets could not be parsed.",
+          ("file", "animations.yaml"), ("line", exception.Start.Line), ("error", exception.Message)));
       result.IsValid = false;
       return result;
     }
 
     if (stream.Documents.Count == 0 || stream.Documents[0].RootNode is not YamlMappingNode root) {
-      result.Warnings.Add("animations.yaml: expected a presets mapping");
+      result.Warnings.Add(LogContext.Message("Animation presets rejected.", ("file", "animations.yaml"),
+          ("key", "presets"), ("expected", "mapping")));
       result.IsValid = false;
       return result;
     }
     YamlNode presetsNode = Child(root, "presets");
     if (presetsNode is not YamlMappingNode presets) {
-      result.Warnings.Add("animations.yaml: expected a presets mapping");
+      result.Warnings.Add(LogContext.Message("Animation presets rejected.", ("file", "animations.yaml"),
+          ("key", "presets"), ("expected", "mapping")));
       result.IsValid = false;
       return result;
     }
@@ -194,5 +200,6 @@ public static class AnimationPresetParser {
       map.Children.FirstOrDefault(pair => string.Equals(Scalar(pair.Key), name, StringComparison.OrdinalIgnoreCase)).Value;
 
   static void Warn(AnimationCatalogLoadResult result, YamlNode node, string message) =>
-      result.Warnings.Add($"line {node?.Start.Line ?? 0}: {message}");
+      result.Warnings.Add(LogContext.Message("Animation preset warning.", ("file", "animations.yaml"),
+          ("line", node?.Start.Line ?? 0), ("detail", message), ("value", Scalar(node))));
 }

@@ -23,6 +23,7 @@ public sealed class LoadingScreen : BaseUnityPlugin {
   public const string PluginVersion = "0.6.0";
 
   static ManualLogSource _logger;
+  static readonly LogOnce ReportedWarnings = new();
 
   void Awake() {
     _logger = Logger;
@@ -34,7 +35,9 @@ public sealed class LoadingScreen : BaseUnityPlugin {
       CustomAssets.Initialize(imageFolder);
       ScreenConfigLoader.Load(imageFolder);
     } catch (Exception exception) {
-      LogError($"Could not load the loading screen config: {exception}");
+      LogError(LogContext.Message("Loading screen configuration failed to initialize.",
+          ("folder", LogContext.File(ImageFolder.Value, Paths.BepInExRootPath)), ("error", exception.Message)));
+      LogError(exception);
     }
 
     IsModEnabled.SettingChanged += (_, _) => {
@@ -62,6 +65,10 @@ public sealed class LoadingScreen : BaseUnityPlugin {
   public static void LogWarning(object obj) {
     if (ModLogFilter.Allows(PluginConfig.LogLevel?.Value ?? ModLogLevel.Warning, ModLogLevel.Warning))
       _logger.LogWarning(FormatLog(obj));
+  }
+
+  public static void LogWarningOnce(string key, string message) {
+    if (ReportedWarnings.First(key)) LogWarning(message);
   }
 
   public static void LogError(object obj) {

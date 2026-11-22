@@ -602,15 +602,19 @@ public sealed class LayerHost : MonoBehaviour {
     AnimatedLayer animated = new() {
       Rect = rect,
       Group = rect.gameObject.AddComponent<CanvasGroup>(),
-      Enter = catalog.Resolve(spec.Enter, LoadingScreen.LogWarning),
-      Idle = catalog.Resolve(spec.Idle, LoadingScreen.LogWarning),
-      Exit = catalog.Resolve(spec.Exit, LoadingScreen.LogWarning),
+      Enter = catalog.Resolve(spec.Enter, warning => LogAnimationWarning(warning, "enter", layer)),
+      Idle = catalog.Resolve(spec.Idle, warning => LogAnimationWarning(warning, "idle", layer)),
+      Exit = catalog.Resolve(spec.Exit, warning => LogAnimationWarning(warning, "exit", layer)),
       Speed = spec.Speed ?? 1f,
     };
     _animated.Add(animated);
     if (spec.Enter != "none") _enterDuration = Mathf.Max(_enterDuration, animated.Enter.EffectiveDuration(animated.Speed));
     if (spec.Exit != "none") _exitDuration = Mathf.Max(_exitDuration, animated.Exit.EffectiveDuration(animated.Speed));
   }
+
+  void LogAnimationWarning(string warning, string phase, Layer layer) =>
+      LoadingScreen.LogWarning(LogContext.Message(warning, ("phase", phase), ("screen", _progressSituation.Kind),
+          ("layout", CurrentSelection?.LayoutName), ("layer", layer.Id)));
 
   float IdleElapsed(float now) =>
       _exitStartedAt >= 0f ? _idleAtExit

@@ -10,6 +10,7 @@ using YamlDotNet.Core;
 using YamlDotNet.RepresentationModel;
 
 public sealed class UiTranslations {
+  public const string FileName = "translations.yaml";
   const string ProgressTemplate = "<b>{percent}%</b>\n<size=-4>({seconds}{unit})</size>";
 
   static readonly (string Language, string Prompt, string Unit)[] BuiltIn = [
@@ -97,23 +98,27 @@ public sealed class UiTranslations {
     try {
       stream.Load(new StringReader(yaml));
     } catch (YamlException exception) {
-      translations.Warnings.Add($"Invalid YAML: {exception.Message}");
+      translations.Warnings.Add(LogContext.Message("Could not parse translation overrides.", ("file", FileName),
+          ("line", exception.Start.Line), ("error", exception.Message)));
       return translations;
     }
 
     if (stream.Documents.Count == 0 || stream.Documents[0].RootNode is not YamlMappingNode root) {
-      translations.Warnings.Add("Expected a language mapping.");
+      translations.Warnings.Add(LogContext.Message("Translation overrides ignored.", ("file", FileName),
+          ("expected", "mapping of language names")));
       return translations;
     }
 
     foreach (KeyValuePair<YamlNode, YamlNode> languageEntry in root.Children) {
       string language = (languageEntry.Key as YamlScalarNode)?.Value;
       if (!LanguageText.TryCode(language, out string code) || !Defaults.ContainsKey(code)) {
-        translations.Warnings.Add($"Unknown language '{language}'.");
+        translations.Warnings.Add(LogContext.Message("Unknown translation language ignored.", ("file", FileName),
+            ("line", languageEntry.Key.Start.Line), ("language", language)));
         continue;
       }
       if (languageEntry.Value is not YamlMappingNode entries) {
-        translations.Warnings.Add($"Expected a string mapping for '{language}'.");
+        translations.Warnings.Add(LogContext.Message("Translation language ignored.", ("file", FileName),
+            ("line", languageEntry.Value.Start.Line), ("language", language), ("expected", "mapping of keys to text")));
         continue;
       }
       if (!translations._overrides.TryGetValue(code, out Dictionary<string, string> values)) {
@@ -123,9 +128,12 @@ public sealed class UiTranslations {
       foreach (KeyValuePair<YamlNode, YamlNode> entry in entries.Children) {
         string key = (entry.Key as YamlScalarNode)?.Value;
         if (!KeyNames.Contains(key, StringComparer.OrdinalIgnoreCase)) {
-          translations.Warnings.Add($"Unknown key '{key}' for '{language}'.");
+          translations.Warnings.Add(LogContext.Message("Unknown translation key ignored.", ("file", FileName),
+              ("line", entry.Key.Start.Line), ("language", language), ("key", key),
+              ("accepted", string.Join(",", KeyNames))));
         } else if (entry.Value is not YamlScalarNode scalar || string.IsNullOrWhiteSpace(scalar.Value)) {
-          translations.Warnings.Add($"Expected non-empty text for '{language}.{key}'.");
+          translations.Warnings.Add(LogContext.Message("Translation text ignored.", ("file", FileName),
+              ("line", entry.Value.Start.Line), ("language", language), ("key", key), ("expected", "non-empty text")));
         } else {
           values[key] = scalar.Value;
         }

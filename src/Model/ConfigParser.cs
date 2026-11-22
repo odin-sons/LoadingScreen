@@ -183,8 +183,8 @@ public sealed class ConfigParser {
       return null;
     }
 
-    foreach (YamlNode layerNode in layers.Children) {
-      Layer layer = ParseLayer(layerNode, name);
+    for (int index = 0; index < layers.Children.Count; index++) {
+      Layer layer = ParseLayer(layers.Children[index], name, index);
 
       if (layer != null) {
         layout.Layers.Add(layer);
@@ -199,8 +199,9 @@ public sealed class ConfigParser {
     return layout;
   }
 
-  Layer ParseLayer(YamlNode node, string layoutName) {
-    string where = $"layout '{layoutName}'";
+  Layer ParseLayer(YamlNode node, string layoutName, int index) {
+    string id = node is YamlMappingNode layerMapping ? Scalar(Child(layerMapping, "id")) : null;
+    string where = $"layout '{layoutName}' layer '{id ?? index.ToString(CultureInfo.InvariantCulture)}'";
 
     if (node is not YamlMappingNode mapping) {
       Warn(node, $"{where}: a layer must be a mapping, ignored");
@@ -514,8 +515,9 @@ public sealed class ConfigParser {
       entriesNode = Child(mapping, "entries");
     }
 
+    int index = 0;
     foreach (YamlNode entryNode in Sequence(entriesNode, $"'{name}' entries")) {
-      Entry entry = ParseEntry(entryNode, name);
+      Entry entry = ParseEntry(entryNode, $"{name}.entries[{index++}]");
 
       if (entry != null) {
         list.Entries.Add(entry);
@@ -1212,10 +1214,11 @@ public sealed class ConfigParser {
   }
 
   void Warn(YamlNode node, string message) {
-    Warn(node == null ? 0 : (int) node.Start.Line, message);
+    Warn(node == null ? 0 : (int) node.Start.Line, message, Scalar(node));
   }
 
-  void Warn(long line, string message) {
-    _result.Warnings.Add(line > 0 ? $"line {line}: {message}" : message);
+  void Warn(long line, string message, string value = null) {
+    _result.Warnings.Add(LogContext.Message("Configuration warning.",
+        ("file", "loadingscreen.yaml"), ("line", line), ("detail", message), ("value", value)));
   }
 }

@@ -177,7 +177,10 @@ public static class LoadingManager {
 
     LoadingAudio.Play(host, selection, hasEntryText && tipText, continueSession);
 
-    LoadingScreen.LogInfo($"Loading screen for {situation}: {selection.List.Name} -> {selection.Entry.Image}");
+    LoadingScreen.LogInfo(LogContext.Message("Showing loading screen.", ("side", "client"),
+        ("screen", situation.Kind), ("stage", stage), ("situation", situation),
+        ("entryList", selection.List.Name), ("image", selection.Entry.Image),
+        ("layout", selection.LayoutName)));
 
     CurrentCaption = continueSession ? Session.CurrentCaption
         : hasEntryText ? entryText : CaptionUseTipWhenNoText.Value ? null : string.Empty;
@@ -322,7 +325,9 @@ public static class LoadingManager {
     } else if (_cachedLoadingImage) {
       loadingImage = _cachedLoadingImage;
     } else {
-      LoadingScreen.LogError($"Could not find a LoadingImage to setup!");
+      LoadingScreen.LogWarningOnce("ui:LoadingImage", LogContext.Message(
+          "Could not apply loading image appearance; game UI element is unavailable.",
+          ("side", "client"), ("element", "LoadingImage")));
       return;
     }
 
@@ -395,7 +400,9 @@ public static class LoadingManager {
     } else if (_cachedLoadingBackground) {
       loadingBackground = _cachedLoadingBackground;
     } else {
-      LoadingScreen.LogError($"Could not find a LoadingBackground to setup!");
+      LoadingScreen.LogWarningOnce("ui:LoadingBackground", LogContext.Message(
+          "Could not apply loading background appearance; game UI element is unavailable.",
+          ("side", "client"), ("element", "LoadingBackground")));
     }
 
     if (loadingBackground) {
@@ -414,7 +421,9 @@ public static class LoadingManager {
     } else if (_cachedPanelSeparator) {
       panelSeparator = _cachedPanelSeparator;
     } else {
-      LoadingScreen.LogError($"Could not find a PanelSeparator to setup!");
+      LoadingScreen.LogWarningOnce("ui:PanelSeparator", LogContext.Message(
+          "Could not apply separator appearance; game UI element is unavailable.",
+          ("side", "client"), ("element", "PanelSeparator")));
       return;
     }
 
@@ -458,7 +467,9 @@ public static class LoadingManager {
     } else if (_cachedTipText) {
       tipText = _cachedTipText;
     } else {
-      LoadingScreen.LogError($"Could not find a TipText to setup!");
+      LoadingScreen.LogWarningOnce("ui:TipText", LogContext.Message(
+          "Could not apply tip appearance; game UI element is unavailable.",
+          ("side", "client"), ("element", "TipText")));
     }
 
     if (!_textLooks.ContainsKey(tipText)) {
