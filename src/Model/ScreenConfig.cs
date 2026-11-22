@@ -19,8 +19,10 @@ public enum TextAlign {
 public sealed class TextStyle {
   public float? FontSize { get; set; }
   public ColorValue? Color { get; set; }
+  public bool AutoColor { get; set; }
   public TextAlign? Align { get; set; }
   public ColorValue? Background { get; set; }
+  public bool AutoBackground { get; set; }
 }
 
 public sealed class Layer {

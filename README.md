@@ -542,6 +542,16 @@ A text layer accepts `place` with `position`, `opacity`, and `fit: { width }` (t
 `size`, `color`, `align` (`left`, `center`, `right`), `background` (a color box behind the text). Without a text
 layer, the caption goes to the usual tip line.
 
+Set a text layer's `color: auto` to choose light or dark text from the average brightness of the image behind its
+text box. `background: auto` chooses a light or dark box at 60% opacity; `color: auto` also accounts for that box.
+The image is sampled once when loaded, and the choice updates when the text box's placement changes. On screens
+without a sampled custom image, the YAML default background is used.
+
+`[6 - Accessibility] Readable text` is a personal setting, off by default. When enabled, it preserves the selected
+text hue while adjusting its lightness toward WCAG AA 4.5:1 contrast against the effective background; if needed,
+it strengthens the text box and renders the text opaque. `[6 - Accessibility] Minimum text size` is also personal. Its default `0` disables the
+minimum; positive values apply to text layers, tips, and captions.
+
 Layouts show the game's sleep text and spinner by default. Set `showSleepUi: false` on the layout selected by a
 `sleep` entry to hide both; add a `text: caption` layer to display the entry text or a tip in their place. Other
 image and text layers can supply a fully custom sleep screen. This key has no effect outside sleep.

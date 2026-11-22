@@ -51,7 +51,9 @@ public static class ExampleConfigText {
       # takes placement and a "color" tint, replaces the built-in separator) and "text: caption" (the entry text or a tip).
       # Exact extensionless "entry" and "separator" are keywords; files named entry.png or separator.png work normally.
       # A text layer takes place (position, opacity, fit: { width }) and: size, color, align (left | center | right),
-      # background (a color box behind the text). Without a text layer the usual tip line is used.
+      # background (a color box behind the text). color and background also accept auto;
+      # auto picks light or dark from the image behind the text box (auto background uses 60% opacity).
+      # Without a text layer the usual tip line is used.
       # A sleep layout can set showSleepUi: false to hide the game's sleep text and spinner and use its own layers.
 
       # defaults:
@@ -91,7 +93,8 @@ public static class ExampleConfigText {
       #         place: { fit: { width: 30% }, position: { anchor: top, y: 8% } }
       #       - text: caption
       #         size: 28
-      #         background: "#00000099"
+      #         color: auto
+      #         background: auto
       #         place: { fit: { width: 50% }, position: { anchor: bottom, y: -6% } }
 
       # when:

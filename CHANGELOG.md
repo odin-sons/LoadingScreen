@@ -2,6 +2,9 @@
 
 ### Unreleased
 
+  * Added YAML `color: auto` and `background: auto` for text layers, based on the image area behind the text box.
+    Added personal `Readable text` and `Minimum text size` accessibility settings (off by default).
+
   * Added a client-controlled `Log level` setting (Error, Warning by default, Info, Debug). Detailed screen selection,
     audio volume, server transfer, and image timing messages are available at Debug.
 

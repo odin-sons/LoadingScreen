@@ -24,6 +24,10 @@ public sealed class LayerHost : MonoBehaviour {
     public TMP_Text Text;
     public Placement Placement;
     public float Padding;
+    public TextStyle Style;
+    public Image Background;
+    public ColorValue BaseColor;
+    public float BaseSize;
   }
 
   const float TextBackgroundPadding = 12f;
@@ -45,6 +49,19 @@ public sealed class LayerHost : MonoBehaviour {
   public bool IsShowing { get; private set; }
   public bool ShowSleepUi { get; private set; } = true;
   public Selection CurrentSelection { get; private set; }
+  public Image ReadableImageFor(RectTransform text) {
+    Vector3[] textCorners = new Vector3[4];
+    text.GetWorldCorners(textCorners);
+    foreach (PlacedImage placed in _placed.AsEnumerable().Reverse()) {
+      Vector3[] imageCorners = new Vector3[4];
+      placed.Rect.GetWorldCorners(imageCorners);
+      if (textCorners[0].x < imageCorners[2].x && textCorners[2].x > imageCorners[0].x
+          && textCorners[0].y < imageCorners[2].y && textCorners[2].y > imageCorners[0].y) {
+        return placed.Rect.GetComponent<Image>();
+      }
+    }
+    return null;
+  }
 
   public Transform Separator { get; set; }
 
@@ -219,6 +236,15 @@ public sealed class LayerHost : MonoBehaviour {
       }
     }
 
+    foreach (PlacedText placed in _texts) {
+      placed.Text.fontSize = Mathf.Max(placed.BaseSize, PluginConfig.MinimumTextSize.Value);
+      placed.Padding = placed.Style.Background.HasValue || placed.Style.AutoBackground || PluginConfig.ReadableText.Value
+          ? TextBackgroundPadding : 0f;
+      placed.Text.rectTransform.offsetMin = new(placed.Padding, placed.Padding);
+      placed.Text.rectTransform.offsetMax = new(-placed.Padding, -placed.Padding);
+    }
+    Relayout();
+
     StartAnimations(Time.realtimeSinceStartup - _animationStartedAt);
   }
 
@@ -299,12 +325,10 @@ public sealed class LayerHost : MonoBehaviour {
     TextStyle style = layer.Text ?? new();
     float padding = 0f;
 
-    if (style.Background.HasValue) {
-      Image background = container.gameObject.AddComponent<Image>();
-      background.color = ToColor(style.Background.Value);
-      background.raycastTarget = false;
-      padding = TextBackgroundPadding;
-    }
+    Image background = container.gameObject.AddComponent<Image>();
+    background.color = style.Background.HasValue ? ToColor(style.Background.Value) : Color.clear;
+    background.raycastTarget = false;
+    if (style.Background.HasValue || style.AutoBackground || PluginConfig.ReadableText.Value) padding = TextBackgroundPadding;
 
     TMP_Text text = Instantiate(template, container, worldPositionStays: false);
     LoadingManager.MatchTipFont(text);
@@ -319,11 +343,10 @@ public sealed class LayerHost : MonoBehaviour {
       _ => TextAlignmentOptions.Top,
     };
 
-    if (style.FontSize.HasValue) {
-      text.fontSize = style.FontSize.Value;
-    }
+    text.fontSize = Mathf.Max(style.FontSize ?? template.fontSize, PluginConfig.MinimumTextSize.Value);
 
     Color color = style.Color.HasValue ? ToColor(style.Color.Value) : template.color;
+    Color32 baseColor = color;
     color.a *= placement.Opacity ?? 1f;
     text.color = color;
     text.SetText(caption);
@@ -341,7 +364,10 @@ public sealed class LayerHost : MonoBehaviour {
       template.enabled = false;
     }
 
-    _texts.Add(new() { Rect = container, Text = text, Placement = placement, Padding = padding });
+    _texts.Add(new() { Rect = container, Text = text, Placement = placement, Padding = padding,
+        Style = style, Background = background,
+        BaseColor = new(baseColor.r, baseColor.g, baseColor.b, baseColor.a),
+        BaseSize = style.FontSize ?? template.fontSize });
   }
 
   void AddImageLayer(Layer layer, Sprite sprite, Placement placement) {
@@ -482,6 +508,82 @@ public sealed class LayerHost : MonoBehaviour {
         fade.sizeDelta = horizontal ? new(thickness, 0f) : new(0f, thickness);
       }
     }
+
+    foreach (PlacedText placed in _texts) UpdateTextColor(placed);
+  }
+
+  void UpdateTextColor(PlacedText placed) {
+    ColorValue image = ScreenConfigLoader.Current.Defaults.Background;
+    ColorValue[] topSamples = null;
+    ColorValue topBacking = image;
+    int topSampleSize = 0;
+    float sampleLeft = 0f, sampleBottom = 0f, sampleRight = 0f, sampleTop = 0f;
+    Vector3[] textCorners = new Vector3[4];
+    placed.Rect.GetWorldCorners(textCorners);
+    int textIndex = placed.Rect.GetSiblingIndex();
+    for (int i = 0; i < textIndex; i++) {
+      if (!_root.GetChild(i).TryGetComponent(out Image graphic)) continue;
+      if (_root.GetChild(i).name.StartsWith("Text-")) continue;
+      if (graphic.sprite == null) {
+        Color32 fill = graphic.color;
+        image = ColorMath.Blend(new(fill.r, fill.g, fill.b, fill.a), image);
+        topSamples = null;
+        continue;
+      }
+      if (!CustomAssets.TryGetImageSamples(graphic.sprite, out ColorValue[] samples, out int sampleSize)) continue;
+      Vector3[] imageCorners = new Vector3[4];
+      graphic.rectTransform.GetWorldCorners(imageCorners);
+      float left = Mathf.Max(textCorners[0].x, imageCorners[0].x);
+      float right = Mathf.Min(textCorners[2].x, imageCorners[2].x);
+      float bottom = Mathf.Max(textCorners[0].y, imageCorners[0].y);
+      float top = Mathf.Min(textCorners[2].y, imageCorners[2].y);
+      if (left >= right || bottom >= top) continue;
+      float width = imageCorners[2].x - imageCorners[0].x;
+      float height = imageCorners[2].y - imageCorners[0].y;
+      if (width <= 0f || height <= 0f) continue;
+      ColorValue sample = ColorMath.AverageArea(samples, sampleSize, sampleSize,
+          (left - imageCorners[0].x) / width, (bottom - imageCorners[0].y) / height,
+          (right - imageCorners[0].x) / width, (top - imageCorners[0].y) / height);
+      Color32 tint = graphic.color;
+      float coverage = (right - left) * (top - bottom) /
+          ((textCorners[2].x - textCorners[0].x) * (textCorners[2].y - textCorners[0].y));
+      if (coverage > 0.999f && tint.r == 255 && tint.g == 255 && tint.b == 255 && tint.a == 255) {
+        topSamples = samples;
+        topBacking = image;
+        topSampleSize = sampleSize;
+        sampleLeft = (left - imageCorners[0].x) / width;
+        sampleBottom = (bottom - imageCorners[0].y) / height;
+        sampleRight = (right - imageCorners[0].x) / width;
+        sampleTop = (top - imageCorners[0].y) / height;
+      } else {
+        topSamples = null;
+      }
+      image = ColorMath.Blend(new(
+          (byte) (sample.R * tint.r / 255), (byte) (sample.G * tint.g / 255),
+          (byte) (sample.B * tint.b / 255), (byte) (sample.A * tint.a * coverage / 255)), image);
+    }
+
+    TextStyle style = placed.Style;
+    double imageLuminance = topSamples == null ? ColorMath.RelativeLuminance(image)
+        : ColorMath.AverageLuminance(topSamples, topSampleSize, topSampleSize,
+            sampleLeft, sampleBottom, sampleRight, sampleTop, backing: topBacking);
+    ColorValue? box = style.AutoBackground
+        ? ColorMath.AutoBackground(imageLuminance) : style.Background;
+    ColorValue effective = box.HasValue ? ColorMath.Blend(box.Value, image) : image;
+    double effectiveLuminance = topSamples == null ? ColorMath.RelativeLuminance(effective)
+        : ColorMath.AverageLuminance(topSamples, topSampleSize, topSampleSize,
+            sampleLeft, sampleBottom, sampleRight, sampleTop, box, topBacking);
+    ColorValue text = style.AutoColor ? ColorMath.AutoText(effectiveLuminance) : placed.BaseColor;
+    if (PluginConfig.ReadableText.Value) {
+      (text, box) = ColorMath.Readable(text, box, image,
+          topSamples == null ? null : candidate => ColorMath.AverageLuminance(
+              topSamples, topSampleSize, topSampleSize,
+              sampleLeft, sampleBottom, sampleRight, sampleTop, candidate, topBacking));
+    }
+    placed.Background.color = box.HasValue ? ToColor(box.Value) : Color.clear;
+    Color textColor = ToColor(text);
+    if (!PluginConfig.ReadableText.Value) textColor.a *= placed.Placement.Opacity ?? 1f;
+    placed.Text.color = textColor;
   }
 
   void Clear() {

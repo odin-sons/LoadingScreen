@@ -311,8 +311,12 @@ public sealed class ConfigParser {
       }
     }
 
-    layer.Text.Color = ParseColor(Child(mapping, "color"), where, "color");
-    layer.Text.Background = ParseColor(Child(mapping, "background"), where, "background");
+    YamlNode textColor = Child(mapping, "color");
+    YamlNode background = Child(mapping, "background");
+    layer.Text.AutoColor = string.Equals(Scalar(textColor), "auto", StringComparison.OrdinalIgnoreCase);
+    layer.Text.AutoBackground = string.Equals(Scalar(background), "auto", StringComparison.OrdinalIgnoreCase);
+    if (!layer.Text.AutoColor) layer.Text.Color = ParseColor(textColor, where, "color");
+    if (!layer.Text.AutoBackground) layer.Text.Background = ParseColor(background, where, "background");
 
     YamlNode align = Child(mapping, "align");
 
