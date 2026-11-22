@@ -18,6 +18,27 @@ public class ConfigParserTests {
   }
 
   [Fact]
+  public void TextLayerAcceptsAutomaticTextAndBackgroundColors() {
+    const string yaml = """
+        layouts:
+          accessible:
+            layers:
+              - image: entry
+              - text: caption
+                color: auto
+                background: auto
+        """;
+
+    ConfigLoadResult result = Parse(yaml);
+    Assert.Empty(result.Warnings);
+    TextStyle style = result.Config.Layouts["accessible"].Layers[1].Text;
+    Assert.True(style.AutoColor);
+    Assert.True(style.AutoBackground);
+    Assert.Null(style.Color);
+    Assert.Null(style.Background);
+  }
+
+  [Fact]
   public void OldSituationsKeyIsNotAccepted() {
     ConfigLoadResult result = Parse("situations: { general: [ general/a.jpg ] }");
 

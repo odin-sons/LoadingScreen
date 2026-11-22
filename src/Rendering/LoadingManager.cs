@@ -25,6 +25,8 @@ public static class LoadingManager {
   static readonly Dictionary<Image, VanillaLook> _vanillaLooks = [];
   static readonly HashSet<Image> _backgroundImages = [];
   static readonly Dictionary<TMP_Text, TextLook> _textLooks = [];
+  static readonly Dictionary<TMP_Text, Image> _tipBoxes = [];
+  static readonly Dictionary<TMP_Text, Image> _tipImages = [];
   static readonly Dictionary<Transform, PanelLook> _panelLooks = [];
   static readonly Dictionary<GameObject, bool> _hiddenObjects = [];
   static TMP_Text _originalFejdStartupText;
@@ -78,6 +80,11 @@ public static class LoadingManager {
       rect.anchoredPosition = look.Position;
       rect.sizeDelta = look.SizeDelta;
     }
+    foreach (Image box in _tipBoxes.Values) {
+      if (box) Object.Destroy(box.gameObject);
+    }
+    _tipBoxes.Clear();
+    _tipImages.Clear();
     foreach (KeyValuePair<Transform, PanelLook> pair in _panelLooks) {
       if (!pair.Key) continue;
       pair.Key.gameObject.SetActive(pair.Value.Active);
@@ -123,12 +130,17 @@ public static class LoadingManager {
 
   public static void RefreshAppearance() {
     if (_cachedLoadingImage) SetupLoadingImage();
-    if (_cachedTipText) SetupTipText();
+    foreach (TMP_Text text in _textLooks.Keys.ToList()) {
+      if (text) SetupTipText(text);
+    }
     if (_continuePrompt) SetupContinuePromptAppearance();
     if (_cachedLoadingBackground) SetupLoadingBackground();
     if (_cachedPanelSeparator) SetupPanelSeparator();
     if (HudHost) HudHost.RefreshAppearance();
     if (FejdStartupHost) FejdStartupHost.RefreshAppearance();
+    foreach (KeyValuePair<TMP_Text, Image> pair in _tipImages.ToList()) {
+      if (pair.Key) ApplyTipReadability(pair.Key, pair.Value);
+    }
   }
 
   public static bool ShowSituation(
@@ -173,6 +185,10 @@ public static class LoadingManager {
 
     if (tipText && !host.ShowsOwnText) {
       tipText.SetText(caption ?? string.Empty);
+      ApplyTipReadability(tipText, host.ReadableImageFor(tipText.rectTransform));
+    } else if (tipText) {
+      _tipImages.Remove(tipText);
+      if (_tipBoxes.TryGetValue(tipText, out Image box) && box) box.color = Color.clear;
     }
 
     return true;
@@ -188,6 +204,7 @@ public static class LoadingManager {
 
     SetLoadingImage(loadingImage);
     SetLoadingTip(tipText);
+    ApplyTipReadability(tipText, loadingImage);
   }
 
   public static void SetLoadingImage(Image loadingImage) {
@@ -208,6 +225,83 @@ public static class LoadingManager {
     if (tipText && CustomAssets.GetRandomLoadingTip(out string loadingTipText)) {
       tipText.SetText(loadingTipText);
     }
+  }
+
+  static void ApplyTipReadability(TMP_Text tipText, Image image) {
+    if (!tipText) return;
+    _tipImages[tipText] = image;
+    if (!ReadableText.Value) {
+      if (_tipBoxes.TryGetValue(tipText, out Image hiddenBox) && hiddenBox) hiddenBox.color = Color.clear;
+      return;
+    }
+
+    ColorValue background = ScreenConfigLoader.Current.Defaults.Background;
+    ColorValue backing = background;
+    ColorValue[] areaPixels = null;
+    int areaSize = 0;
+    float areaLeft = 0f, areaBottom = 0f, areaRight = 0f, areaTop = 0f;
+    if (image && CustomAssets.TryGetImageSamples(image.sprite, out ColorValue[] pixels, out int size)) {
+      Vector3[] textCorners = new Vector3[4];
+      Vector3[] imageCorners = new Vector3[4];
+      tipText.rectTransform.GetWorldCorners(textCorners);
+      image.rectTransform.GetWorldCorners(imageCorners);
+      float width = imageCorners[2].x - imageCorners[0].x;
+      float height = imageCorners[2].y - imageCorners[0].y;
+      float left = Mathf.Max(textCorners[0].x, imageCorners[0].x);
+      float right = Mathf.Min(textCorners[2].x, imageCorners[2].x);
+      float bottom = Mathf.Max(textCorners[0].y, imageCorners[0].y);
+      float top = Mathf.Min(textCorners[2].y, imageCorners[2].y);
+      float textArea = (textCorners[2].x - textCorners[0].x) * (textCorners[2].y - textCorners[0].y);
+      if (width > 0f && height > 0f && textArea > 0f && left < right && bottom < top) {
+        ColorValue sample = ColorMath.AverageArea(pixels, size, size,
+            (left - imageCorners[0].x) / width, (bottom - imageCorners[0].y) / height,
+            (right - imageCorners[0].x) / width, (top - imageCorners[0].y) / height);
+        Color32 tint = image.color;
+        float coverage = (right - left) * (top - bottom) / textArea;
+        if (coverage > 0.999f && tint.r == 255 && tint.g == 255 && tint.b == 255 && tint.a == 255) {
+          areaPixels = pixels;
+          areaSize = size;
+          areaLeft = (left - imageCorners[0].x) / width;
+          areaBottom = (bottom - imageCorners[0].y) / height;
+          areaRight = (right - imageCorners[0].x) / width;
+          areaTop = (top - imageCorners[0].y) / height;
+        }
+        background = ColorMath.Blend(new(
+            (byte) (sample.R * tint.r / 255), (byte) (sample.G * tint.g / 255),
+            (byte) (sample.B * tint.b / 255), (byte) (sample.A * tint.a * coverage / 255)), background);
+      }
+    }
+
+    Color32 original = ToColor(ScreenConfigLoader.Current.Defaults.Tip.Color);
+    (ColorValue text, ColorValue? boxColor) = ColorMath.Readable(
+        new(original.r, original.g, original.b, original.a), null, background,
+        areaPixels == null ? null : candidate => ColorMath.AverageLuminance(
+            areaPixels, areaSize, areaSize,
+            areaLeft, areaBottom, areaRight, areaTop, candidate, backing));
+    tipText.color = ToColor(text);
+    if (!boxColor.HasValue) {
+      if (_tipBoxes.TryGetValue(tipText, out Image existing) && existing) existing.color = Color.clear;
+      return;
+    }
+
+    if (!_tipBoxes.TryGetValue(tipText, out Image box) || !box) {
+      GameObject child = new("ReadableTipBackground", typeof(RectTransform), typeof(Image));
+      child.transform.SetParent(tipText.transform.parent, worldPositionStays: false);
+      box = child.GetComponent<Image>();
+      box.raycastTarget = false;
+      _tipBoxes[tipText] = box;
+    }
+    RectTransform textRect = tipText.rectTransform;
+    RectTransform boxRect = box.rectTransform;
+    boxRect.anchorMin = textRect.anchorMin;
+    boxRect.anchorMax = textRect.anchorMax;
+    boxRect.pivot = textRect.pivot;
+    boxRect.anchoredPosition = textRect.anchoredPosition;
+    boxRect.sizeDelta = textRect.sizeDelta;
+    if (box.transform.GetSiblingIndex() > tipText.transform.GetSiblingIndex()) {
+      box.transform.SetSiblingIndex(tipText.transform.GetSiblingIndex());
+    }
+    box.color = ToColor(boxColor.Value);
   }
 
   public static void RotateTip(LayerHost host, TMP_Text tipText) {
@@ -379,7 +473,7 @@ public static class LoadingManager {
     tipText
         .SetAlignment(TextAlignmentOptions.Top)
         .SetTextWrappingMode(TextWrappingModes.Normal)
-        .SetFontSize(defaults.Size)
+        .SetFontSize(Mathf.Max(defaults.Size, PluginConfig.MinimumTextSize.Value))
         .SetColor(ToColor(defaults.Color));
 
     tipText.GetComponent<RectTransform>()

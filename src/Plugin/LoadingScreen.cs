@@ -42,6 +42,8 @@ public sealed class LoadingScreen : BaseUnityPlugin {
       if (!IsModEnabled.Value) LoadingManager.Disable();
     };
     ShareScreensWithPlayers.SettingChanged += (_, _) => ServerImages.OnSettingsChanged();
+    ReadableText.SettingChanged += (_, _) => LoadingManager.RefreshAppearance();
+    MinimumTextSize.SettingChanged += (_, _) => LoadingManager.RefreshAppearance();
     Harmony.CreateAndPatchAll(Assembly.GetExecutingAssembly(), harmonyInstanceId: PluginGuid);
   }
 

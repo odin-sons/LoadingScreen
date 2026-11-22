@@ -24,6 +24,8 @@ public static class CustomAssets {
   const int MaxCachedImages = 16;
 
   static readonly Dictionary<string, Sprite> _loadingImageCache = [];
+  const int SampleSize = 64;
+  static readonly Dictionary<Sprite, ColorValue[]> _imageSamples = [];
   static readonly LinkedList<string> _loadingImageUsage = new();
   static readonly Dictionary<Object, HashSet<Sprite>> _pinnedSprites = [];
 
@@ -110,13 +112,43 @@ public static class CustomAssets {
     };
 
     System.Diagnostics.Stopwatch stopwatch = System.Diagnostics.Stopwatch.StartNew();
-    _loadImageMethod.Invoke(obj: null, [texture, data, true]);
+    _loadImageMethod.Invoke(obj: null, [texture, data, false]);
+    Color32[] pixels = texture.GetPixels32();
+    ColorValue[] samples = new ColorValue[SampleSize * SampleSize];
+    long[] red = new long[samples.Length], green = new long[samples.Length],
+        blue = new long[samples.Length], alpha = new long[samples.Length];
+    int[] counts = new int[samples.Length];
+    for (int y = 0; y < texture.height; y++) {
+      int row = System.Math.Min(SampleSize - 1, y * SampleSize / texture.height) * SampleSize;
+      for (int x = 0; x < texture.width; x++) {
+        int index = row + System.Math.Min(SampleSize - 1, x * SampleSize / texture.width);
+        Color32 pixel = pixels[y * texture.width + x];
+        red[index] += pixel.r;
+        green[index] += pixel.g;
+        blue[index] += pixel.b;
+        alpha[index] += pixel.a;
+        counts[index]++;
+      }
+    }
+    for (int i = 0; i < samples.Length; i++) {
+      if (counts[i] == 0) {
+        int sourceX = System.Math.Min(texture.width - 1, (i % SampleSize) * texture.width / SampleSize);
+        int sourceY = System.Math.Min(texture.height - 1, (i / SampleSize) * texture.height / SampleSize);
+        Color32 pixel = pixels[sourceY * texture.width + sourceX];
+        samples[i] = new(pixel.r, pixel.g, pixel.b, pixel.a);
+        continue;
+      }
+      samples[i] = new((byte) (red[i] / counts[i]), (byte) (green[i] / counts[i]),
+          (byte) (blue[i] / counts[i]), (byte) (alpha[i] / counts[i]));
+    }
+    texture.Apply(updateMipmaps: false, makeNoLongerReadable: true);
     LoadingScreen.LogDebug(
         $"Loaded image {Path.GetFileName(imageFile)} ({texture.width}x{texture.height}) "
             + $"in {stopwatch.ElapsedMilliseconds} ms.");
 
     sprite = Sprite.Create(texture, new(0, 0, texture.width, texture.height), Vector2.zero, 1);
     sprite.name = $"loadingscreen.sprite-{Path.GetFileName(imageFile)}";
+    _imageSamples[sprite] = samples;
 
     _loadingImageCache[imageFile] = sprite;
     TouchCachedImage(imageFile);
@@ -161,9 +193,15 @@ public static class CustomAssets {
 
   static void DestroyIfOrphaned(Sprite sprite) {
     if (sprite && !IsPinned(sprite) && !_loadingImageCache.ContainsValue(sprite)) {
+      _imageSamples.Remove(sprite);
       Object.Destroy(sprite.texture);
       Object.Destroy(sprite);
     }
+  }
+
+  public static bool TryGetImageSamples(Sprite sprite, out ColorValue[] samples, out int size) {
+    size = SampleSize;
+    return _imageSamples.TryGetValue(sprite, out samples);
   }
 
   static void EvictCachedImages() {

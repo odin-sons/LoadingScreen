@@ -29,12 +29,15 @@ public static class PluginConfig {
   public static ConfigEntry<int> MusicVolumePercent { get; private set; }
   public static ConfigEntry<int> VoiceVolumePercent { get; private set; }
   public static ConfigEntry<GameSounds> MuteGameSounds { get; private set; }
+  public static ConfigEntry<bool> ReadableText { get; private set; }
+  public static ConfigEntry<int> MinimumTextSize { get; private set; }
 
   const string General = "1 - General";
   const string Screens = "2 - When to show";
   const string Timing = "3 - Timing";
   const string StartScreen = "4 - Game start screen";
   const string Sound = "5 - Sound";
+  const string Accessibility = "6 - Accessibility";
 
   internal static void BindConfig(ConfigFile config, ConfigSynchronization sync) {
     LockSyncedSettings =
@@ -166,6 +169,14 @@ public static class PluginConfig {
         config.BindInOrder(Sound, "Mute game sounds on loading screens", GameSounds.None,
             "Game sounds to fade out while a loading screen is visible: None, or Effects (such as the portal hum), Music, or both separated by a comma. [Not Synced with Server]");
 
+    ReadableText =
+        config.BindInOrder(Accessibility, "Readable text", false,
+            "Adjust text lightness for at least 4.5:1 contrast, and strengthen its background box if needed. [Not Synced with Server]");
+    MinimumTextSize =
+        config.BindInOrder(Accessibility, "Minimum text size", 0,
+            "Smallest font size for text layers, tips and captions. 0 turns the minimum off. [Not Synced with Server]",
+            new AcceptableValueRange<int>(0, 200));
+
     sync.Register(ChangeImageEverySeconds);
     sync.Register(ChangeTipEverySeconds);
     sync.Register(ShowLoadingScreenOnTeleport);
@@ -187,5 +198,7 @@ public static class PluginConfig {
     sync.Register(MusicVolumePercent, clientControlled: true);
     sync.Register(VoiceVolumePercent, clientControlled: true);
     sync.Register(MuteGameSounds, clientControlled: true);
+    sync.Register(ReadableText, clientControlled: true);
+    sync.Register(MinimumTextSize, clientControlled: true);
   }
 }
