@@ -678,6 +678,14 @@ Behavior switches in `Odin_Sons.LoadingScreen.cfg`; each has a description in th
 | `3 - Timing` | Change image every N seconds, Change tip every N seconds, Hold loading screen until a key is pressed, Wait for the voice to finish, Wait for the exit animation to finish, Maximum hold time in seconds |
 | `4 - Game start screen` | Use loading images, Show progress |
 | `5 - Sound` | Play loading screen sounds, Music volume percent, Voice volume percent, Mute game sounds on loading screens |
+| `7 - Experimental` | Load world in background |
+
+`[7 - Experimental] Load world in background` is a personal setting, off by default. When enabled, starting or
+joining a world loads the world scene in the background instead of freezing the game, so the loading screen keeps
+animating; menu buttons and keys are ignored until the world opens. If the background load cannot start, the game's
+normal load runs and a warning is logged. With `Log level` at `Info`, each world load logs
+`Loaded the world scene.` on `LoadingScreen` with `mode` (`sync` or `async`), `totalSeconds`, and for background
+loads `readSeconds` (until the scene data is read) and `activationSeconds` (until the world objects are created).
 
 ### Config synchronization
 
@@ -692,7 +700,7 @@ admin can choose ownership in `ConditionalConfigSync.SyncPolicy.cfg`:
 `Mod enabled`, `Share screens with players`, all settings in `2 - When to show`, and all settings in `3 - Timing`
 except `Hold loading screen until a key is pressed`. `Lock Configuration` controls the lock itself.
 The remaining settings are client controlled: `Image folder`, `Text language`, `Log level`, the key hold, both game start settings,
-and sound settings. Each cfg description ends with its sync status. The server's
+sound settings, and `Load world in background`. Each cfg description ends with its sync status. The server's
 `loadingscreen.yaml` and `animations.yaml` carry appearance defaults and presets through
 the existing screen transfer; they are not cfg settings.
 
