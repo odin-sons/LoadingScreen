@@ -6,6 +6,17 @@ using Xunit;
 
 public class LoadingHoldStateTests {
   [Fact]
+  public void ExitHoldEndsWhenAnimationFinishesOrMaximumExpires() {
+    LoadingHoldState state = new();
+    Assert.False(state.Update(true, false, true, false, false, false, 0f, 2, true).Holding);
+    Assert.True(state.Update(true, true, true, false, false, false, 1f, 2, true).Holding);
+    Assert.True(state.Update(true, true, true, false, false, false, 1.5f, 2, true).Holding);
+    Assert.False(state.Update(true, true, true, false, false, false, 1.6f, 2).Holding);
+    Assert.False(state.Update(true, false, true, false, false, false, 2f, 2).Holding);
+    Assert.True(state.Update(true, true, true, false, false, false, 3f, 2, true).Holding);
+    Assert.False(state.Update(true, true, true, false, false, false, 5f, 2, true).Holding);
+  }
+  [Fact]
   public void HoldsOnlyAfterLoadingAndTimesOutAtTheMaximum() {
     LoadingHoldState state = new();
 

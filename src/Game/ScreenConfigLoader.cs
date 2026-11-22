@@ -9,6 +9,7 @@ using global::LoadingScreen.Model;
 
 public static class ScreenConfigLoader {
   public const string ConfigFileName = "loadingscreen.yaml";
+  public const string AnimationsFileName = "animations.yaml";
 
   public static ScreenConfig Current { get; private set; } = new();
   public static EntrySelector Selector { get; private set; } = new(new ScreenConfig(), debug: LoadingScreen.LogDebug);
@@ -96,9 +97,11 @@ public static class ScreenConfigLoader {
     }
   }
 
-  public static ConfigLoadResult ParseServerYaml(string yaml, Func<string, bool> isListed) {
+  public static ConfigLoadResult ParseServerYaml(string yaml, string animationsYaml, Func<string, bool> isListed) {
     try {
-      return ParseWithYaml(yaml, isListed);
+      ConfigLoadResult result = ParseWithYaml(yaml, isListed);
+      ApplyAnimations(result, animationsYaml);
+      return result;
     } catch (Exception exception) when (exception is FileNotFoundException or TypeLoadException) {
       LoadingScreen.LogError($"Could not load YamlDotNet ({exception.Message}); server config ignored.");
       return null;
@@ -108,6 +111,17 @@ public static class ScreenConfigLoader {
   public static string ReadLocalYaml() {
     string path = PluginDir == null ? null : Path.Combine(PluginDir, ConfigFileName);
     return path != null && File.Exists(path) ? File.ReadAllText(path) : string.Empty;
+  }
+
+  public static string ReadLocalAnimationsYaml() {
+    string path = PluginDir == null ? null : Path.Combine(PluginDir, AnimationsFileName);
+    return path != null && File.Exists(path) ? File.ReadAllText(path) : string.Empty;
+  }
+
+  static void ApplyAnimations(ConfigLoadResult result, string yaml) {
+    AnimationCatalogLoadResult animations = AnimationPresetParser.Parse(yaml);
+    result.Config.Defaults.Animations = animations.Catalog;
+    result.Warnings.AddRange(animations.Warnings.Select(warning => $"{AnimationsFileName}: {warning}"));
   }
 
   [MethodImpl(MethodImplOptions.NoInlining)]
@@ -125,6 +139,7 @@ public static class ScreenConfigLoader {
 
     ConfigLoadResult result =
         ParseWithYaml(File.ReadAllText(path), relativePath => File.Exists(LocalImagePath(relativePath)));
+    ApplyAnimations(result, ReadLocalAnimationsYaml());
 
     foreach (string warning in result.Warnings) {
       LoadingScreen.LogWarning($"{ConfigFileName}: {warning}");

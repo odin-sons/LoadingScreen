@@ -20,12 +20,12 @@ public sealed class ConfigLoadResult {
 public sealed class ConfigParser {
   const int MaxNestingDepth = 32;
 
-  static readonly string[] _placementKeys = ["fit", "position", "opacity", "fade", "animate"];
+  static readonly string[] _placementKeys = ["fit", "position", "opacity", "fade"];
   static readonly string[] _defaultKeys = [
-    "place", "background", "tint", "vignette", "mask", "zoom", "tip", "continueprompt", "separator", "spinner"
+    "place", "background", "tint", "vignette", "mask", "animation", "tip", "continueprompt", "separator", "spinner"
   ];
   static readonly string[] _layerKeys = [
-    "id", "color", "image", "text", "size", "align", "background", "place"
+    "id", "color", "image", "text", "size", "align", "background", "place", "animation"
   ];
   static readonly string[] _layoutKeys = ["layers", "sound", "showsleepui", "vignette", "mask", "place"];
   static readonly string[] _entryKeys = ["image", "sound", "voice", "text", "layout", "place", "when"];
@@ -211,6 +211,7 @@ public sealed class ConfigParser {
     Layer layer = new() {
       Id = Scalar(Child(mapping, "id")),
       Placement = ParsePlacement(Child(mapping, "place"), $"{where}: 'place'"),
+      Animation = ParseAnimation(Child(mapping, "animation"), $"{where}.animation"),
     };
 
     YamlNode color = Child(mapping, "color");
@@ -595,8 +596,7 @@ public sealed class ConfigParser {
     defaults.Tint = ParseDefaultColor(Child(mapping, "tint"), "defaults.tint", defaults.Tint);
     defaults.Vignette = ParseVignette(Child(mapping, "vignette"), "defaults.vignette");
     defaults.Mask = ParseMask(Child(mapping, "mask"), "defaults.mask");
-    ParseDefaultSection(Child(mapping, "zoom"), "zoom", defaults.Zoom,
-        new Dictionary<string, (float Min, float Max)> { ["Amount"] = (0.5f, 1.5f), ["Seconds"] = (float.Epsilon, float.MaxValue) });
+    defaults.Animation = ParseAnimation(Child(mapping, "animation"), "defaults.animation");
     ParseDefaultSection(Child(mapping, "tip"), "tip", defaults.Tip,
         new Dictionary<string, (float Min, float Max)> { ["Size"] = (0f, 64f) });
     ParseDefaultSection(Child(mapping, "continueprompt"), "continuePrompt", defaults.ContinuePrompt,
@@ -779,9 +779,44 @@ public sealed class ConfigParser {
     ParsePosition(Child(mapping, "position"), placement, where);
     placement.Opacity = ParseOpacity(Child(mapping, "opacity"), where);
     placement.Fade = ParseFade(Child(mapping, "fade"), where);
-    placement.Animate = ParseBool(Child(mapping, "animate"), where, "animate");
 
     return placement;
+  }
+
+  AnimationSpec ParseAnimation(YamlNode node, string where) {
+    if (IsNull(node)) return null;
+    if (node is YamlScalarNode) {
+      string name = Scalar(node)?.Trim();
+      if (!string.IsNullOrEmpty(name)) return new() { Idle = name };
+      Warn(node, $"{where}: preset name cannot be empty");
+      return null;
+    }
+    if (node is not YamlMappingNode map) {
+      Warn(node, $"{where}: expected a preset name or phase mapping");
+      return null;
+    }
+    WarnUnknownKeys(map, ["enter", "idle", "exit", "speed"], where);
+    AnimationSpec spec = new() {
+      Enter = Phase("enter"),
+      Idle = Phase("idle"),
+      Exit = Phase("exit"),
+    };
+    YamlNode speedNode = Child(map, "speed");
+    if (!IsNull(speedNode)) {
+      if (float.TryParse(Scalar(speedNode), NumberStyles.Float, CultureInfo.InvariantCulture, out float speed)
+          && !float.IsNaN(speed) && !float.IsInfinity(speed) && speed > 0f) spec.Speed = speed;
+      else Warn(speedNode, $"{where}: speed must be positive");
+    }
+    return spec;
+
+    string Phase(string key) {
+      YamlNode phase = Child(map, key);
+      if (IsNull(phase)) return null;
+      string name = Scalar(phase)?.Trim();
+      if (!string.IsNullOrEmpty(name)) return name;
+      Warn(phase, $"{where}: '{key}' must be a preset name");
+      return null;
+    }
   }
 
   Fit ParseFit(YamlNode node, string where) {

@@ -18,19 +18,15 @@ public static class ImageScaleUtils {
     }
   }
 
-  public static IEnumerator ScaleLerp(
-      Transform transform, Vector3 startScale, Vector3 endScale, float lerpDuration,
-      float elapsed = 0f) {
-    transform.localScale = startScale;
-    float startedAt = Time.realtimeSinceStartup - Mathf.Max(0f, elapsed);
-    float timeElapsed;
-
-    while ((timeElapsed = Time.realtimeSinceStartup - startedAt) < lerpDuration) {
-      transform.localScale = Vector3.Lerp(startScale, endScale, ZoomTiming.Progress(timeElapsed, lerpDuration));
+  static IEnumerator AnimateDefaultZoom(Transform transform) {
+    AnimationPreset preset = ScreenConfigLoader.Current.Defaults.Animations.Resolve("zoom-in");
+    float startedAt = Time.realtimeSinceStartup;
+    float elapsed;
+    while ((elapsed = Time.realtimeSinceStartup - startedAt) < preset.EffectiveDuration()) {
+      transform.localScale = Vector3.one * preset.Sample(elapsed, 0f, 0f).Scale;
       yield return null;
     }
-
-    transform.localScale = endScale;
+    transform.localScale = Vector3.one * preset.Sample(preset.EffectiveDuration(), 0f, 0f).Scale;
   }
 
   public static void ScaleLerpLoadingImage(this MonoBehaviour component, Image loadingImage) {
@@ -41,17 +37,6 @@ public static class ImageScaleUtils {
 
     _component = component;
     _image = loadingImage;
-    ZoomDefaults zoom = ScreenConfigLoader.Current.Defaults.Zoom;
-    if (zoom.Enabled && loadingImage) {
-      _scaleLerpCoroutine =
-          component.StartCoroutine(
-              ScaleLerp(
-                  loadingImage.transform,
-                  Vector3.one,
-                  Vector3.one * zoom.Amount,
-                  zoom.Seconds));
-    } else if (loadingImage) {
-      loadingImage.transform.localScale = Vector3.one;
-    }
+    if (loadingImage) _scaleLerpCoroutine = component.StartCoroutine(AnimateDefaultZoom(loadingImage.transform));
   }
 }

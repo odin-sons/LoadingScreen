@@ -10,7 +10,7 @@ public sealed class LoadingHoldState {
 
   public LoadingHoldDecision Update(
       bool loadingVisible, bool ready, bool allowed, bool holdUntilKey, bool voiceActive,
-      bool dismissed, float now, int maximumSeconds) {
+      bool dismissed, float now, int maximumSeconds, bool exitActive = false) {
     if (!allowed) {
       Reset();
       return default;
@@ -31,13 +31,13 @@ public sealed class LoadingHoldState {
       }
 
       bool waitingForKey = holdUntilKey && !_keyDismissed;
-      if (waitingForKey || voiceActive) return new(true, waitingForKey);
+      if (waitingForKey || voiceActive || exitActive) return new(true, waitingForKey);
 
       Reset();
       return default;
     }
 
-    if (_armed && loadingVisible && (holdUntilKey || voiceActive)) {
+    if (_armed && loadingVisible && (holdUntilKey || voiceActive || exitActive)) {
       _armed = false;
       _holding = true;
       _startedAt = now;

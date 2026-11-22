@@ -21,6 +21,7 @@ public static class PluginConfig {
   public static ConfigEntry<bool> ShowLoadingScreenWhileSleeping { get; private set; }
   public static ConfigEntry<bool> HoldLoadingScreen { get; private set; }
   public static ConfigEntry<bool> WaitForVoice { get; private set; }
+  public static ConfigEntry<bool> WaitForExitAnimation { get; private set; }
   public static ConfigEntry<int> MaximumHoldSeconds { get; private set; }
   public static ConfigEntry<bool> CaptionUseTipWhenNoText { get; private set; }
 
@@ -140,6 +141,13 @@ public static class PluginConfig {
             false,
             "After loading finishes, keep the screen visible while its entry voice is playing or loading. Never holds during cinematics or on a dedicated server. [Synced with Server]");
 
+    WaitForExitAnimation =
+        config.BindInOrder(
+            Timing,
+            "Wait for the exit animation to finish",
+            false,
+            "After loading finishes, play layer exit animations before closing the screen. Limited by Maximum hold time in seconds. Never holds during cinematics or on a dedicated server. [Synced with Server]");
+
     MaximumHoldSeconds =
         config.BindInOrder(
             Timing,
@@ -191,6 +199,7 @@ public static class PluginConfig {
     sync.Register(ShowLoadingScreenWhileSleeping);
     sync.Register(HoldLoadingScreen, clientControlled: true);
     sync.Register(WaitForVoice);
+    sync.Register(WaitForExitAnimation);
     sync.Register(MaximumHoldSeconds);
     sync.Register(ShowLoadingScreenImmediatelyOnDeath);
     sync.Register(CaptionUseTipWhenNoText);

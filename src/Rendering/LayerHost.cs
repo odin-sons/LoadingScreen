@@ -30,6 +30,16 @@ public sealed class LayerHost : MonoBehaviour {
     public float BaseSize;
   }
 
+  sealed class AnimatedLayer {
+    public RectTransform Rect;
+    public CanvasGroup Group;
+    public AnimationPreset Enter;
+    public AnimationPreset Idle;
+    public AnimationPreset Exit;
+    public float Speed;
+    public Vector2 BasePosition;
+  }
+
   const float TextBackgroundPadding = 12f;
 
   static readonly Dictionary<Layer, string> _lastPoolPick = [];
@@ -38,13 +48,19 @@ public sealed class LayerHost : MonoBehaviour {
   TMP_Text _hiddenTemplate;
 
   readonly List<PlacedImage> _placed = [];
-  readonly List<Transform> _animated = [];
+  readonly List<AnimatedLayer> _animated = [];
   RectTransform _root;
   ScreenEffectOverlay _effects;
   Graphic _vanillaImage;
   Vector2 _lastSize;
   bool _layoutShowsSeparator;
   float _animationStartedAt;
+  float _idleBase;
+  float _idleAtExit;
+  float _enterDuration;
+  float _exitDuration;
+  float _exitStartedAt = -1f;
+  bool _skipEnter;
 
   public bool IsShowing { get; private set; }
   public bool ShowSleepUi { get; private set; } = true;
@@ -73,7 +89,6 @@ public sealed class LayerHost : MonoBehaviour {
         Anchor = Anchor.Bottom,
         X = new Length(defaults.X, LengthUnit.Pixels),
         Y = new Length(-defaults.Bottom, LengthUnit.Pixels),
-        Animate = false,
       };
     }
   }
@@ -107,7 +122,7 @@ public sealed class LayerHost : MonoBehaviour {
   }
 
   public bool Show(Selection selection, string caption = null, TMP_Text textTemplate = null,
-      float animationElapsed = 0f) {
+      float animationElapsed = 0f, bool continued = false) {
     Clear();
 
     if (selection == null) {
@@ -162,7 +177,7 @@ public sealed class LayerHost : MonoBehaviour {
               ? Placement.Merge(selection.Entry.Place, layer.Placement, layout.Placement, config.Defaults)
               : Placement.Merge(layer.Placement, layout.Placement, config.Defaults);
 
-      AddImageLayer(layer, sprite, placement);
+      AddImageLayer(layer, sprite, placement, layout == DefaultLayout && layer.FromEntry);
       drewEntryImage |= layer.FromEntry;
     }
 
@@ -185,10 +200,13 @@ public sealed class LayerHost : MonoBehaviour {
     SetSeparatorVisible(!_layoutShowsSeparator && config.Defaults.Separator.OnLayouts);
     CurrentSelection = selection;
     IsShowing = true;
-    _animationStartedAt = Time.realtimeSinceStartup - animationElapsed;
+    _animationStartedAt = Time.realtimeSinceStartup;
+    _idleBase = continued ? animationElapsed : 0f;
+    _skipEnter = continued;
+    _exitStartedAt = -1f;
     Canvas.ForceUpdateCanvases();
     Relayout();
-    StartAnimations(animationElapsed);
+    RenderAnimations(Time.realtimeSinceStartup);
     _effects.Apply(config.Defaults, layout);
     return true;
   }
@@ -198,6 +216,7 @@ public sealed class LayerHost : MonoBehaviour {
     IsShowing = false;
     CurrentSelection = null;
     ShowSleepUi = true;
+    _exitStartedAt = -1f;
     gameObject.SetActive(false);
     SetSeparatorVisible(true);
 
@@ -223,16 +242,11 @@ public sealed class LayerHost : MonoBehaviour {
       return;
     }
 
-    _animated.Clear();
     foreach (PlacedImage placed in _placed) {
       if (placed.Layer.FromEntry) {
         Color color = ToColor(ScreenConfigLoader.Current.Defaults.Tint);
         color.a *= placed.Placement.Opacity ?? 1f;
         placed.Rect.GetComponent<Image>().color = color;
-      }
-
-      if (placed.Placement.Animate ?? ScreenConfigLoader.Current.Defaults.Zoom.Enabled) {
-        _animated.Add(placed.Rect);
       }
     }
 
@@ -245,7 +259,7 @@ public sealed class LayerHost : MonoBehaviour {
     }
     Relayout();
 
-    StartAnimations(Time.realtimeSinceStartup - _animationStartedAt);
+    RenderAnimations(Time.realtimeSinceStartup);
   }
 
   void SetSeparatorVisible(bool visible) {
@@ -257,8 +271,10 @@ public sealed class LayerHost : MonoBehaviour {
   void LateUpdate() {
     if (!IsShowing) return;
     if (_root.rect.size != _lastSize) Relayout();
+    float now = Time.realtimeSinceStartup;
+    RenderAnimations(now);
     if (CurrentSelection == LoadingManager.Session.Selection) {
-      LoadingManager.Session.Tick(Time.realtimeSinceStartup - _animationStartedAt);
+      LoadingManager.Session.Tick(IdleElapsed(now));
     }
   }
 
@@ -306,6 +322,7 @@ public sealed class LayerHost : MonoBehaviour {
     rect.sizeDelta = Vector2.zero;
     image.color = ToColor(layer.Color);
     image.raycastTarget = false;
+    RegisterAnimation(layer, rect);
   }
 
   public bool ShowsOwnText => _texts.Count > 0;
@@ -368,9 +385,10 @@ public sealed class LayerHost : MonoBehaviour {
         Style = style, Background = background,
         BaseColor = new(baseColor.r, baseColor.g, baseColor.b, baseColor.a),
         BaseSize = style.FontSize ?? template.fontSize });
+    RegisterAnimation(layer, container);
   }
 
-  void AddImageLayer(Layer layer, Sprite sprite, Placement placement) {
+  void AddImageLayer(Layer layer, Sprite sprite, Placement placement, bool defaultEntry = false) {
     Image image = CreateChild<Image>($"Image-{layer.Id ?? sprite.name}", _root);
     image.sprite = sprite;
     image.type = Image.Type.Simple;
@@ -412,10 +430,7 @@ public sealed class LayerHost : MonoBehaviour {
     }
 
     _placed.Add(placed);
-
-    if (placement.Animate ?? ScreenConfigLoader.Current.Defaults.Zoom.Enabled) {
-      _animated.Add(image.transform);
-    }
+    RegisterAnimation(layer, image.rectTransform, defaultEntry);
   }
 
   void OnDestroy() {
@@ -428,39 +443,92 @@ public sealed class LayerHost : MonoBehaviour {
       if (this == LoadingManager.FejdStartupHost && LoadingManager.Session.Stage == LoadingStage.Menu
           && !LoadingManager.Session.WasVisible) {
         _animationStartedAt = Time.realtimeSinceStartup;
+        _idleBase = 0f;
         LoadingManager.Session.MarkVisible(_animationStartedAt);
       }
-      StartAnimations(Time.realtimeSinceStartup - _animationStartedAt);
+      RenderAnimations(Time.realtimeSinceStartup);
     }
   }
 
-  void StartAnimations(float elapsed = 0f) {
-    StopAllCoroutines();
+  void RegisterAnimation(Layer layer, RectTransform rect, bool defaultEntry = false) {
+    ScreenDefaults defaults = ScreenConfigLoader.Current.Defaults;
+    AnimationSpec fallback = AnimationSpec.Merge(
+        defaults.Animation, defaultEntry ? new() { Idle = "zoom-in" } : null);
+    AnimationSpec spec = AnimationSpec.Merge(layer.Animation, fallback);
+    AnimationCatalog catalog = defaults.Animations;
+    AnimatedLayer animated = new() {
+      Rect = rect,
+      Group = rect.gameObject.AddComponent<CanvasGroup>(),
+      Enter = catalog.Resolve(spec.Enter, LoadingScreen.LogWarning),
+      Idle = catalog.Resolve(spec.Idle, LoadingScreen.LogWarning),
+      Exit = catalog.Resolve(spec.Exit, LoadingScreen.LogWarning),
+      Speed = spec.Speed ?? 1f,
+    };
+    _animated.Add(animated);
+    if (spec.Enter != "none") _enterDuration = Mathf.Max(_enterDuration, animated.Enter.EffectiveDuration(animated.Speed));
+    if (spec.Exit != "none") _exitDuration = Mathf.Max(_exitDuration, animated.Exit.EffectiveDuration(animated.Speed));
+  }
 
-    foreach (PlacedImage placed in _placed) {
-      if (placed.Rect) placed.Rect.localScale = Vector3.one;
+  float IdleElapsed(float now) =>
+      _exitStartedAt >= 0f ? _idleAtExit
+          : _idleBase + Mathf.Max(0f, now - _animationStartedAt - (_skipEnter ? 0f : _enterDuration));
+
+  public bool BeginExit(float now) {
+    if (!IsShowing || _exitDuration <= 0f) return false;
+    if (_exitStartedAt < 0f) {
+      _idleAtExit = IdleElapsed(now);
+      _exitStartedAt = now;
     }
+    return now - _exitStartedAt < _exitDuration;
+  }
 
-    if (!isActiveAndEnabled) {
-      return;
-    }
-
-    foreach (Transform target in _animated) {
-      if (target) {
-        StartCoroutine(
-            ImageScaleUtils.ScaleLerp(
-                target,
-                Vector3.one,
-                Vector3.one * ScreenConfigLoader.Current.Defaults.Zoom.Amount,
-                ScreenConfigLoader.Current.Defaults.Zoom.Seconds,
-                elapsed));
+  void RenderAnimations(float now) {
+    if (!IsShowing) return;
+    float elapsed = Mathf.Max(0f, now - _animationStartedAt);
+    float idleElapsed = IdleElapsed(now);
+    float exitElapsed = _exitStartedAt < 0f ? -1f : now - _exitStartedAt;
+    foreach (AnimatedLayer layer in _animated) {
+      if (!layer.Rect) continue;
+      AnimationPreset preset;
+      float phaseTime;
+      bool playOnce;
+      if (exitElapsed >= 0f) {
+        preset = layer.Exit;
+        phaseTime = exitElapsed;
+        playOnce = true;
+      } else if (!_skipEnter && elapsed < _enterDuration) {
+        preset = layer.Enter;
+        phaseTime = elapsed;
+        playOnce = true;
+      } else {
+        preset = layer.Idle;
+        phaseTime = idleElapsed;
+        playOnce = false;
       }
+      layer.Rect.anchoredPosition = layer.BasePosition;
+      Vector3 pivotPosition = layer.Rect.localPosition;
+      Vector2 pivot = layer.Rect.pivot;
+      Vector2 center = new(
+          pivotPosition.x + (0.5f - pivot.x) * layer.Rect.rect.width,
+          pivotPosition.y + (0.5f - pivot.y) * layer.Rect.rect.height);
+      AnimationSample sample = preset.Sample(
+          phaseTime, _root.rect.width, _root.rect.height, layer.Rect.rect.width, layer.Rect.rect.height,
+          center.x, center.y, layer.Speed, playOnce);
+      layer.Rect.anchoredPosition = layer.BasePosition + new Vector2(sample.X, -sample.Y);
+      layer.Rect.localScale = Vector3.one * sample.Scale;
+      layer.Rect.localEulerAngles = new Vector3(0f, 0f, -sample.Rotation);
+      layer.Group.alpha = sample.Opacity;
     }
   }
 
   void Relayout() {
     Vector2 size = _root.rect.size;
     _lastSize = size;
+    foreach (AnimatedLayer layer in _animated) {
+      layer.Rect.anchoredPosition = layer.BasePosition;
+      layer.Rect.localScale = Vector3.one;
+      layer.Rect.localEulerAngles = Vector3.zero;
+    }
 
     foreach (PlacedText placed in _texts) {
       Fit fit = placed.Placement.Fit;
@@ -510,6 +578,7 @@ public sealed class LayerHost : MonoBehaviour {
     }
 
     foreach (PlacedText placed in _texts) UpdateTextColor(placed);
+    foreach (AnimatedLayer layer in _animated) layer.BasePosition = layer.Rect.anchoredPosition;
   }
 
   void UpdateTextColor(PlacedText placed) {
@@ -591,6 +660,8 @@ public sealed class LayerHost : MonoBehaviour {
     StopAllCoroutines();
     _placed.Clear();
     _animated.Clear();
+    _enterDuration = 0f;
+    _exitDuration = 0f;
     _texts.Clear();
 
     if (_hiddenTemplate) {
