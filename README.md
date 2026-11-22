@@ -678,6 +678,7 @@ Behavior switches in `Odin_Sons.LoadingScreen.cfg`; each has a description in th
 | `3 - Timing` | Change image every N seconds, Change tip every N seconds, Hold loading screen until a key is pressed, Wait for the voice to finish, Wait for the exit animation to finish, Maximum hold time in seconds |
 | `4 - Game start screen` | Use loading images, Show progress |
 | `5 - Sound` | Play loading screen sounds, Music volume percent, Voice volume percent, Mute game sounds on loading screens |
+| `6 - Accessibility` | Readable text, Minimum text size |
 | `7 - Experimental` | Load world in background |
 
 `[7 - Experimental] Load world in background` is a personal setting, off by default. When enabled, starting or
