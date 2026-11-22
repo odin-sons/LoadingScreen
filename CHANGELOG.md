@@ -126,7 +126,7 @@ Adds a vignette and color mask.
 
 ### 0.2.0 (2026-11-21)
 
-Adds situational, layered loading screens from a YAML config with server-shared images. Not yet tested in the game.
+Adds situational, layered loading screens from a YAML config with server-shared images.
 
 #### Features
 
