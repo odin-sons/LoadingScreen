@@ -39,6 +39,10 @@ cfg and clearer logs.
   * **Subsystem sources.** Log lines come from `LoadingScreen.Config`, `LoadingScreen.Audio`, `LoadingScreen.Server`
     and `LoadingScreen.Render` BepInEx sources, so one area can be found with a single search; startup messages stay
     on `LoadingScreen`. `Log level` filters all of them.
+  * **Problem summary.** After a load or reload that logs warnings or errors for `loadingscreen.yaml`,
+    `animations.yaml` or `translations.yaml`, the console shows one line with the problem count per file and points
+    to LogOutput.log; the main menu shows it once in a dismissible popup when the console is closed. The text uses the
+    new `configProblems` translation key.
 
 #### Changes
 

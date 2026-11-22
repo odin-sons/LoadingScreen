@@ -60,6 +60,7 @@ public sealed class LoadingScreen : BaseUnityPlugin {
   void Update() {
     if (!IsModEnabled.Value) return;
     ServerImages.Tick();
+    ConfigProblemReport.Tick();
     ScreenConfigLoader.TickBiomeWarnings();
   }
 

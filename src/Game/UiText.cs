@@ -15,6 +15,9 @@ public static class UiText {
   public static string FormatProgress(int percent, int seconds) =>
       _translations.FormatProgress(Localization.instance?.GetSelectedLanguage(), percent, seconds);
 
+  public static string FormatConfigProblems(string files) =>
+      _translations.FormatConfigProblems(Localization.instance?.GetSelectedLanguage(), files);
+
   public static void Load(string folder) {
     string path = Path.Combine(folder, FileName);
     try {

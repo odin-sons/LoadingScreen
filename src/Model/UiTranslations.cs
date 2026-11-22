@@ -53,7 +53,8 @@ public sealed class UiTranslations {
   ];
 
   static readonly string[] KeyNames = [
-    "continuePrompt", "gameStartProgress", "secondsUnit", "connectingStage", "passwordStage", "receivingWorldStage"
+    "continuePrompt", "gameStartProgress", "secondsUnit", "connectingStage", "passwordStage", "receivingWorldStage",
+    "configProblems"
   ];
   static readonly Dictionary<string, Dictionary<string, string>> Defaults = BuiltIn.ToDictionary(
       item => LanguageText.Code("Game", item.Language),
@@ -67,6 +68,7 @@ public sealed class UiTranslations {
     Defaults["en"]["connectingStage"] = "Connecting";
     Defaults["en"]["passwordStage"] = "Password";
     Defaults["en"]["receivingWorldStage"] = "Receiving the world";
+    Defaults["en"]["configProblems"] = "LoadingScreen found problems in {files}. Details are in BepInEx/LogOutput.log.";
   }
 
   readonly Dictionary<string, Dictionary<string, string>> _overrides = new(StringComparer.OrdinalIgnoreCase);
@@ -89,6 +91,9 @@ public sealed class UiTranslations {
           .Replace("{percent}", percent.ToString(CultureInfo.InvariantCulture))
           .Replace("{seconds}", Math.Max(0, seconds).ToString(CultureInfo.InvariantCulture))
           .Replace("{unit}", Get(language, "secondsUnit"));
+
+  public string FormatConfigProblems(string language, string files) =>
+      Get(language, "configProblems").Replace("{files}", files);
 
   public static UiTranslations Parse(string yaml) {
     UiTranslations translations = new();

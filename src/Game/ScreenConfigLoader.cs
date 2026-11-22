@@ -113,8 +113,17 @@ public static class ScreenConfigLoader {
 
   public static bool Load(string pluginDir) {
     PluginDir = pluginDir;
-    UiText.Load(pluginDir);
+    ConfigProblemReport.Begin();
 
+    try {
+      UiText.Load(pluginDir);
+      return LoadLocalConfig(pluginDir);
+    } finally {
+      ConfigProblemReport.End();
+    }
+  }
+
+  static bool LoadLocalConfig(string pluginDir) {
     try {
       return LoadWithYaml(pluginDir);
     } catch (Exception exception) when (exception is FileNotFoundException or TypeLoadException) {
