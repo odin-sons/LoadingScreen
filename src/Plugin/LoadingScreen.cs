@@ -35,9 +35,9 @@ public sealed class LoadingScreen : BaseUnityPlugin {
       CustomAssets.Initialize(imageFolder);
       ScreenConfigLoader.Load(imageFolder);
     } catch (Exception exception) {
-      LogError(LogContext.Message("Loading screen configuration failed to initialize.",
+      LogFatal(LogContext.Message("Loading screen configuration failed to initialize.",
           ("folder", LogContext.File(ImageFolder.Value, Paths.BepInExRootPath)), ("error", exception.Message)));
-      LogError(exception);
+      LogFatal(exception);
     }
 
     IsModEnabled.SettingChanged += (_, _) => {
@@ -50,7 +50,14 @@ public sealed class LoadingScreen : BaseUnityPlugin {
     WarnIfDebugIsFiltered();
     ReadableText.SettingChanged += (_, _) => LoadingManager.RefreshAppearance();
     MinimumTextSize.SettingChanged += (_, _) => LoadingManager.RefreshAppearance();
-    Harmony.CreateAndPatchAll(Assembly.GetExecutingAssembly(), harmonyInstanceId: PluginGuid);
+
+    try {
+      Harmony.CreateAndPatchAll(Assembly.GetExecutingAssembly(), harmonyInstanceId: PluginGuid);
+    } catch (Exception exception) {
+      LogFatal(LogContext.Message("Harmony patching failed; the loading screen is disabled.",
+          ("operation", "patch"), ("harmony", PluginGuid), ("error", exception.Message)));
+      LogFatal(exception);
+    }
   }
 
   void Update() {
@@ -59,28 +66,22 @@ public sealed class LoadingScreen : BaseUnityPlugin {
     ScreenConfigLoader.TickBiomeWarnings();
   }
 
-  public static void LogInfo(object obj) {
-    if (ModLogFilter.Allows(PluginConfig.LogLevel?.Value ?? ModLogLevel.Warning, ModLogLevel.Info))
-      _logger.LogInfo(obj);
-  }
+  public static void LogInfo(object obj) => Write(BepInEx.Logging.LogLevel.Info, LogSeverity.Info, obj);
 
-  public static void LogWarning(object obj) {
-    if (ModLogFilter.Allows(PluginConfig.LogLevel?.Value ?? ModLogLevel.Warning, ModLogLevel.Warning))
-      _logger.LogWarning(obj);
-  }
+  public static void LogWarning(object obj) => Write(BepInEx.Logging.LogLevel.Warning, LogSeverity.Warning, obj);
 
   public static void LogWarningOnce(string key, string message) {
     if (ReportedWarnings.First(key)) LogWarning(message);
   }
 
-  public static void LogError(object obj) {
-    if (ModLogFilter.Allows(PluginConfig.LogLevel?.Value ?? ModLogLevel.Warning, ModLogLevel.Error))
-      _logger.LogError(obj);
-  }
+  public static void LogError(object obj) => Write(BepInEx.Logging.LogLevel.Error, LogSeverity.Error, obj);
 
-  public static void LogDebug(object obj) {
-    if (ModLogFilter.Allows(PluginConfig.LogLevel?.Value ?? ModLogLevel.Warning, ModLogLevel.Debug))
-      _logger.LogDebug(obj);
+  public static void LogFatal(object obj) => Write(BepInEx.Logging.LogLevel.Fatal, LogSeverity.Fatal, obj);
+
+  public static void LogDebug(object obj) => Write(BepInEx.Logging.LogLevel.Debug, LogSeverity.Debug, obj);
+
+  static void Write(BepInEx.Logging.LogLevel level, LogSeverity severity, object obj) {
+    if (ModLogFilter.Allows(PluginConfig.LogLevel?.Value ?? ModLogLevel.Warning, severity)) _logger.Log(level, obj);
   }
 
   static void WarnIfDebugIsFiltered() {
