@@ -2,128 +2,187 @@
 
 ### Unreleased
 
-  * Log messages now start with a short sentence followed by `key=value` details (file, YAML line, layer,
+Adds progress, spinner and animated layers, localized prompts, readability and audio-wait options, a reorganized
+cfg and clearer logs.
+
+#### Features
+
+  * **Progress layer.** `progress` layers with bar, ring, and percentage styles. Game start uses real scene-load
+    progress; portal and death use destination-zone and nearby-object readiness; sleep uses game time. Server joining
+    shows localized connection stages. Ready area progress stays at 100% with a soft pulse during game delays.
+  * **Spinner layer.** `spinner` layers for game start, portal, death and sleep layouts, with Valheim's hammer sprite,
+    generated ring and dots, or a custom image. Spinners use `place` and spin by default; layer animations can replace
+    the spin. Existing `defaults.spinner` settings keep their game start behavior through an implicit hammer layer
+    when centered; an explicit spinner layer takes precedence.
+  * **Death tip order.** Death tries enemy, dominant damage type, hit type, death biome, custom biome's base biome,
+    then general.
+  * **Custom biomes.** Expand World Data custom biomes use their `biome:` identifiers in `when.biome` lists and
+    `knownBiome` conditions; unresolved names warn at runtime.
+  * **Layer animations.** Enter, idle and exit animations for YAML layers, built-in motion presets, and custom presets
+    in `animations.yaml`. Server screen sharing and reload include custom presets.
+  * **Exit animation wait.** Server-synced `Wait for the exit animation to finish` timing setting, off by default.
+    Exit playback uses the existing maximum hold time as a cap.
+  * **Voice wait.** Server-synced `Wait for the voice to finish` timing setting (off by default). A HUD loading screen
+    can stay visible until its entry voice ends, with the existing maximum hold time as a cap.
+  * **Localized prompts.** The mod's continue prompt and integer game-start progress display are localized for
+    Valheim's 36 languages, with per-key `translations.yaml` overrides in the local config folder and English
+    fallback.
+  * **Automatic text color.** YAML `color: auto` and `background: auto` for text layers, based on the image area
+    behind the text box.
+  * **Accessibility settings.** Personal `Readable text` and `Minimum text size` settings (off by default).
+  * **Log level.** Client-controlled `Log level` setting (Error, Warning by default, Info, Debug). Detailed screen
+    selection, audio volume, server transfer, and image timing messages are available at Debug. Choosing Debug warns
+    once when BepInEx.cfg filters Debug out of the disk log.
+  * **Log context.** Log messages start with a short sentence followed by `key=value` details (file, YAML line, layer,
     screen, side, rejected value), stack traces go to Debug, and repeated warnings are logged once.
-  * Log lines follow the plain BepInEx format without the mod's own timestamp. Choosing Debug warns once when
-    BepInEx.cfg filters Debug out of the disk log.
+  * **Live toggle.** `Mod enabled` applies without a restart.
 
-  * Added `progress` layers with bar, ring, and percentage styles. Game start uses real scene-load progress;
-    portal and death use destination-zone and nearby-object readiness; sleep uses game time. Server joining shows
-    localized connection stages. Ready area progress stays at 100% with a soft pulse during game delays.
+#### Changes
 
-  * Added `spinner` layers for game start, portal, death and sleep layouts, with Valheim's hammer sprite,
-    generated ring and dots, or a custom image. Spinners use `place` and spin by default; layer animations can
-    replace the spin. Existing `defaults.spinner` settings keep their game start behavior through an implicit
-    hammer layer when centered; an explicit spinner layer takes precedence.
+  * **Biome lists.** `when.biome` replaces `when.teleport` for destination biome lists and death biome tips.
+  * **`when` key.** The YAML top-level `situations` key is renamed to `when`; existing YAML files must use `when`.
+  * **Zoom fields.** The default entry image keeps its existing slow zoom without the old `animate` and
+    `defaults.zoom` fields.
+  * **Cfg layout.** The cfg is reorganized into General, When to show, Timing, Game start screen and Sound. Each
+    setting states whether it is synchronized. One synced `Share screens with players` switch controls transfer.
 
-  * `when.biome` replaces `when.teleport` for destination biome lists and death biome tips. Death tries
-    enemy, dominant damage type, hit type, death biome, custom biome's base biome, then general. Expand World Data
-    custom biomes use their `biome:` identifiers in these lists and `knownBiome` conditions; unresolved names warn
-    at runtime.
+#### Fixes
 
-  * Added enter, idle and exit animations for YAML layers, built-in motion presets, and custom presets in
-    `animations.yaml`. Server screen sharing and reload include custom presets. The default entry image keeps its
-    existing slow zoom without the old `animate` and `defaults.zoom` fields.
-  * Added the server-synced `Wait for the exit animation to finish` timing setting, off by default. Exit playback
-    uses the existing maximum hold time as a cap.
+  * **Setting sync.** Server settings and the lock now actually synchronize, while personal settings stay local.
+  * **Log format.** Log lines follow the plain BepInEx format without the mod's own timestamp.
 
-  * Localized the mod's continue prompt and integer game-start progress display for Valheim's 36 languages, with
-    per-key `translations.yaml` overrides in the local config folder and English fallback.
+### 0.6.0 (2026-11-21)
 
-  * Added YAML `color: auto` and `background: auto` for text layers, based on the image area behind the text box.
-    Added personal `Readable text` and `Minimum text size` accessibility settings (off by default).
+Adds localized text, a continue prompt, sleep screens, tip and image rotation, simpler YAML layers, and seamless
+server joins.
 
-  * Added a server-synced `Wait for the voice to finish` timing setting (off by default). A HUD loading screen can
-    stay visible until its entry voice ends, with the existing maximum hold time as a cap.
+#### Features
 
-  * Added a client-controlled `Log level` setting (Error, Warning by default, Info, Debug). Detailed screen selection,
-    audio volume, server transfer, and image timing messages are available at Debug.
+  * **Text language.** Tips and entry captions follow Valheim's language or the `[1 - General] Text language`
+    override. Localized `tips.<code>.txt` files take precedence over `tips.txt`; entry `text` also accepts ISO-keyed
+    translations.
+  * **Continue prompt.** Optional hold after HUD loading finishes, dismissed by a key or mouse click and capped at
+    30 seconds by default. Disabled on dedicated servers and during cinematics; `defaults.continuePrompt` styles the
+    prompt line.
+  * **Sleep screen.** Optional loading image and tip while sleeping, with a `when.sleep` list that falls back to
+    `general`. Layouts can hide the game's sleep text and spinner with `showSleepUi: false`.
+  * **Tip rotation.** Optional on HUD and main-menu loading screens: `[3 - Timing] Change tip every N seconds`
+    (default 0, off). Tips from `tips.txt` advance without repeating the previous tip when possible; entry text stays
+    fixed.
+  * **Slideshow.** Optional on HUD and game start loading screens: `[3 - Timing] Change image every N seconds`
+    (default 0, off). Situational entries cycle within their selected list and respect `order`; zoom restarts per
+    image.
 
-  * Reorganized the cfg into General, When to show, Timing, Game start screen and Sound. Each setting now states
-    whether it is synchronized; server settings and the lock now actually synchronize, while personal settings stay
-    local. `Mod enabled` applies without a restart, and one synced `Share screens with players` switch controls transfer.
-  * Renamed the YAML top-level `situations` key to `when`; existing YAML files must use `when`.
+#### Changes
 
-### 0.6.0
+  * **Layer content.** YAML layer content is simplified to `image`, `text` or `color`; `image` accepts a path, path
+    list, `entry` or `separator`.
+  * **Enemy and placement keys.** Enemy prefab lists now live under `when.enemy`, and placement at every scope uses
+    `place`.
 
-  * Simplified YAML layer content to `image`, `text` or `color`; `image` accepts a path, path list, `entry` or `separator`.
-    Enemy prefab lists now live under `when.enemy`, and placement at every scope uses `place`.
-  * A server join keeps the same loading image, caption and zoom across the menu, scene loader and HUD. Music and
-    voice continue through host handovers without replaying the entry voice or dipping in volume during the fade.
+#### Fixes
 
-  * Tips and entry captions follow Valheim's language or the `[1 - General] Text language` override. Localized
-    `tips.<code>.txt` files take precedence over `tips.txt`; entry `text` also accepts ISO-keyed translations.
-  * Optional hold after HUD loading finishes, dismissed by a key or mouse click and capped at 30 seconds by default.
-    Disabled on dedicated servers and during cinematics; `defaults.continuePrompt` styles the prompt line.
-  * Optional loading image and tip while sleeping, with a `when.sleep` list that falls back to `general`.
-    Layouts can hide the game's sleep text and spinner with `showSleepUi: false`.
-  * Optional tip rotation on HUD and main-menu loading screens: `[3 - Timing] Change tip every N seconds` (default
-    0, off). Tips from `tips.txt` advance without repeating the previous tip when possible; entry text stays fixed.
-  * Optional slideshow on HUD and game start loading screens: `[3 - Timing] Change image every N seconds` (default
-    0, off). Situational entries cycle within their selected list and respect `order`; zoom restarts per image.
+  * **Join consistency.** A server join keeps the same loading image, caption and zoom across the menu, scene loader
+    and HUD.
+  * **Audio handover.** Music and voice continue through host handovers without replaying the entry voice or dipping
+    in volume during the fade.
 
-### 0.5.0
+### 0.5.0 (2026-11-21)
 
-  * Optional looped music on layouts, lists and entries, plus one-shot voiced entry text (`sound` and `voice` in YAML).
-    Audio follows the game's volume sliders; client cfg controls playback and music/voice volume. Servers can share
-    bounded `.ogg` and `.wav` files with the screens.
-    Voices are scaled like the game's sound effects, music like the game's music, and the game start screen stays
-    silent until the game's volume settings are loaded. `Mute game sounds on loading screens` (`None` by default) fades
-    out the game's effects, music or both while a screen is visible.
+Adds music and voiced entry text to loading screens, matched to the game's volume.
 
-### 0.4.0
+#### Features
 
-  * Optional config synchronization: Conditional Config Sync 1.0.10+ takes priority when installed; otherwise
-    ServerSync is merged into the plugin. Slideshow timing and situation settings can follow the server, with a
-    server lock; machine, language, game start, sound and key-hold settings remain local.
+  * **Music and voice.** Optional looped music on layouts, lists and entries, plus one-shot voiced entry text (`sound`
+    and `voice` in YAML). Audio follows the game's volume sliders; client cfg controls playback and music/voice
+    volume.
+  * **Shared audio.** Servers can share bounded `.ogg` and `.wav` files with the screens.
+  * **Game sound muting.** `Mute game sounds on loading screens` (`None` by default) fades out the game's effects,
+    music or both while a screen is visible.
 
-### 0.3.0
+#### Fixes
 
-  * Optional full-screen vignette and color mask in YAML `defaults`, with per-layout overrides.
+  * **Volume matching.** Voices are scaled like the game's sound effects, music like the game's music, and the game
+    start screen stays silent until the game's volume settings are loaded.
 
-### 0.2.0 (2026-11-20)
+### 0.4.0 (2026-11-21)
 
-  * Configurable image folder for `loadingscreen.yaml`, `tips.txt` and images; relative paths start at BepInEx.
+Adds optional config synchronization with the server.
 
-  * Appearance settings moved from the BepInEx cfg to the YAML `defaults` section. Existing cfg appearance values
-    are not migrated; the built-in YAML values preserve the former cfg defaults.
-  * Entry conditions: `when` with `knownItem`, `hasItem`, `knownRecipe`, `knownBiome`, `globalKey` and `playerKey`,
-    each also as `not...`; an entry is shown only when every condition holds.
-  * Entries may have only a `text`; it is shown over a random plain image.
-  * Death screens per enemy: `when.enemy.<creature prefab>` is tried before the damage type and the hit type.
-  * `order: random | sequential`, for the whole file or one list.
-  * `image: separator` layer and the setting to keep or hide the built-in separator on layout screens.
-  * Settings renamed to plain names in numbered sections, each with a description. Old settings are not migrated.
-  * Fixed a white loading screen when no custom images exist.
+#### Features
 
-  * Situational loading screens from `BepInEx/config/LoadingScreen/loadingscreen.yaml` (YamlDotNet, new dependency
-    `ValheimModding-YamlDotNet`):
+  * **Config sync.** Conditional Config Sync 1.0.10+ takes priority when installed; otherwise ServerSync is merged
+    into the plugin.
+  * **Server lock.** Slideshow timing and situation settings can follow the server, with a server lock; machine,
+    language, game start, sound and key-hold settings remain local.
+
+### 0.3.0 (2026-11-21)
+
+Adds a vignette and color mask.
+
+#### Features
+
+  * **Vignette and mask.** Optional full-screen vignette and color mask in YAML `defaults`, with per-layout overrides.
+
+### 0.2.0 (2026-11-21)
+
+Adds situational, layered loading screens from a YAML config with server-shared images. Not yet tested in the game.
+
+#### Features
+
+  * **Situational screens.** Loading screens from `BepInEx/config/LoadingScreen/loadingscreen.yaml` (YamlDotNet, new
+    dependency `ValheimModding-YamlDotNet`):
     * portal teleports pick entries by destination biome, respawns by cause of death (hit type, then the dominant
       damage type for hits), everything else by the general list; random without immediate repeats;
     * config problems are logged with line numbers and never stop the rest of the config from loading;
     * a commented example config is created on first start.
-  * Layered layouts: color layers, fixed images, random image pools, the entry image and a caption text layer, each
-    with fit, anchor, offsets, opacity, gradient edges and the scale animation; placement falls back from the entry
-    to the layer, the layout and the global defaults.
-  * Entry captions replace the tip; new setting `[When to show] useTipWhenNoText`.
-  * Server images: a server running the mod shares its config and images; clients download them in the background
-    into `BepInEx/cache/LoadingScreen/` with size, path and hash checks. New settings `[ServerImages] serveToClients`
-    and `downloadFromServer`.
-  * Console command `loadingscreen reload|status`.
-  * Images are checked before decoding (PNG or JPEG, at most 8192 px per side and 16.7 megapixels) and decoded
-    without mipmaps or a CPU copy.
-  * The chosen image is decoded when the death or teleport happens; at most 16 decoded images are kept in memory.
-  * Not yet tested in the game.
+  * **Layered layouts.** Color layers, fixed images, random image pools, the entry image and a caption text layer,
+    each with fit, anchor, offsets, opacity, gradient edges and the scale animation; placement falls back from the
+    entry to the layer, the layout and the global defaults.
+  * **Image folder.** Configurable image folder for `loadingscreen.yaml`, `tips.txt` and images; relative paths start
+    at BepInEx.
+  * **Entry conditions.** `when` with `knownItem`, `hasItem`, `knownRecipe`, `knownBiome`, `globalKey` and
+    `playerKey`, each also as `not...`; an entry is shown only when every condition holds.
+  * **Text-only entries.** Entries may have only a `text`; it is shown over a random plain image.
+  * **Entry captions.** Entry captions replace the tip; new setting `[When to show] useTipWhenNoText`.
+  * **Enemy deaths.** Death screens per enemy: `when.enemy.<creature prefab>` is tried before the damage type and the
+    hit type.
+  * **Order.** `order: random | sequential`, for the whole file or one list.
+  * **Separator layer.** `image: separator` layer and the setting to keep or hide the built-in separator on layout
+    screens.
+  * **Server images.** A server running the mod shares its config and images; clients download them in the
+    background into `BepInEx/cache/LoadingScreen/` with size, path and hash checks. New settings
+    `[ServerImages] serveToClients` and `downloadFromServer`.
+  * **Console command.** `loadingscreen reload|status`.
+
+#### Changes
+
+  * **Appearance in YAML.** Appearance settings moved from the BepInEx cfg to the YAML `defaults` section. Existing
+    cfg appearance values are not migrated; the built-in YAML values preserve the former cfg defaults.
+  * **Setting names.** Settings renamed to plain names in numbered sections, each with a description. Old settings
+    are not migrated.
+
+#### Fixes
+
+  * **White screen.** Fixed a white loading screen when no custom images exist.
+  * **Image checks.** Images are checked before decoding (PNG or JPEG, at most 8192 px per side and 16.7 megapixels)
+    and decoded without mipmaps or a CPU copy.
+  * **Memory use.** The chosen image is decoded when the death or teleport happens; at most 16 decoded images are
+    kept in memory.
 
 ### 0.1.0 (2026-11-20)
 
-  * Modified fork of Intermission 1.10.0 by redseiko (ComfyMods, upstream commit `cc8647b`), changed by Odin_Sons.
-  * Renamed the plugin so it can be installed next to Intermission:
+First release: Intermission renamed so both mods can be installed side by side. No functional changes yet.
+
+#### Features
+
+  * **Fork.** Modified fork of Intermission 1.10.0 by redseiko (ComfyMods, upstream commit `cc8647b`), changed by
+    Odin_Sons.
+  * **New identity.** The plugin is renamed so it can be installed next to Intermission:
     * GUID `Odin_Sons.LoadingScreen`, name, namespace and assembly `LoadingScreen`.
     * Config file `BepInEx/config/Odin_Sons.LoadingScreen.cfg`, image and tip folder `BepInEx/config/LoadingScreen/`.
-  * Build: game assemblies are publicized at build time with `BepInEx.AssemblyPublicizer.MSBuild`; new `BepInExPath`
-    property for BepInEx installs outside the game folder (mod manager profiles).
-  * No functional changes yet.
+  * **Build.** Game assemblies are publicized at build time with `BepInEx.AssemblyPublicizer.MSBuild`; new
+    `BepInExPath` property for BepInEx installs outside the game folder (mod manager profiles).
 
 ## Intermission changelog (upstream)
 
