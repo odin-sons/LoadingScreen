@@ -74,6 +74,18 @@ public class UiTranslationsTests {
   }
 
   [Fact]
+  public void ConfigProblemsFallBackToEnglishAndAcceptOverrides() {
+    UiTranslations translations = UiTranslations.Parse("""
+        German:
+          configProblems: "Probleme in {files}."
+        """);
+
+    Assert.Equal("LoadingScreen found problems in animations.yaml: 1. Details are in BepInEx/LogOutput.log.",
+        translations.FormatConfigProblems("Russian", "animations.yaml: 1"));
+    Assert.Equal("Probleme in animations.yaml: 1.", translations.FormatConfigProblems("German", "animations.yaml: 1"));
+  }
+
+  [Fact]
   public void InvalidYamlFallsBackToBuiltIns() {
     UiTranslations translations = UiTranslations.Parse("Russian: [unfinished");
 

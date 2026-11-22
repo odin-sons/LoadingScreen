@@ -96,8 +96,8 @@ German:
   gameStartProgress: "<b>{percent}%</b>\n<size=-4>({seconds} {unit})</size>"
 ```
 
-The keys are `continuePrompt`, `gameStartProgress`, `secondsUnit`, `connectingStage`, `passwordStage`, and
-`receivingWorldStage`. The progress template accepts `{percent}`,
+The keys are `continuePrompt`, `gameStartProgress`, `secondsUnit`, `connectingStage`, `passwordStage`,
+`receivingWorldStage`, and `configProblems`. The progress template accepts `{percent}`,
 `{seconds}`, and `{unit}`; percent and elapsed seconds are integers. The game-start percentage now follows the
 real scene load operation. Missing or invalid entries keep their built-in
 translations. `loadingscreen reload` re-reads the file. Translations for less common languages welcome review from
@@ -715,6 +715,12 @@ reports problems and from `Info` otherwise. Messages come from one BepInEx sourc
 
 `loadingscreen status` shows what is loaded; `loadingscreen reload` re-reads `loadingscreen.yaml`, the images and
 the selected tip file. A broken YAML file keeps the previously loaded config.
+
+When a load or reload logs warnings or errors for `loadingscreen.yaml`, `animations.yaml` or `translations.yaml`, the
+console shows one line with the number of problems per file, for example
+`LoadingScreen found problems in loadingscreen.yaml: 2, translations.yaml: 1. Details are in BepInEx/LogOutput.log.`
+The main menu shows the same line once in a dismissible popup when the console is closed. Its text uses the
+`configProblems` translation key, where `{files}` is the per-file list. Problems hidden by `Log level` are not counted.
 
 ## Server images
 
