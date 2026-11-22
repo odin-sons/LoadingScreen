@@ -169,6 +169,7 @@ public sealed class LayerHost : MonoBehaviour {
     CurrentSelection = selection;
     IsShowing = true;
     _animationStartedAt = Time.realtimeSinceStartup - animationElapsed;
+    Canvas.ForceUpdateCanvases();
     Relayout();
     StartAnimations(animationElapsed);
     _effects.Apply(config.Defaults, layout);
@@ -229,6 +230,12 @@ public sealed class LayerHost : MonoBehaviour {
 
   void LateUpdate() {
     if (IsShowing && _root.rect.size != _lastSize) {
+      Relayout();
+    }
+  }
+
+  void OnRectTransformDimensionsChange() {
+    if (IsShowing && _root && _root.rect.size != _lastSize) {
       Relayout();
     }
   }
@@ -298,6 +305,7 @@ public sealed class LayerHost : MonoBehaviour {
     }
 
     TMP_Text text = Instantiate(template, container, worldPositionStays: false);
+    LoadingManager.MatchTipFont(text);
     text.name = "Caption";
     text.enabled = true;
     text.gameObject.SetActive(true);

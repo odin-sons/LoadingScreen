@@ -21,6 +21,9 @@ public static class LoadingManager {
   public static LoadingSession Session { get; } = new();
 
   static TMP_Text _cachedTipText;
+  static TMP_FontAsset _tipFont;
+  static Material _tipMaterial;
+  static FontStyles _tipStyle;
   static TMP_Text _continuePrompt;
   static Image _cachedLoadingImage;
   static Image _cachedLoadingBackground;
@@ -231,6 +234,21 @@ public static class LoadingManager {
         .SetPosition(new(defaults.X, defaults.Bottom));
   }
 
+  public static void MatchTipFont(TMP_Text text) {
+    if (!text) return;
+    if (!_tipFont) {
+      _tipFont = text.font;
+      _tipMaterial = text.fontSharedMaterial;
+      _tipStyle = text.fontStyle;
+      return;
+    }
+    if (text.font != _tipFont) {
+      text.font = _tipFont;
+      text.fontSharedMaterial = _tipMaterial;
+    }
+    text.fontStyle = _tipStyle;
+  }
+
   public static void SetupTipText(TMP_Text tipText = default) {
     if (tipText) {
       _cachedTipText = tipText;
@@ -240,6 +258,7 @@ public static class LoadingManager {
       LoadingScreen.LogError($"Could not find a TipText to setup!");
     }
 
+    MatchTipFont(tipText);
     TipDefaults defaults = ScreenConfigLoader.Current.Defaults.Tip;
     tipText
         .SetAlignment(TextAlignmentOptions.Top)
