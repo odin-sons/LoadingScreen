@@ -51,7 +51,9 @@ public sealed class UiTranslations {
     ("Latvian", "Nospiediet jebkuru taustiņu, lai turpinātu", "s")
   ];
 
-  static readonly string[] KeyNames = ["continuePrompt", "gameStartProgress", "secondsUnit"];
+  static readonly string[] KeyNames = [
+    "continuePrompt", "gameStartProgress", "secondsUnit", "connectingStage", "passwordStage", "receivingWorldStage"
+  ];
   static readonly Dictionary<string, Dictionary<string, string>> Defaults = BuiltIn.ToDictionary(
       item => LanguageText.Code("Game", item.Language),
       item => new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase) {
@@ -59,6 +61,12 @@ public sealed class UiTranslations {
         ["gameStartProgress"] = ProgressTemplate,
         ["secondsUnit"] = item.Unit
       }, StringComparer.OrdinalIgnoreCase);
+
+  static UiTranslations() {
+    Defaults["en"]["connectingStage"] = "Connecting";
+    Defaults["en"]["passwordStage"] = "Password";
+    Defaults["en"]["receivingWorldStage"] = "Receiving the world";
+  }
 
   readonly Dictionary<string, Dictionary<string, string>> _overrides = new(StringComparer.OrdinalIgnoreCase);
 

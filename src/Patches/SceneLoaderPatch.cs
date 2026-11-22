@@ -34,6 +34,10 @@ static class SceneLoaderPatch {
   static Vector2 _spinnerSize;
   internal static Sprite SpinnerSprite => _spinnerSprite;
   internal static Vector2 SpinnerSize => _spinnerSize;
+  internal static TMP_Text ProgressTextTemplate => _loadingText
+      ? _loadingText : _sceneLoader ? _sceneLoader.savingNotification.GetComponentInChildren<TMP_Text>(true) : null;
+  internal static ProgressValue CurrentProgress => _sceneLoader && _sceneLoader._sceneLoadOperation != null
+      ? ProgressMath.Scene(_sceneLoader._sceneLoadOperation.Progress) : new(null);
   static bool _spinnerWasEnabled;
   static Vector2 _indicatorAnchorMin;
   static Vector2 _indicatorAnchorMax;
@@ -186,8 +190,10 @@ static class SceneLoaderPatch {
     }
 
     if (SceneLoaderShowProgressText.Value && _loadingText) {
-      _loadingText.text = UiText.FormatProgress(
-          Mathf.RoundToInt(__instance._fakeProgress * 100f), Mathf.FloorToInt(time - _startTime));
+      float? progress = CurrentProgress.Fraction;
+      _loadingText.text = progress.HasValue
+          ? UiText.FormatProgress(Mathf.RoundToInt(progress.Value * 100f), Mathf.FloorToInt(time - _startTime))
+          : string.Empty;
     }
   }
 

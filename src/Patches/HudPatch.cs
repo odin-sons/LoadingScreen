@@ -76,6 +76,7 @@ static class HudPatch {
   static void UpdateBlackScreenPostfix(Hud __instance) {
     if (!IsModEnabled.Value || _sleepExitHolding) return;
     bool sleeping = ShowLoadingScreenWhileSleeping.Value && Player.m_localPlayer && Player.m_localPlayer.IsSleeping();
+    if (sleeping && !_wasSleeping) ProgressReader.ResetSleep();
     bool newScreen = !_loadingScreenState || sleeping != _wasSleeping;
     _wasSleeping = sleeping;
 

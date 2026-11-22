@@ -8,7 +8,14 @@ public enum LayerKind {
   Image,
   Color,
   Text,
-  Spinner
+  Spinner,
+  Progress
+}
+
+public enum ProgressStyle {
+  Bar,
+  Ring,
+  Percent
 }
 
 public enum SpinnerStyle {
@@ -40,6 +47,8 @@ public sealed class Layer {
   public bool GameSeparator { get; set; }
   public bool HasTint { get; set; }
   public SpinnerStyle SpinnerStyle { get; set; }
+  public ProgressStyle ProgressStyle { get; set; }
+  public float? ProgressSize { get; set; }
   public AnimationSpec Animation { get; set; }
   public List<string> Images { get; } = [];
   public ColorValue Color { get; set; }

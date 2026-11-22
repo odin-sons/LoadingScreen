@@ -31,7 +31,7 @@ on Unity, but **the mod has not been tested in the game yet**. See the
 - **Situational screens.** A portal teleport shows an image chosen for the destination biome; a respawn first tries
   the cause of death, then the biome where the player died; everything else uses the general list. Within a list,
   one entry is picked at random without immediate repeats.
-- **Layered layouts.** A screen is a stack of layers (solid colors, fixed images, random image pools, spinners, the chosen
+- **Layered layouts.** A screen is a stack of layers (solid colors, fixed images, random image pools, spinners, progress, the chosen
   entry's image, the caption), each sized and positioned on its own, with gradient edges and enter, idle and exit animations.
   Two presets are included in the example config.
 - **Captions.** An entry can carry plain or translated text; without it, a tip from the selected language's tip file is shown.
@@ -96,8 +96,10 @@ German:
   gameStartProgress: "<b>{percent}%</b>\n<size=-4>({seconds} {unit})</size>"
 ```
 
-The keys are `continuePrompt`, `gameStartProgress`, and `secondsUnit`. The progress template accepts `{percent}`,
-`{seconds}`, and `{unit}`; percent and elapsed seconds are integers. Missing or invalid entries keep their built-in
+The keys are `continuePrompt`, `gameStartProgress`, `secondsUnit`, `connectingStage`, `passwordStage`, and
+`receivingWorldStage`. The progress template accepts `{percent}`,
+`{seconds}`, and `{unit}`; percent and elapsed seconds are integers. The game-start percentage now follows the
+real scene load operation. Missing or invalid entries keep their built-in
 translations. `loadingscreen reload` re-reads the file. Translations for less common languages welcome review from
 native speakers.
 
@@ -511,6 +513,10 @@ layouts:
         place: { fit: { width: 30% }, position: { anchor: top, y: 8% } }
       - spinner: ring        # also accepts hammer, dots, or a relative image path
         place: { fit: { width: 48px }, position: { anchor: bottom, y: -20% } }
+      - progress: bar         # also accepts ring or percent
+        color: "#FFFFFF"
+        size: 16
+        place: { fit: { width: 40% }, position: { anchor: bottom, y: -12% } }
       - text: caption          # the entry text or a tip
         size: 28
         color: "#FFFFFF"
@@ -527,8 +533,8 @@ value wins: entry, then layer, then layout, then defaults. For example, `default
 
 Layer `image` accepts one path, a list of paths (one picked per screen), `entry` (the selected entry's image), or
 `separator` (the game's ornament line). The exact extensionless values `entry` and `separator` are keywords;
-use `entry.png` or `separator.png` for files with those names. A layer has one content key: `image`, `text`, or
-`color`, or `spinner`. On an `image: separator` layer, `color` is an optional tint.
+use `entry.png` or `separator.png` for files with those names. A layer has one content key: `image`, `text`,
+`color`, `spinner`, or `progress`. On an `image: separator` layer, `color` is an optional tint.
 
 A `spinner` layer works in layouts selected for game start, portal, death, and sleep screens. Use `spinner: hammer`
 for Valheim's loading indicator sprite, `spinner: ring` or `spinner: dots` for generated graphics, or
@@ -536,6 +542,16 @@ for Valheim's loading indicator sprite, `spinner: ring` or `spinner: dots` for g
 image layers. Spinner layers use `place` like images and keep their native size unless `fit` is set. They use
 `spin` as their idle animation by default; `animation: pulse` or an `animation` phase mapping replaces it.
 An explicit spinner layer on the game start layout replaces the legacy game start indicator.
+
+Use `progress: bar`, `progress: ring`, or `progress: percent` in any layout. It uses `place` like an image;
+`color` sets its color and `size` sets bar height, ring diameter, or percentage font size. Defaults are a 240 px
+bar, 96 px ring, and 28 point percentage. `place.fit` can set a different width or height. Game start follows the
+real scene load operation. Portal and death wait for the target zone, then count instantiated nearby objects by
+the same rules as Valheim's area readiness check. The zone-ready transition moves to 50%; the remaining half
+tracks the object share. At 100%, the layer softly pulses while Valheim holds a minimum teleport or respawn delay.
+Sleep tracks game time toward the next morning. While joining a server, any progress style displays the localized
+connecting, password, or receiving-world stage instead of a percentage. If no loading signal is available, the
+progress layer is hidden.
 
 | Option | Values |
 |---|---|
@@ -640,7 +656,7 @@ without a sampled custom image, the YAML default background is used.
 `[6 - Accessibility] Readable text` is a personal setting, off by default. When enabled, it preserves the selected
 text hue while adjusting its lightness toward WCAG AA 4.5:1 contrast against the effective background; if needed,
 it strengthens the text box and renders the text opaque. `[6 - Accessibility] Minimum text size` is also personal. Its default `0` disables the
-minimum; positive values apply to text layers, tips, and captions.
+minimum; positive values apply to text layers, tips, captions, and progress labels.
 
 Layouts show the game's sleep text and spinner by default. Set `showSleepUi: false` on the layout selected by a
 `sleep` entry to hide both; add a `text: caption` layer to display the entry text or a tip in their place. Other

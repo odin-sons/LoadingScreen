@@ -2,6 +2,10 @@
 
 ### Unreleased
 
+  * Added `progress` layers with bar, ring, and percentage styles. Game start uses real scene-load progress;
+    portal and death use destination-zone and nearby-object readiness; sleep uses game time. Server joining shows
+    localized connection stages. Ready area progress stays at 100% with a soft pulse during game delays.
+
   * Added `spinner` layers for game start, portal, death and sleep layouts, with Valheim's hammer sprite,
     generated ring and dots, or a custom image. Spinners use `place` and spin by default; layer animations can
     replace the spin. Existing `defaults.spinner` settings keep their game start behavior through an implicit

@@ -25,7 +25,7 @@ public sealed class ConfigParser {
     "place", "background", "tint", "vignette", "mask", "animation", "tip", "continueprompt", "separator", "spinner"
   ];
   static readonly string[] _layerKeys = [
-    "id", "color", "image", "text", "spinner", "size", "align", "background", "place", "animation"
+    "id", "color", "image", "text", "spinner", "progress", "size", "align", "background", "place", "animation"
   ];
   static readonly string[] _layoutKeys = ["layers", "sound", "showsleepui", "vignette", "mask", "place"];
   static readonly string[] _entryKeys = ["image", "sound", "voice", "text", "layout", "place", "when"];
@@ -218,10 +218,33 @@ public sealed class ConfigParser {
     YamlNode image = Child(mapping, "image");
     YamlNode text = Child(mapping, "text");
     YamlNode spinner = Child(mapping, "spinner");
+    YamlNode progress = Child(mapping, "progress");
 
-    if ((image != null ? 1 : 0) + (text != null ? 1 : 0) + (spinner != null ? 1 : 0) > 1) {
-      Warn(node, $"{where}: use only one of 'image', 'text' and 'spinner' in a layer, ignored");
+    if ((image != null ? 1 : 0) + (text != null ? 1 : 0) + (spinner != null ? 1 : 0)
+        + (progress != null ? 1 : 0) > 1) {
+      Warn(node, $"{where}: use only one of 'image', 'text', 'spinner' and 'progress' in a layer, ignored");
       return null;
+    }
+
+    if (progress != null) {
+      if (!Enum.TryParse(Scalar(progress), ignoreCase: true, out ProgressStyle style)
+          || !Enum.IsDefined(typeof(ProgressStyle), style)) {
+        Warn(progress, $"{where}: 'progress' needs bar, ring or percent; layer ignored");
+        return null;
+      }
+      layer.Kind = LayerKind.Progress;
+      layer.ProgressStyle = style;
+      layer.Color = ParseColor(color, where, "color") ?? new(255, 255, 255);
+      YamlNode progressSize = Child(mapping, "size");
+      if (!IsNull(progressSize)) {
+        if (float.TryParse(Scalar(progressSize), NumberStyles.Float, CultureInfo.InvariantCulture, out float sizeValue)
+            && !float.IsInfinity(sizeValue) && !float.IsNaN(sizeValue) && sizeValue > 0f) {
+          layer.ProgressSize = sizeValue;
+        } else {
+          Warn(progressSize, $"{where}: 'size' must be positive");
+        }
+      }
+      return layer;
     }
 
     if (spinner != null) {
