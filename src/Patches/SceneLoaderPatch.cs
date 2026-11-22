@@ -32,8 +32,10 @@ static class SceneLoaderPatch {
   static LoadingIndicator _indicator;
   static Sprite _spinnerSprite;
   static Vector2 _spinnerSize;
+  static Vector2 _spinnerCenter;
   internal static Sprite SpinnerSprite => _spinnerSprite;
   internal static Vector2 SpinnerSize => _spinnerSize;
+  internal static Vector2 SpinnerCenter => _spinnerCenter;
   internal static TMP_Text ProgressTextTemplate => _loadingText
       ? _loadingText : _sceneLoader ? _sceneLoader.savingNotification.GetComponentInChildren<TMP_Text>(true) : null;
   internal static ProgressValue CurrentProgress => _sceneLoader && _sceneLoader._sceneLoadOperation != null
@@ -123,6 +125,10 @@ static class SceneLoaderPatch {
     _spinnerWasEnabled = _indicator.m_spinner.enabled;
     _spinnerSprite = _indicator.m_spinner.sprite;
     _spinnerSize = _indicator.m_spinner.rectTransform.rect.size;
+    RectTransform spinnerRect = _indicator.m_spinner.rectTransform;
+    Vector3 spinnerCenter = indicatorRect.InverseTransformPoint(spinnerRect.TransformPoint(spinnerRect.rect.center));
+    _spinnerCenter = new(
+        spinnerCenter.x - indicatorRect.rect.center.x, spinnerCenter.y - indicatorRect.rect.yMin);
 
     if (SceneLoaderUseLoadingImages.Value && HasImages()) {
       sceneLoader._showLogos = false;
