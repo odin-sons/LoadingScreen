@@ -11,7 +11,7 @@ public static class ScreenConfigLoader {
   public const string ConfigFileName = "loadingscreen.yaml";
 
   public static ScreenConfig Current { get; private set; } = new();
-  public static EntrySelector Selector { get; private set; } = new(new ScreenConfig());
+  public static EntrySelector Selector { get; private set; } = new(new ScreenConfig(), debug: LoadingScreen.LogDebug);
   public static string PluginDir { get; private set; }
   public static ScreenConfig LocalConfig { get; private set; } = new();
   public static bool IsUsingServerConfig { get; private set; }
@@ -26,6 +26,18 @@ public static class ScreenConfigLoader {
   public static bool IsImageAvailable(string relativePath) {
     string path = ResolveImagePath(relativePath);
     return path != null && File.Exists(path);
+  }
+
+  static bool IsEntryUsable(Entry entry) {
+    if (entry.Image != null && !IsImageAvailable(entry.Image)) {
+      LoadingScreen.LogDebug($"Skipping entry {entry.Image}: image is unavailable.");
+      return false;
+    }
+    if (!Conditions.AreMet(entry.Conditions, PlayerConditions.Instance)) {
+      LoadingScreen.LogDebug($"Skipping entry {entry.Image ?? "(no image)"}: conditions are not met.");
+      return false;
+    }
+    return true;
   }
 
   public static string LocalImagePath(string relativePath) {
@@ -142,8 +154,8 @@ public static class ScreenConfigLoader {
     Current = config;
     Selector = new(
         Current,
-        entry => (entry.Image == null || IsImageAvailable(entry.Image))
-            && Conditions.AreMet(entry.Conditions, PlayerConditions.Instance));
+        IsEntryUsable,
+        debug: LoadingScreen.LogDebug);
     LoadingManager.RefreshAppearance();
     ImageScaleUtils.RefreshAppearance();
     SceneLoaderPatch.RefreshAppearance();

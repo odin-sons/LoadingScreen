@@ -264,6 +264,7 @@ public sealed class LoadingAudio : MonoBehaviour {
     }
     _fade = _handover.Opacity(ScreenOpacity());
     source.volume = music ? MusicVolume() : VoiceVolume();
+    LoadingScreen.LogDebug($"Playing {(music ? "music" : "voice")} {path} at volume {source.volume:0.###} (configured {(music ? MusicVolumePercent.Value : VoiceVolumePercent.Value)}%).");
     source.clip = clip;
     source.Play();
     if (music) {

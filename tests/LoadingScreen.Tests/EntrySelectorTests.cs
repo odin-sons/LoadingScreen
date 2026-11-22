@@ -9,6 +9,30 @@ using LoadingScreen.Model;
 using Xunit;
 
 public class EntrySelectorTests {
+  [Fact]
+  public void DebugExplainsSkippedListAndGeneralFallback() {
+    ScreenConfig config = Config();
+    List<string> messages = [];
+    EntrySelector selector = new(config, entry => entry.Image != "s1.jpg", debug: messages.Add);
+
+    Selection selected = selector.Select(Situation.Sleep);
+
+    Assert.Equal("general", selected.List.Name);
+    Assert.Contains(messages, message => message.Contains("Skipped sleep: no usable entries"));
+    Assert.Contains(messages, message => message.Contains("general fallback"));
+  }
+
+  [Fact]
+  public void DebugExplainsUnmatchedSituationKey() {
+    List<string> messages = [];
+    EntrySelector selector = new(Config(), debug: messages.Add);
+
+    selector.Select(Situation.Teleport("Plains"));
+
+    Assert.Contains(messages, message => message.Contains("No biome list for destination Plains"));
+    Assert.Contains(messages, message => message.Contains("general fallback for Teleport(Plains)"));
+  }
+
   static EntryList List(string name, params string[] images) {
     EntryList list = new() { Name = name };
     list.Entries.AddRange(images.Select(image => new Entry { Image = image }));

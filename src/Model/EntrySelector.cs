@@ -52,28 +52,35 @@ public sealed class EntrySelector {
   readonly ScreenConfig _config;
   readonly Func<Entry, bool> _isUsable;
   readonly Random _random;
+  readonly Action<string> _debug;
   readonly Dictionary<EntryList, Entry> _lastPicked = [];
 
-  public EntrySelector(ScreenConfig config, Func<Entry, bool> isUsable = null, Random random = null) {
+  public EntrySelector(ScreenConfig config, Func<Entry, bool> isUsable = null, Random random = null,
+      Action<string> debug = null) {
     _config = config ?? new ScreenConfig();
     _isUsable = isUsable ?? (_ => true);
     _random = random ?? new Random();
+    _debug = debug;
   }
 
   public Selection Select(Situation situation) {
-    foreach (EntryList list in Candidates(situation)) {
+    foreach ((EntryList list, string reason) in Candidates(situation)) {
       Selection selection = SelectFromList(list);
       if (selection != null) {
+        _debug?.Invoke($"Selected {selection.Entry.Image} from {list.Name}: {reason}; order {list.Order ?? _config.Order}.");
         return selection;
       }
+      _debug?.Invoke($"Skipped {list.Name}: no usable entries for {situation}.");
     }
 
     return null;
   }
 
   public Selection SelectNext(Selection current, Situation situation) {
-    if (current != null && Candidates(situation).Any(list => ReferenceEquals(list, current.List))) {
-      return SelectFromList(current.List);
+    if (current != null && Candidates(situation).Any(candidate => ReferenceEquals(candidate.List, current.List))) {
+      Selection next = SelectFromList(current.List);
+      if (next != null) _debug?.Invoke($"Selected {next.Entry.Image} from {current.List.Name}: continuing the same list.");
+      return next;
     }
 
     return Select(situation);
@@ -92,31 +99,33 @@ public sealed class EntrySelector {
     _lastPicked.Clear();
   }
 
-  IEnumerable<EntryList> Candidates(Situation situation) {
+  IEnumerable<(EntryList List, string Reason)> Candidates(Situation situation) {
     if (situation.Kind == SituationKind.Sleep) {
-      yield return _config.Sleep;
+      yield return (_config.Sleep, "sleep situation");
     }
 
     if (situation.Kind == SituationKind.Death && situation.AttackerPrefab != null
         && _config.Enemy.TryGetValue(situation.AttackerPrefab, out EntryList enemy)) {
-      yield return enemy;
+      yield return (enemy, $"attacker {situation.AttackerPrefab}");
+    } else if (situation.Kind == SituationKind.Death && situation.AttackerPrefab != null) {
+      _debug?.Invoke($"No enemy list for attacker {situation.AttackerPrefab}.");
     }
 
-    Dictionary<string, EntryList> specific = situation.Kind switch {
-      SituationKind.Teleport => _config.Teleport,
-      SituationKind.Death => _config.Death,
-      _ => null,
-    };
-
-    if (specific != null) {
+    if (situation.Kind == SituationKind.Death) {
       foreach (string key in situation.Keys) {
-        if (key != null && specific.TryGetValue(key, out EntryList list)) {
-          yield return list;
-        }
+        if (key == null) continue;
+        if (_config.Death.TryGetValue(key, out EntryList list)) yield return (list, $"death cause {key}");
+        else _debug?.Invoke($"No death list for cause {key}.");
+      }
+    } else if (situation.Kind == SituationKind.Teleport) {
+      foreach (string key in situation.Keys) {
+        if (key == null) continue;
+        if (_config.Teleport.TryGetValue(key, out EntryList list)) yield return (list, $"destination biome {key}");
+        else _debug?.Invoke($"No biome list for destination {key}.");
       }
     }
 
-    yield return _config.General;
+    yield return (_config.General, $"general fallback for {situation}");
   }
 
   Entry Pick(EntryList list) {

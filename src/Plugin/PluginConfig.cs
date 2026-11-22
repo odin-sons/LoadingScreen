@@ -9,6 +9,7 @@ public static class PluginConfig {
   public static ConfigEntry<bool> IsModEnabled { get; private set; }
   public static ConfigEntry<string> ImageFolder { get; private set; }
   public static ConfigEntry<string> TextLanguage { get; private set; }
+  public static ConfigEntry<ModLogLevel> LogLevel { get; private set; }
   public static ConfigEntry<int> ChangeImageEverySeconds { get; private set; }
   public static ConfigEntry<int> ChangeTipEverySeconds { get; private set; }
 
@@ -61,6 +62,13 @@ public static class PluginConfig {
             "Game",
             "Language for tips and entry text. Game follows Valheim's language; enter an ISO language code "
                 + "such as ru or pt-BR to override it. Unknown codes use the game language. [Not Synced with Server]");
+
+    LogLevel =
+        config.BindInOrder(
+            General,
+            "Log level",
+            ModLogLevel.Warning,
+            "Show LoadingScreen messages at this level and above: Error, Warning, Info, or Debug. [Not Synced with Server]");
 
     ShareScreensWithPlayers =
         config.BindInOrder(
@@ -171,6 +179,7 @@ public static class PluginConfig {
     sync.Register(IsModEnabled);
     sync.Register(ImageFolder, clientControlled: true);
     sync.Register(TextLanguage, clientControlled: true);
+    sync.Register(LogLevel, clientControlled: true);
     sync.Register(SceneLoaderUseLoadingImages, clientControlled: true);
     sync.Register(SceneLoaderShowProgressText, clientControlled: true);
     sync.Register(ShareScreensWithPlayers);

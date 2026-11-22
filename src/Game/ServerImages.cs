@@ -501,6 +501,7 @@ public static class ServerImages {
 
       if (!File.Exists(CacheFile(next))) {
         _downloading = next;
+        LoadingScreen.LogDebug($"Downloading server file {next.Path} ({next.Size} bytes, {next.ChunkCount} chunks).");
         _downloadBuffer = new MemoryStream((int) next.TransferSize);
         _nextChunk = 0;
         RequestChunk();
@@ -519,6 +520,7 @@ public static class ServerImages {
     ZPackage request = new();
     request.Write(_downloading.Hash);
     request.Write(_nextChunk);
+    LoadingScreen.LogDebug($"Requesting server file {_downloading.Path} chunk {_nextChunk + 1}/{_downloading.ChunkCount}.");
     _serverRpc.Invoke(RpcRequestChunk, request);
   }
 
@@ -616,6 +618,7 @@ public static class ServerImages {
     }
 
     _downloadBuffer.Write(chunk, 0, chunk.Length);
+    LoadingScreen.LogDebug($"Received server file {_downloading.Path} chunk {index + 1}/{_downloading.ChunkCount} ({chunk.Length} bytes).");
     _nextChunk++;
     _retries = 0;
 
@@ -663,6 +666,7 @@ public static class ServerImages {
       }
 
       _downloadedCount++;
+      LoadingScreen.LogDebug($"Saved server file {file.Path} ({file.Size} bytes).");
     } catch (Exception exception) {
       _failedCount++;
       LoadingScreen.LogWarning($"Could not save server image {file.Path}: {exception.Message}");
