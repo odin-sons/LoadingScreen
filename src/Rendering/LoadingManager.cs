@@ -487,11 +487,14 @@ public static class LoadingManager {
     if (show && !_continuePrompt) {
       _continuePrompt = Object.Instantiate(hud.m_loadingTip, hud.m_loadingProgress.transform);
       _continuePrompt.name = "ContinuePrompt";
-      _continuePrompt.SetText("Press any key to continue");
       SetupContinuePromptAppearance();
     }
 
     if (_continuePrompt) {
+      if (show) {
+        string prompt = UiText.Get("continuePrompt");
+        if (_continuePrompt.text != prompt) _continuePrompt.SetText(prompt);
+      }
       _continuePrompt.gameObject.SetActive(show);
     }
   }
