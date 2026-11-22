@@ -71,11 +71,11 @@ public static class ScreenConfigLoader {
     return PluginDir == null ? null : Path.Combine(PluginDir, relativePath.Replace('/', Path.DirectorySeparatorChar));
   }
 
-  public static void UseServerConfig(ScreenConfig config, Func<string, string> resolver) {
+  public static void UseServerConfig(ScreenConfig config, Func<string, string> resolver, int warnings) {
     IsUsingServerConfig = true;
     Activate(config, resolver);
-    LoadingScreen.LogInfo(LogContext.Message("Activated loading screen configuration.",
-        ("side", "client"), ("source", "server"), ("summary", Summary())));
+    LoadingScreen.LogMessage(LogContext.Message("Activated loading screen configuration.",
+        ("side", "client"), ("source", "server"), ("warnings", warnings), ("summary", Summary())), warnings);
   }
 
   public static void UseLocalConfig() {
@@ -187,8 +187,8 @@ public static class ScreenConfigLoader {
       Activate(LocalConfig, LocalImagePath);
     }
 
-    LoadingScreen.LogInfo(LogContext.Message("Loaded loading screen configuration.",
-        ("file", ConfigFileName), ("source", "local"), ("summary", Summary())));
+    LoadingScreen.LogMessage(LogContext.Message("Loaded loading screen configuration.",
+        ("file", ConfigFileName), ("source", "local"), ("summary", Summary())), _lastWarningCount);
     ServerImages.OnLocalConfigLoaded();
 
     return true;

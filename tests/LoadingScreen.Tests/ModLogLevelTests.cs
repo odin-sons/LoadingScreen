@@ -28,6 +28,21 @@ public class ModLogLevelTests {
     Assert.Equal(expected, ModLogFilter.Threshold(severity));
   }
 
+  [Theory]
+  [InlineData(0, ModLogLevel.Info)]
+  [InlineData(1, ModLogLevel.Warning)]
+  [InlineData(12, ModLogLevel.Warning)]
+  public void MessageThresholdDependsOnReportedProblems(int problems, ModLogLevel expected) {
+    Assert.Equal(expected, ModLogFilter.Threshold(LogSeverity.Message, problems));
+  }
+
+  [Fact]
+  public void CleanSummaryIsHiddenByTheDefaultLevel() {
+    Assert.False(ModLogFilter.Allows(ModLogLevel.Warning, LogSeverity.Message));
+    Assert.True(ModLogFilter.Allows(ModLogLevel.Warning, LogSeverity.Message, problems: 2));
+    Assert.False(ModLogFilter.Allows(ModLogLevel.Error, LogSeverity.Message, problems: 2));
+  }
+
   [Fact]
   public void FatalPassesTheStrictestFilter() {
     Assert.True(ModLogFilter.Allows(ModLogLevel.Error, LogSeverity.Fatal));

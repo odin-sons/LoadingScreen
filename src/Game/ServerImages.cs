@@ -460,7 +460,7 @@ public static class ServerImages {
 
     Directory.CreateDirectory(CacheDir);
     PruneCache();
-    ScreenConfigLoader.UseServerConfig(result.Config, CachedPath);
+    ScreenConfigLoader.UseServerConfig(result.Config, CachedPath, result.Warnings.Count);
 
     _downloadQueue.Clear();
 

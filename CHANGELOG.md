@@ -47,6 +47,8 @@ cfg and clearer logs.
     setting states whether it is synchronized. One synced `Share screens with players` switch controls transfer.
   * **Fatal startup errors.** Failures that disable the mod (configuration or image folder setup, Harmony patching)
     are logged at BepInEx `Fatal` level with their context and stack trace; other errors stay at `Error`.
+  * **Load summary.** The configuration summary after each load is logged at BepInEx `Message` level. It appears at
+    `Log level` Warning and above when it reports problems, and at Info and above otherwise.
 
 #### Fixes
 
