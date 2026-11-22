@@ -73,7 +73,7 @@ public static class PluginConfig {
             General,
             "Log level",
             ModLogLevel.Warning,
-            "Show LoadingScreen messages at this level and above: Error, Warning, Info, or Debug. [Not Synced with Server]");
+            "Show LoadingScreen messages at this level and above: Error, Warning, Info, or Debug. Debug also needs Debug in LogLevels under [Logging.Disk] in BepInEx.cfg. [Not Synced with Server]");
 
     ShareScreensWithPlayers =
         config.BindInOrder(
