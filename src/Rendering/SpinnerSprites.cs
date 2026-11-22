@@ -8,11 +8,13 @@ static class SpinnerSprites {
   const int Size = 64;
   static Sprite _ring;
   static Sprite _dots;
+  static Sprite _progressRing;
 
   public static Sprite Ring => _ring ? _ring : _ring = Create(SpinnerStyle.Ring);
   public static Sprite Dots => _dots ? _dots : _dots = Create(SpinnerStyle.Dots);
+  public static Sprite ProgressRing => _progressRing ? _progressRing : _progressRing = Create(SpinnerStyle.Ring, fullRing: true);
 
-  static Sprite Create(SpinnerStyle style) {
+  static Sprite Create(SpinnerStyle style, bool fullRing = false) {
     Texture2D texture = new(Size, Size, TextureFormat.RGBA32, false) {
       name = $"LoadingScreen-{style}",
       filterMode = FilterMode.Bilinear,
@@ -24,7 +26,8 @@ static class SpinnerSprites {
       for (int x = 0; x < Size; x++) {
         float dx = x + 0.5f - Size / 2f;
         float dy = y + 0.5f - Size / 2f;
-        float alpha = style == SpinnerStyle.Ring ? RingAlpha(dx, dy) : DotsAlpha(dx, dy);
+        float alpha = fullRing ? SolidRingAlpha(dx, dy)
+            : style == SpinnerStyle.Ring ? RingAlpha(dx, dy) : DotsAlpha(dx, dy);
         pixels[y * Size + x] = new(255, 255, 255, (byte) Mathf.RoundToInt(alpha * 255f));
       }
     }
@@ -35,11 +38,15 @@ static class SpinnerSprites {
   }
 
   static float RingAlpha(float dx, float dy) {
-    float radius = Mathf.Sqrt(dx * dx + dy * dy);
-    float edge = Mathf.Clamp01(Mathf.Min(radius - 17f, 23f - radius));
+    float edge = SolidRingAlpha(dx, dy);
     float angle = Mathf.Atan2(dy, dx) / (2f * Mathf.PI);
     if (angle < 0f) angle += 1f;
     return edge * Mathf.Clamp01((angle - 0.1f) / 0.75f);
+  }
+
+  static float SolidRingAlpha(float dx, float dy) {
+    float radius = Mathf.Sqrt(dx * dx + dy * dy);
+    return Mathf.Clamp01(Mathf.Min(radius - 17f, 23f - radius));
   }
 
   static float DotsAlpha(float dx, float dy) {

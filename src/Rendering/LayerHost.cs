@@ -40,6 +40,16 @@ public sealed class LayerHost : MonoBehaviour {
     public Vector2 BasePosition;
   }
 
+  sealed class ProgressVisual {
+    public RectTransform Rect;
+    public Image Track;
+    public Image Fill;
+    public TMP_Text Label;
+    public CanvasGroup Pulse;
+    public ProgressStyle Style;
+    public Color Color;
+  }
+
   const float TextBackgroundPadding = 12f;
 
   static readonly Dictionary<Layer, string> _lastPoolPick = [];
@@ -48,7 +58,11 @@ public sealed class LayerHost : MonoBehaviour {
   TMP_Text _hiddenTemplate;
 
   readonly List<PlacedImage> _placed = [];
+  readonly List<ProgressVisual> _progress = [];
   readonly List<AnimatedLayer> _animated = [];
+  static Sprite _progressSprite;
+  LoadingStage _progressStage;
+  Situation _progressSituation;
   RectTransform _root;
   ScreenEffectOverlay _effects;
   Graphic _vanillaImage;
@@ -124,7 +138,8 @@ public sealed class LayerHost : MonoBehaviour {
   }
 
   public bool Show(Selection selection, string caption = null, TMP_Text textTemplate = null,
-      float animationElapsed = 0f, bool continued = false, bool gameStart = false) {
+      float animationElapsed = 0f, bool continued = false, bool gameStart = false,
+      LoadingStage stage = LoadingStage.Hud, Situation situation = default) {
     Clear();
 
     if (selection == null) {
@@ -139,6 +154,8 @@ public sealed class LayerHost : MonoBehaviour {
             : DefaultLayout;
 
     gameObject.SetActive(true);
+    _progressStage = stage;
+    _progressSituation = situation;
 
     bool drewEntryImage = false;
 
@@ -158,6 +175,11 @@ public sealed class LayerHost : MonoBehaviour {
 
       if (layer.Kind == LayerKind.Spinner) {
         AddSpinnerLayer(layer, layout);
+        continue;
+      }
+
+      if (layer.Kind == LayerKind.Progress) {
+        AddProgressLayer(layer, layout, textTemplate ? textTemplate : SceneLoaderPatch.ProgressTextTemplate);
         continue;
       }
 
@@ -206,7 +228,8 @@ public sealed class LayerHost : MonoBehaviour {
     CustomAssets.Pin(
         this,
         _placed
-            .Where(placed => placed.Layer.Kind != LayerKind.Spinner || placed.Layer.SpinnerStyle == SpinnerStyle.Image)
+            .Where(placed => placed.Layer.Kind != LayerKind.Progress
+                && (placed.Layer.Kind != LayerKind.Spinner || placed.Layer.SpinnerStyle == SpinnerStyle.Image))
             .Select(placed => placed.Rect.GetComponent<Image>().sprite)
             .Where(sprite => sprite != LoadingManager.SeparatorSprite));
     _layoutShowsSeparator = layout.ShowsSeparator;
@@ -221,6 +244,7 @@ public sealed class LayerHost : MonoBehaviour {
     Canvas.ForceUpdateCanvases();
     Relayout();
     RenderAnimations(Time.realtimeSinceStartup);
+    UpdateProgress(Time.realtimeSinceStartup);
     _effects.Apply(config.Defaults, layout);
     return true;
   }
@@ -287,6 +311,7 @@ public sealed class LayerHost : MonoBehaviour {
     if (_root.rect.size != _lastSize) Relayout();
     float now = Time.realtimeSinceStartup;
     RenderAnimations(now);
+    UpdateProgress(now);
     if (CurrentSelection == LoadingManager.Session.Selection) {
       LoadingManager.Session.Tick(IdleElapsed(now));
     }
@@ -344,6 +369,91 @@ public sealed class LayerHost : MonoBehaviour {
         && SceneLoaderPatch.SpinnerSize.y > 0f ? SceneLoaderPatch.SpinnerSize : null;
     AddImageLayer(layer, sprite, placement, imageSize: imageSize);
     HasSpinner = true;
+  }
+
+  static Sprite ProgressSprite => _progressSprite ? _progressSprite : _progressSprite =
+      Sprite.Create(Texture2D.whiteTexture, new Rect(0f, 0f, 1f, 1f), new Vector2(0.5f, 0.5f));
+
+  void AddProgressLayer(Layer layer, Layout layout, TMP_Text template) {
+    Sprite sprite = layer.ProgressStyle == ProgressStyle.Ring ? SpinnerSprites.ProgressRing : ProgressSprite;
+    Vector2 native = layer.ProgressStyle switch {
+      ProgressStyle.Bar => new(240f, layer.ProgressSize ?? 16f),
+      ProgressStyle.Ring => Vector2.one * (layer.ProgressSize ?? 96f),
+      _ => new(96f, 40f),
+    };
+    Placement placement = Placement.Merge(
+        layer.Placement, layout.Placement, new() { Fit = new() { Mode = FitMode.None } },
+        ScreenConfigLoader.Current.Defaults);
+    AddImageLayer(layer, sprite, placement, imageSize: native);
+    RectTransform rect = _placed[^1].Rect;
+    Image track = rect.GetComponent<Image>();
+    Color color = ToColor(layer.Color);
+    color.a *= placement.Opacity ?? 1f;
+    track.color = layer.ProgressStyle == ProgressStyle.Percent
+        ? Color.clear : color * new Color(1f, 1f, 1f, 0.25f);
+    Image fill = CreateChild<Image>("ProgressFill", rect);
+    fill.sprite = sprite;
+    fill.type = Image.Type.Filled;
+    fill.fillMethod = layer.ProgressStyle == ProgressStyle.Ring
+        ? Image.FillMethod.Radial360 : Image.FillMethod.Horizontal;
+    fill.fillAmount = 0f;
+    fill.color = color;
+    fill.raycastTarget = false;
+    fill.rectTransform.anchorMin = Vector2.zero;
+    fill.rectTransform.anchorMax = Vector2.one;
+    fill.rectTransform.sizeDelta = Vector2.zero;
+    fill.rectTransform.anchoredPosition = Vector2.zero;
+    CanvasGroup pulse = fill.gameObject.AddComponent<CanvasGroup>();
+    TMP_Text label = null;
+    if (template) {
+      label = Instantiate(template, rect, worldPositionStays: false);
+      LoadingManager.MatchTipFont(label);
+      label.name = "ProgressLabel";
+      label.enabled = true;
+      label.gameObject.SetActive(true);
+      label.alignment = TextAlignmentOptions.Center;
+      label.textWrappingMode = TextWrappingModes.NoWrap;
+      label.fontSize = Mathf.Max(layer.ProgressSize ?? 28f, PluginConfig.MinimumTextSize.Value);
+      label.color = color;
+      label.raycastTarget = false;
+      label.rectTransform.anchorMin = layer.ProgressStyle == ProgressStyle.Percent ? Vector2.zero : new(0.5f, 0.5f);
+      label.rectTransform.anchorMax = layer.ProgressStyle == ProgressStyle.Percent ? Vector2.one : new(0.5f, 0.5f);
+      label.rectTransform.pivot = new(0.5f, 0.5f);
+      label.rectTransform.anchoredPosition = Vector2.zero;
+      label.rectTransform.sizeDelta = layer.ProgressStyle == ProgressStyle.Percent
+          ? Vector2.zero : new(260f, 48f);
+    }
+    _progress.Add(new() { Rect = rect, Track = track, Fill = fill, Label = label, Pulse = pulse,
+        Style = layer.ProgressStyle, Color = color });
+  }
+
+  void UpdateProgress(float now) {
+    if (_progress.Count == 0) return;
+    ProgressValue value = ProgressReader.Read(_progressStage, _progressSituation);
+    bool stage = value.StageKey != null;
+    bool numeric = value.Fraction.HasValue;
+    string label = stage ? UiText.Get(value.StageKey)
+        : numeric ? $"{Mathf.RoundToInt(value.Fraction.Value * 100f)}%" : string.Empty;
+    float pulse = value.Pulse ? 0.85f + 0.15f * Mathf.Sin(now * 2f) : 1f;
+    foreach (ProgressVisual visual in _progress) {
+      visual.Rect.gameObject.SetActive(stage || numeric);
+      visual.Track.enabled = numeric && visual.Style != ProgressStyle.Percent;
+      visual.Fill.enabled = numeric && visual.Style != ProgressStyle.Percent;
+      visual.Fill.fillAmount = value.Fraction ?? 0f;
+      visual.Pulse.alpha = pulse;
+      if (visual.Label) {
+        if (visual.Style == ProgressStyle.Percent) {
+          visual.Label.rectTransform.anchorMin = stage ? new(0.5f, 0.5f) : Vector2.zero;
+          visual.Label.rectTransform.anchorMax = stage ? new(0.5f, 0.5f) : Vector2.one;
+          visual.Label.rectTransform.sizeDelta = stage ? new(260f, 48f) : Vector2.zero;
+        }
+        visual.Label.gameObject.SetActive(stage || (numeric && visual.Style == ProgressStyle.Percent));
+        if (visual.Label.text != label) visual.Label.SetText(label);
+        Color color = visual.Color;
+        color.a *= pulse;
+        visual.Label.color = color;
+      }
+    }
   }
 
   void AddColorLayer(Layer layer) {
@@ -692,6 +802,7 @@ public sealed class LayerHost : MonoBehaviour {
     CustomAssets.Pin(this, []);
     StopAllCoroutines();
     _placed.Clear();
+    _progress.Clear();
     HasSpinner = false;
     HasExplicitSpinner = false;
     _animated.Clear();

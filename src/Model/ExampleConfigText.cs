@@ -56,11 +56,14 @@ public static class ExampleConfigText {
       #
       # Layers: "color" (solid fill), "image" (one file, a list of files, "entry", or "separator"),
       # "spinner" (hammer, ring, dots, or a relative image path),
+      # "progress" (bar, ring, or percent),
       # "image: entry" (the chosen entry's image), "image: separator" (the game's ornament line,
       # takes placement and a "color" tint, replaces the built-in separator) and "text: caption" (the entry text or a tip).
       # Exact extensionless "entry" and "separator" are keywords; files named entry.png or separator.png work normally.
       # A spinner spins by default; animation: pulse or another preset replaces that motion.
       # Place a spinner like an image. Without place.fit it uses the sprite's native size.
+      # Progress uses real scene, nearby-object, or night-skip completion; connecting shows localized stage text.
+      # Set color, size, and place on a progress layer. At 100%, area progress softly pulses until the game proceeds.
       # A text layer takes place (position, opacity, fit: { width }) and: size, color, align (left | center | right),
       # background (a color box behind the text). color and background also accept auto;
       # auto picks light or dark from the image behind the text box (auto background uses 60% opacity).
@@ -105,6 +108,10 @@ public static class ExampleConfigText {
       #         place: { fit: { width: 30% }, position: { anchor: top, y: 8% } }
       #       - spinner: ring
       #         place: { fit: { width: 48px }, position: { anchor: bottom, y: -20% } }
+      #       - progress: bar
+      #         color: "#FFFFFF"
+      #         size: 16
+      #         place: { fit: { width: 40% }, position: { anchor: bottom, y: -12% } }
       #       - text: caption
       #         size: 28
       #         color: auto
