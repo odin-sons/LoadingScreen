@@ -58,8 +58,9 @@ cfg and clearer logs.
 
   * **Biome lists.** `when.biome` replaces `when.teleport` for destination biome lists and death biome tips.
   * **`when` key.** The YAML top-level `situations` key is renamed to `when`; existing YAML files must use `when`.
-  * **Zoom fields.** The default entry image keeps its existing slow zoom without the old `animate` and
-    `defaults.zoom` fields.
+  * **Zoom fields.** `animation` replaces the old `animate` and `defaults.zoom` fields. Files from 0.6.0 still
+    load without warnings: `animate` maps to the `zoom-in` idle preset, `zoom.enabled: false` turns it off and
+    `zoom.seconds` sets the speed; `zoom.amount` is ignored.
   * **Cfg layout.** The cfg is reorganized into General, When to show, Timing, Game start screen and Sound. Each
     setting states whether it is synchronized. One synced `Share screens with players` switch controls transfer.
   * **Fatal startup errors.** Failures that disable the mod (configuration or image folder setup, Harmony patching)

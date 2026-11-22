@@ -884,4 +884,42 @@ public class YamlLimitsTests {
     Assert.False(result.IsValid);
     Assert.Contains(result.Warnings, warning => warning.Contains("aliases"));
   }
+
+  [Fact]
+  public void LegacyAnimateAndZoomKeysMapToIdleAnimation() {
+    const string yaml = """
+        defaults:
+          zoom: { enabled: true, amount: 1.05, seconds: 30 }
+        layouts:
+          main:
+            layers:
+              - id: still
+                image: entry
+                place: { fit: cover, animate: false }
+              - id: moving
+                image: common/logo.png
+                place: { animate: true }
+        """;
+
+    ConfigLoadResult result = new ConfigParser(_ => true).Parse(yaml);
+
+    Assert.Empty(result.Warnings);
+    Assert.Equal(0.5f, result.Config.Defaults.Animation.Speed);
+    List<Layer> layers = result.Config.Layouts["main"].Layers;
+    Assert.Equal("none", layers[0].Animation.Idle);
+    Assert.Equal("zoom-in", layers[1].Animation.Idle);
+  }
+
+  [Fact]
+  public void LegacyZoomDisabledTurnsDefaultIdleOff() {
+    const string yaml = """
+        defaults:
+          zoom: { enabled: false }
+        """;
+
+    ConfigLoadResult result = new ConfigParser(_ => true).Parse(yaml);
+
+    Assert.Empty(result.Warnings);
+    Assert.Equal("none", result.Config.Defaults.Animation.Idle);
+  }
 }
