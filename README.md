@@ -118,9 +118,12 @@ The game's sleep text and spinner stay visible above the image. A sleep-specific
 
 Set `[3 - Timing] Hold loading screen until a key is pressed` to `true` to keep the HUD loading screen and tip
 visible after loading finishes (default: off). A separate "Press any key to continue" line appears; any key or mouse
-click dismisses it. `[3 - Timing] Maximum hold time in seconds` closes it automatically after 30 seconds by
-default (allowed: 1 to 300). The hold never runs on dedicated servers or during cinematics. Style the prompt with
-`defaults.continuePrompt` in `loadingscreen.yaml`.
+click dismisses the key hold. Set `[3 - Timing] Wait for the voice to finish` to `true` to keep the HUD screen
+visible while its entry voice is loading or playing after loading finishes (default: off). It releases when the voice
+ends or fails to load; no voice or disabled sounds do not cause a hold. A key press does not skip the voice, and when
+both settings are on, the screen closes after both the voice and key hold are done. `[3 - Timing] Maximum hold time in
+seconds` closes either hold automatically after 30 seconds by default (allowed: 1 to 300). Neither hold runs on
+dedicated servers or during cinematics. Style the key prompt with `defaults.continuePrompt` in `loadingscreen.yaml`.
 
 ### Selection
 
@@ -587,7 +590,7 @@ Behavior switches in `Odin_Sons.LoadingScreen.cfg`; each has a description in th
 |---|---|
 | `1 - General` | Lock Configuration, Mod enabled, Image folder, Text language, Log level, Share screens with players |
 | `2 - When to show` | Loading screen on portal teleport, Loading screen while sleeping, Loading screen right after death, Random tip when an entry has no text |
-| `3 - Timing` | Change image every N seconds, Change tip every N seconds, Hold loading screen until a key is pressed, Maximum hold time in seconds |
+| `3 - Timing` | Change image every N seconds, Change tip every N seconds, Hold loading screen until a key is pressed, Wait for the voice to finish, Maximum hold time in seconds |
 | `4 - Game start screen` | Use loading images, Show progress |
 | `5 - Sound` | Play loading screen sounds, Music volume percent, Voice volume percent, Mute game sounds on loading screens |
 

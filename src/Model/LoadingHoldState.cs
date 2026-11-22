@@ -1,44 +1,56 @@
 namespace LoadingScreen.Model;
 
+public readonly record struct LoadingHoldDecision(bool Holding, bool ShowContinuePrompt);
+
 public sealed class LoadingHoldState {
   bool _armed;
   bool _holding;
+  bool _keyDismissed;
   float _startedAt;
 
-  public bool Update(bool loadingVisible, bool ready, bool allowed, bool dismissed, float now, int maximumSeconds) {
+  public LoadingHoldDecision Update(
+      bool loadingVisible, bool ready, bool allowed, bool holdUntilKey, bool voiceActive,
+      bool dismissed, float now, int maximumSeconds) {
     if (!allowed) {
       Reset();
-      return false;
+      return default;
     }
 
     if (!ready) {
       _holding = false;
+      _keyDismissed = false;
       _armed = loadingVisible;
-      return false;
+      return default;
     }
 
     if (_holding) {
-      if (dismissed || now - _startedAt >= maximumSeconds) {
+      if (dismissed) _keyDismissed = true;
+      if (now - _startedAt >= maximumSeconds) {
         Reset();
-        return false;
+        return default;
       }
 
-      return true;
+      bool waitingForKey = holdUntilKey && !_keyDismissed;
+      if (waitingForKey || voiceActive) return new(true, waitingForKey);
+
+      Reset();
+      return default;
     }
 
-    if (_armed && loadingVisible) {
+    if (_armed && loadingVisible && (holdUntilKey || voiceActive)) {
       _armed = false;
       _holding = true;
       _startedAt = now;
-      return true;
+      return new(true, holdUntilKey);
     }
 
     _armed = false;
-    return false;
+    return default;
   }
 
   public void Reset() {
     _armed = false;
     _holding = false;
+    _keyDismissed = false;
   }
 }
