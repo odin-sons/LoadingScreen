@@ -10,7 +10,8 @@ using Xunit;
 public class ConfigParserTests {
   static readonly HashSet<string> _files = [
     "general/a.jpg", "general/b.png", "sleep/night.jpg", "mistlands/fog.jpg", "death/fall.jpg", "common/logo.png", "common/bg.jpeg",
-    "music/forest.ogg", "music/list.wav", "music/entry.ogg", "voice/tip.wav", "entry.png", "separator.png"
+    "music/forest.ogg", "music/list.wav", "music/entry.ogg", "voice/tip.wav", "entry.png", "separator.png",
+    "common/indicator.png"
   ];
 
   static ConfigLoadResult Parse(string yaml, ICollection<string> causes = null) {
@@ -561,6 +562,88 @@ public class ConfigParserTests {
     Assert.Equal(LayerKind.Image, separator.Kind);
     Assert.True(separator.HasTint);
     Assert.Equal(Anchor.Bottom, separator.Placement.Anchor);
+  }
+
+  [Theory]
+  [InlineData("hammer", SpinnerStyle.Hammer)]
+  [InlineData("ring", SpinnerStyle.Ring)]
+  [InlineData("dots", SpinnerStyle.Dots)]
+  public void ParsesSpinnerStylesWithPlacementAndDefaultSpin(string style, SpinnerStyle expected) {
+    string yaml = """
+        layouts:
+          loading:
+            layers:
+              - spinner: STYLE
+                place: { fit: { width: 48px }, position: { anchor: bottom, y: -12% } }
+              - image: entry
+        """.Replace("STYLE", style);
+
+    ConfigLoadResult result = Parse(yaml);
+
+    Assert.Empty(result.Warnings);
+    Layer spinner = result.Config.Layouts["loading"].Layers[0];
+    Assert.Equal(LayerKind.Spinner, spinner.Kind);
+    Assert.Equal(expected, spinner.SpinnerStyle);
+    Assert.Equal("spin", spinner.Animation.Idle);
+    Assert.Equal(Anchor.Bottom, spinner.Placement.Anchor);
+    Assert.Equal(48f, spinner.Placement.Fit.Width.Value.Value);
+  }
+
+  [Fact]
+  public void ParsesCustomSpinnerImageAndAnimationOverride() {
+    const string yaml = """
+        layouts:
+          loading:
+            layers:
+              - spinner: common/indicator.png
+                animation: pulse
+              - image: entry
+        """;
+
+    ConfigLoadResult result = Parse(yaml);
+
+    Assert.Empty(result.Warnings);
+    Layer spinner = result.Config.Layouts["loading"].Layers[0];
+    Assert.Equal(SpinnerStyle.Image, spinner.SpinnerStyle);
+    Assert.Equal(["common/indicator.png"], spinner.Images);
+    Assert.Equal("pulse", spinner.Animation.Idle);
+  }
+
+  [Fact]
+  public void RejectsInvalidAndMixedSpinnerContent() {
+    const string yaml = """
+        layouts:
+          loading:
+            layers:
+              - spinner: unknown
+              - spinner: ring
+                image: entry
+              - spinner: dots
+                text: caption
+              - spinner: hammer
+              - image: entry
+        """;
+
+    ConfigLoadResult result = Parse(yaml);
+
+    Assert.Contains(result.Warnings, warning => warning.Contains("unsupported image type 'unknown'"));
+    Assert.Contains(result.Warnings, warning => warning.Contains("use only one of"));
+    Assert.All(result.Warnings, warning => Assert.Contains("line ", warning));
+    Assert.Equal(2, result.Config.Layouts["loading"].Layers.Count);
+  }
+
+  [Fact]
+  public void LegacySpinnerDefaultsTranslateToGameStartLayer() {
+    ConfigLoadResult result = Parse("defaults: { spinner: { center: true, x: -5, bottom: 180 } }");
+
+    Layer layer = result.Config.Defaults.Spinner.ToLayer();
+    Assert.Equal(LayerKind.Spinner, layer.Kind);
+    Assert.Equal(SpinnerStyle.Hammer, layer.SpinnerStyle);
+    Assert.Equal("spin", layer.Animation.Idle);
+    Assert.Equal(Anchor.Bottom, layer.Placement.Anchor);
+    Assert.Equal(-5f, layer.Placement.X.Value.Value);
+    Assert.Equal(-180f, layer.Placement.Y.Value.Value);
+    Assert.Null(Parse("defaults: { spinner: { center: false } }").Config.Defaults.Spinner.ToLayer());
   }
 
   [Fact]

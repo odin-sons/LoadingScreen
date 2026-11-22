@@ -30,6 +30,11 @@ static class SceneLoaderPatch {
   static LayerHost _host;
   static TMP_Text _loadingText;
   static LoadingIndicator _indicator;
+  static Sprite _spinnerSprite;
+  static Vector2 _spinnerSize;
+  internal static Sprite SpinnerSprite => _spinnerSprite;
+  internal static Vector2 SpinnerSize => _spinnerSize;
+  static bool _spinnerWasEnabled;
   static Vector2 _indicatorAnchorMin;
   static Vector2 _indicatorAnchorMax;
   static Vector2 _indicatorPivot;
@@ -77,6 +82,7 @@ static class SceneLoaderPatch {
     if (_indicator) {
       RectTransform rect = _indicator.transform.GetComponent<RectTransform>();
       _indicator.m_showProgressIndicator = _indicatorShowsProgress;
+      _indicator.m_spinner.enabled = _spinnerWasEnabled;
       rect.anchorMin = _indicatorAnchorMin;
       rect.anchorMax = _indicatorAnchorMax;
       rect.pivot = _indicatorPivot;
@@ -103,6 +109,16 @@ static class SceneLoaderPatch {
     _originalShowHealthWarning = sceneLoader._showHealthWarning;
     _loadingImage = sceneLoader.gameLogo.transform.parent.Find("Bkg").GetComponent<Image>();
     _host = null;
+    _indicator = sceneLoader.loadingIndicator;
+    RectTransform indicatorRect = _indicator.transform.GetComponent<RectTransform>();
+    _indicatorAnchorMin = indicatorRect.anchorMin;
+    _indicatorAnchorMax = indicatorRect.anchorMax;
+    _indicatorPivot = indicatorRect.pivot;
+    _indicatorPosition = indicatorRect.anchoredPosition;
+    _indicatorShowsProgress = _indicator.m_showProgressIndicator;
+    _spinnerWasEnabled = _indicator.m_spinner.enabled;
+    _spinnerSprite = _indicator.m_spinner.sprite;
+    _spinnerSize = _indicator.m_spinner.rectTransform.rect.size;
 
     if (SceneLoaderUseLoadingImages.Value && HasImages()) {
       sceneLoader._showLogos = false;
@@ -125,13 +141,6 @@ static class SceneLoaderPatch {
       LoadingManager.SetLoadingTip(_loadingText);
     }
 
-    _indicator = sceneLoader.loadingIndicator;
-    RectTransform indicatorRect = _indicator.transform.GetComponent<RectTransform>();
-    _indicatorAnchorMin = indicatorRect.anchorMin;
-    _indicatorAnchorMax = indicatorRect.anchorMax;
-    _indicatorPivot = indicatorRect.pivot;
-    _indicatorPosition = indicatorRect.anchoredPosition;
-    _indicatorShowsProgress = _indicator.m_showProgressIndicator;
     RefreshAppearance();
 
     _startTime = Time.time;
@@ -145,7 +154,10 @@ static class SceneLoaderPatch {
 
     RectTransform rectTransform = _indicator.transform.GetComponent<RectTransform>();
     SpinnerDefaults spinner = ScreenConfigLoader.Current.Defaults.Spinner;
-    _indicator.m_showProgressIndicator = spinner.Center || _indicatorShowsProgress;
+    bool layeredSpinner = _host && _host.IsShowing && _host.HasSpinner;
+    _indicator.m_spinner.enabled = !layeredSpinner && _spinnerWasEnabled;
+    _indicator.m_showProgressIndicator = !(_host && _host.IsShowing && _host.HasExplicitSpinner)
+        && (spinner.Center || _indicatorShowsProgress);
     rectTransform.anchorMin = spinner.Center ? new(0.5f, 0f) : _indicatorAnchorMin;
     rectTransform.anchorMax = spinner.Center ? new(0.5f, 0f) : _indicatorAnchorMax;
     rectTransform.pivot = spinner.Center ? new(0.5f, 0f) : _indicatorPivot;
@@ -197,5 +209,6 @@ static class SceneLoaderPatch {
       LoadingManager.SetLoadingImage(_loadingImage);
       sceneLoader.ScaleLerpLoadingImage(_loadingImage);
     }
+    RefreshAppearance();
   }
 }

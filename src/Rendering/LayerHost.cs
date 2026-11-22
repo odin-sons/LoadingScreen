@@ -64,6 +64,8 @@ public sealed class LayerHost : MonoBehaviour {
 
   public bool IsShowing { get; private set; }
   public bool ShowSleepUi { get; private set; } = true;
+  public bool HasSpinner { get; private set; }
+  public bool HasExplicitSpinner { get; private set; }
   public Selection CurrentSelection { get; private set; }
   public Image ReadableImageFor(RectTransform text) {
     Vector3[] textCorners = new Vector3[4];
@@ -122,7 +124,7 @@ public sealed class LayerHost : MonoBehaviour {
   }
 
   public bool Show(Selection selection, string caption = null, TMP_Text textTemplate = null,
-      float animationElapsed = 0f, bool continued = false) {
+      float animationElapsed = 0f, bool continued = false, bool gameStart = false) {
     Clear();
 
     if (selection == null) {
@@ -154,6 +156,11 @@ public sealed class LayerHost : MonoBehaviour {
         continue;
       }
 
+      if (layer.Kind == LayerKind.Spinner) {
+        AddSpinnerLayer(layer, layout);
+        continue;
+      }
+
       if (layer.GameSeparator) {
         if (LoadingManager.SeparatorSprite) {
           AddImageLayer(layer, LoadingManager.SeparatorSprite, Placement.Merge(layer.Placement, SeparatorPlacement));
@@ -181,6 +188,12 @@ public sealed class LayerHost : MonoBehaviour {
       drewEntryImage |= layer.FromEntry;
     }
 
+    if (gameStart && !layout.ShowsSpinner) {
+      Layer legacySpinner = config.Defaults.Spinner.ToLayer();
+      if (legacySpinner != null) AddSpinnerLayer(legacySpinner, layout);
+    }
+    HasExplicitSpinner = gameStart && layout.ShowsSpinner && HasSpinner;
+
     if (!drewEntryImage && layout.ShowsEntryImage && selection.Entry.Image != null) {
       Hide();
       return false;
@@ -193,6 +206,7 @@ public sealed class LayerHost : MonoBehaviour {
     CustomAssets.Pin(
         this,
         _placed
+            .Where(placed => placed.Layer.Kind != LayerKind.Spinner || placed.Layer.SpinnerStyle == SpinnerStyle.Image)
             .Select(placed => placed.Rect.GetComponent<Image>().sprite)
             .Where(sprite => sprite != LoadingManager.SeparatorSprite));
     _layoutShowsSeparator = layout.ShowsSeparator;
@@ -314,6 +328,24 @@ public sealed class LayerHost : MonoBehaviour {
     return picked;
   }
 
+  void AddSpinnerLayer(Layer layer, Layout layout) {
+    Sprite sprite = layer.SpinnerStyle switch {
+      SpinnerStyle.Hammer => SceneLoaderPatch.SpinnerSprite,
+      SpinnerStyle.Ring => SpinnerSprites.Ring,
+      SpinnerStyle.Dots => SpinnerSprites.Dots,
+      _ => CustomAssets.ReadLoadingImage(ScreenConfigLoader.ResolveImagePath(layer.Images.FirstOrDefault())),
+    };
+    if (!sprite) return;
+
+    Placement placement = Placement.Merge(
+        layer.Placement, layout.Placement, new() { Fit = new() { Mode = FitMode.None } },
+        ScreenConfigLoader.Current.Defaults);
+    Vector2? imageSize = layer.SpinnerStyle == SpinnerStyle.Hammer && SceneLoaderPatch.SpinnerSize.x > 0f
+        && SceneLoaderPatch.SpinnerSize.y > 0f ? SceneLoaderPatch.SpinnerSize : null;
+    AddImageLayer(layer, sprite, placement, imageSize: imageSize);
+    HasSpinner = true;
+  }
+
   void AddColorLayer(Layer layer) {
     Image image = CreateChild<Image>($"Color-{layer.Id}", _root);
     RectTransform rect = image.rectTransform;
@@ -388,7 +420,8 @@ public sealed class LayerHost : MonoBehaviour {
     RegisterAnimation(layer, container);
   }
 
-  void AddImageLayer(Layer layer, Sprite sprite, Placement placement, bool defaultEntry = false) {
+  void AddImageLayer(Layer layer, Sprite sprite, Placement placement, bool defaultEntry = false,
+      Vector2? imageSize = null) {
     Image image = CreateChild<Image>($"Image-{layer.Id ?? sprite.name}", _root);
     image.sprite = sprite;
     image.type = Image.Type.Simple;
@@ -403,7 +436,7 @@ public sealed class LayerHost : MonoBehaviour {
       Rect = image.rectTransform,
       Layer = layer,
       Placement = placement,
-      ImageSize = new(sprite.rect.width, sprite.rect.height),
+      ImageSize = imageSize ?? new(sprite.rect.width, sprite.rect.height),
     };
 
     if (placement.Fade != null) {
@@ -659,6 +692,8 @@ public sealed class LayerHost : MonoBehaviour {
     CustomAssets.Pin(this, []);
     StopAllCoroutines();
     _placed.Clear();
+    HasSpinner = false;
+    HasExplicitSpinner = false;
     _animated.Clear();
     _enterDuration = 0f;
     _exitDuration = 0f;

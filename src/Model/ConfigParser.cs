@@ -25,7 +25,7 @@ public sealed class ConfigParser {
     "place", "background", "tint", "vignette", "mask", "animation", "tip", "continueprompt", "separator", "spinner"
   ];
   static readonly string[] _layerKeys = [
-    "id", "color", "image", "text", "size", "align", "background", "place", "animation"
+    "id", "color", "image", "text", "spinner", "size", "align", "background", "place", "animation"
   ];
   static readonly string[] _layoutKeys = ["layers", "sound", "showsleepui", "vignette", "mask", "place"];
   static readonly string[] _entryKeys = ["image", "sound", "voice", "text", "layout", "place", "when"];
@@ -217,10 +217,35 @@ public sealed class ConfigParser {
     YamlNode color = Child(mapping, "color");
     YamlNode image = Child(mapping, "image");
     YamlNode text = Child(mapping, "text");
+    YamlNode spinner = Child(mapping, "spinner");
 
-    if (image != null && text != null) {
-      Warn(node, $"{where}: use only one of 'image' and 'text' in a layer, ignored");
+    if ((image != null ? 1 : 0) + (text != null ? 1 : 0) + (spinner != null ? 1 : 0) > 1) {
+      Warn(node, $"{where}: use only one of 'image', 'text' and 'spinner' in a layer, ignored");
       return null;
+    }
+
+    if (spinner != null) {
+      if (color != null) {
+        Warn(node, $"{where}: use only one of 'color' and 'spinner' in a layer, ignored");
+        return null;
+      }
+      if (spinner is not YamlScalarNode || string.IsNullOrWhiteSpace(Scalar(spinner))) {
+        Warn(spinner, $"{where}: 'spinner' needs hammer, ring, dots or an image path; layer ignored");
+        return null;
+      }
+      layer.Kind = LayerKind.Spinner;
+      string style = Scalar(spinner).Trim();
+      if (style.Equals("hammer", StringComparison.OrdinalIgnoreCase)) layer.SpinnerStyle = SpinnerStyle.Hammer;
+      else if (style.Equals("ring", StringComparison.OrdinalIgnoreCase)) layer.SpinnerStyle = SpinnerStyle.Ring;
+      else if (style.Equals("dots", StringComparison.OrdinalIgnoreCase)) layer.SpinnerStyle = SpinnerStyle.Dots;
+      else {
+        if (!CheckImage(spinner, style, where)) return null;
+        layer.SpinnerStyle = SpinnerStyle.Image;
+        layer.Images.Add(NormalizePath(style));
+      }
+      layer.Animation ??= new();
+      layer.Animation.Idle ??= "spin";
+      return layer;
     }
 
     if (text != null) {
