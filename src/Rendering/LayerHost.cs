@@ -37,6 +37,8 @@ public sealed class LayerHost : MonoBehaviour {
     public AnimationPreset Idle;
     public AnimationPreset Exit;
     public float Speed;
+    public Vector2 Origin;
+    public Vector2 OriginShift;
     public Vector2 BasePosition;
   }
 
@@ -606,6 +608,7 @@ public sealed class LayerHost : MonoBehaviour {
       Idle = catalog.Resolve(spec.Idle, warning => LogAnimationWarning(warning, "idle", layer)),
       Exit = catalog.Resolve(spec.Exit, warning => LogAnimationWarning(warning, "exit", layer)),
       Speed = spec.Speed ?? 1f,
+      Origin = OriginPoint(spec.Origin ?? Anchor.Center),
     };
     _animated.Add(animated);
     if (spec.Enter != "none") _enterDuration = Mathf.Max(_enterDuration, animated.Enter.EffectiveDuration(animated.Speed));
@@ -670,6 +673,11 @@ public sealed class LayerHost : MonoBehaviour {
 
   static readonly Vector2 Center = new(0.5f, 0.5f);
 
+  static Vector2 OriginPoint(Anchor anchor) {
+    (float x, float y) = PlacementSolver.AnchorPoint(anchor);
+    return new(x, y);
+  }
+
   static Vector2 CenteredOffset(LayerRect rect) => new(
       rect.OffsetX + ((0.5f - rect.AnchorX) * rect.Width),
       rect.OffsetY + ((0.5f - rect.AnchorY) * rect.Height));
@@ -678,7 +686,8 @@ public sealed class LayerHost : MonoBehaviour {
     Vector2 size = _root.rect.size;
     _lastSize = size;
     foreach (AnimatedLayer layer in _animated) {
-      layer.Rect.anchoredPosition = layer.BasePosition;
+      layer.Rect.pivot = Center;
+      layer.Rect.anchoredPosition = layer.BasePosition - layer.OriginShift;
       layer.Rect.localScale = Vector3.one;
       layer.Rect.localEulerAngles = Vector3.zero;
     }
@@ -731,7 +740,12 @@ public sealed class LayerHost : MonoBehaviour {
     }
 
     foreach (PlacedText placed in _texts) UpdateTextColor(placed);
-    foreach (AnimatedLayer layer in _animated) layer.BasePosition = layer.Rect.anchoredPosition;
+    foreach (AnimatedLayer layer in _animated) {
+      layer.OriginShift = Vector2.Scale(layer.Origin - Center, layer.Rect.sizeDelta);
+      layer.Rect.pivot = layer.Origin;
+      layer.Rect.anchoredPosition += layer.OriginShift;
+      layer.BasePosition = layer.Rect.anchoredPosition;
+    }
   }
 
   void UpdateTextColor(PlacedText placed) {

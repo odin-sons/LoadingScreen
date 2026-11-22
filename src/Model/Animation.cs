@@ -23,12 +23,14 @@ public sealed class AnimationSpec {
   public string Idle { get; set; }
   public string Exit { get; set; }
   public float? Speed { get; set; }
+  public Anchor? Origin { get; set; }
 
   public static AnimationSpec Merge(AnimationSpec specific, AnimationSpec fallback) => new() {
     Enter = specific?.Enter ?? fallback?.Enter ?? "none",
     Idle = specific?.Idle ?? fallback?.Idle ?? "none",
     Exit = specific?.Exit ?? fallback?.Exit ?? "none",
     Speed = specific?.Speed ?? fallback?.Speed ?? 1f,
+    Origin = specific?.Origin ?? fallback?.Origin ?? Anchor.Center,
   };
 }
 

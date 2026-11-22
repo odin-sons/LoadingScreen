@@ -578,8 +578,11 @@ progress layer is hidden.
 
 Set `animation` on any layer or in `defaults`. A short value such as `animation: zoom-in` sets only the idle
 phase. The full form is `animation: { enter: fly-in-left, idle: breathe, exit: fly-out-left, speed: 1.5 }`.
-Layer values override the corresponding `defaults.animation` phase; omitted phases use `none`. The default
-entry image uses `zoom-in` when no animation is configured, matching the previous 1.05 scale over 15 seconds.
+`origin` sets the point the layer scales and rotates around, like CSS `transform-origin`: `center` (default),
+`left`, `right`, `top`, `bottom` or a corner such as `top-left`, so `animation: { idle: zoom-in, origin: top }`
+zooms a logo away from the top edge. Layer values override the corresponding `defaults.animation` phase;
+omitted phases use `none`. The default entry image uses `zoom-in` when no animation is configured, matching the
+previous 1.05 scale over 15 seconds.
 Enter plays once, idle starts after all layer enter phases finish, and exit plays once when the screen closes.
 A continued menu, scene loader or HUD handover resumes idle at the last drawn time without replaying enter.
 Animation time uses real time, so a blocked world load advances the phase clock.
