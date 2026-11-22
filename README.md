@@ -58,6 +58,7 @@ By default, these files live in `BepInEx/config/LoadingScreen/`:
 | File | Purpose |
 |---|---|
 | `loadingscreen.yaml` | When to show, layouts, placement and appearance (below) |
+| `translations.yaml` | Optional overrides for the mod's own UI text |
 | `tips.txt` | One tip per line; fallback when a language-specific file is absent |
 | `tips.<code>.txt` | Optional translated tips, for example `tips.ru.txt` |
 | `*.png`, `*.jpg` at the top level | Plain images, used when no situational entry applies |
@@ -82,6 +83,23 @@ such as `ru` or `pt-BR`, to force a language for tips and entry text. Unknown co
 looks for `tips.<code>.txt` first, then `tips.txt`. Each file has one tip per line; a missing plain file is created
 empty. Language changes take effect on the next tip or screen selection. The game's `Chinese` and `Chinese_Trad`
 use `zh-CN` and `zh-TW`; `Portuguese_European` and `Portuguese_Brazilian` use `pt` and `pt-BR`.
+
+The mod's own UI text follows Valheim's selected language, independently of `Text language`. Built-in text covers all
+36 languages in the game's localization list; an unknown language falls back to English. To replace individual strings,
+create `translations.yaml` beside `loadingscreen.yaml`. Use a game language name or the corresponding language code:
+
+```yaml
+Russian:
+  continuePrompt: "Нажмите любую клавишу для продолжения"
+  secondsUnit: "с"
+German:
+  gameStartProgress: "<b>{percent}%</b>\n<size=-4>({seconds} {unit})</size>"
+```
+
+The keys are `continuePrompt`, `gameStartProgress`, and `secondsUnit`. The progress template accepts `{percent}`,
+`{seconds}`, and `{unit}`; percent and elapsed seconds are integers. Missing or invalid entries keep their built-in
+translations. `loadingscreen reload` re-reads the file. Translations for less common languages welcome review from
+native speakers.
 
 Set `[3 - Timing] Change image every N seconds` to a positive number to change images while the HUD or game start
 loading screen stays visible. The default `0` turns the slideshow off. When a situational entry is showing, each

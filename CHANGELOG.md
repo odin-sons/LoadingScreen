@@ -2,6 +2,9 @@
 
 ### Unreleased
 
+  * Localized the mod's continue prompt and integer game-start progress display for Valheim's 36 languages, with
+    per-key `translations.yaml` overrides in the local config folder and English fallback.
+
   * Added YAML `color: auto` and `background: auto` for text layers, based on the image area behind the text box.
     Added personal `Readable text` and `Minimum text size` accessibility settings (off by default).
 

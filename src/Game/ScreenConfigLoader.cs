@@ -84,6 +84,7 @@ public static class ScreenConfigLoader {
 
   public static bool Load(string pluginDir) {
     PluginDir = pluginDir;
+    UiText.Load(pluginDir);
 
     try {
       return LoadWithYaml(pluginDir);

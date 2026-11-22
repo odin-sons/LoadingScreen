@@ -147,7 +147,8 @@ static class SceneLoaderPatch {
     }
 
     if (SceneLoaderShowProgressText.Value && _loadingText) {
-      _loadingText.text = $"<b>{__instance._fakeProgress * 100:F0}%</b>\n<size=-4>({time - _startTime:F1}s)</size>";
+      _loadingText.text = UiText.FormatProgress(
+          Mathf.RoundToInt(__instance._fakeProgress * 100f), Mathf.FloorToInt(time - _startTime));
     }
   }
 
