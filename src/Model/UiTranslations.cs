@@ -54,7 +54,7 @@ public sealed class UiTranslations {
 
   static readonly string[] KeyNames = [
     "continuePrompt", "gameStartProgress", "secondsUnit", "connectingStage", "passwordStage", "receivingWorldStage",
-    "configProblems"
+    "configProblems", "musicVolumeSlider", "voiceVolumeSlider"
   ];
   static readonly Dictionary<string, Dictionary<string, string>> Defaults = BuiltIn.ToDictionary(
       item => LanguageText.Code("Game", item.Language),
@@ -69,6 +69,8 @@ public sealed class UiTranslations {
     Defaults["en"]["passwordStage"] = "Password";
     Defaults["en"]["receivingWorldStage"] = "Receiving the world";
     Defaults["en"]["configProblems"] = "LoadingScreen found problems in {files}. Details are in BepInEx/LogOutput.log.";
+    Defaults["en"]["musicVolumeSlider"] = "Loading screen music";
+    Defaults["en"]["voiceVolumeSlider"] = "Loading screen voice";
   }
 
   readonly Dictionary<string, Dictionary<string, string>> _overrides = new(StringComparer.OrdinalIgnoreCase);

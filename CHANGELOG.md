@@ -47,6 +47,12 @@ cfg and clearer logs.
     world scene asynchronously when starting or joining a world so the loading screen keeps animating, with high
     background loading priority and menu input blocked meanwhile. Falls back to the game's synchronous load with a
     warning if the background load cannot start. Each world load logs its read, activation and total time at Info.
+  * **Audio settings sliders.** `Loading screen music` and `Loading screen voice` sliders in the game's Audio
+    settings edit `Music volume percent` and `Voice volume percent`; `OK` saves them and `Back` discards them. Labels
+    use the new `musicVolumeSlider` and `voiceVolumeSlider` translation keys. The sliders are not added while
+    ValheimAudioControl, which rebuilds the Audio tab, is installed.
+  * **NotSoLoud compatibility.** Loading screen music and voice stay out of the game's effects mixer group when
+    NotSoLoud routes unassigned audio there, so they are not scaled twice or faded by the effects mute.
 
 #### Changes
 
