@@ -36,6 +36,9 @@ cfg and clearer logs.
   * **Log context.** Log messages start with a short sentence followed by `key=value` details (file, YAML line, layer,
     screen, side, rejected value), stack traces go to Debug, and repeated warnings are logged once.
   * **Live toggle.** `Mod enabled` applies without a restart.
+  * **Subsystem sources.** Log lines come from `LoadingScreen.Config`, `LoadingScreen.Audio`, `LoadingScreen.Server`
+    and `LoadingScreen.Render` BepInEx sources, so one area can be found with a single search; startup messages stay
+    on `LoadingScreen`. `Log level` filters all of them.
 
 #### Changes
 

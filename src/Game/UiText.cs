@@ -20,11 +20,11 @@ public static class UiText {
     try {
       UiTranslations loaded = UiTranslations.Parse(File.Exists(path) ? File.ReadAllText(path) : string.Empty);
       _translations = loaded;
-      foreach (string warning in loaded.Warnings) LoadingScreen.LogWarning(warning);
+      foreach (string warning in loaded.Warnings) Log.Config.Warning(warning);
     } catch (Exception exception) when (exception is IOException or UnauthorizedAccessException) {
-      LoadingScreen.LogWarning(LogContext.Message("Could not read translation overrides.",
+      Log.Config.Warning(LogContext.Message("Could not read translation overrides.",
           ("file", FileName), ("error", exception.Message)));
-      LoadingScreen.LogDebug(exception);
+      Log.Config.Debug(exception);
     }
   }
 }

@@ -236,7 +236,7 @@ public sealed class LoadingAudio : MonoBehaviour {
     if (path == null) return false;
     long size = File.Exists(path) ? new FileInfo(path).Length : -1;
     if (size < 0 || size > AudioFile.MaxBytes) {
-      LoadingScreen.LogWarningOnce($"audio:{kind}:{relativePath}:{size}", LogContext.Message(
+      Log.Audio.WarningOnce($"audio:{kind}:{relativePath}:{size}", LogContext.Message(
           "Could not load loading screen audio.", ("kind", kind), ("file", relativePath),
           ("bytes", size), ("maxBytes", AudioFile.MaxBytes)));
       return false;
@@ -250,7 +250,7 @@ public sealed class LoadingAudio : MonoBehaviour {
     yield return request.SendWebRequest();
 
     if (request.result != UnityWebRequest.Result.Success) {
-      LoadingScreen.LogWarningOnce($"audio-load:{relativePath}:{request.error}", LogContext.Message(
+      Log.Audio.WarningOnce($"audio-load:{relativePath}:{request.error}", LogContext.Message(
           "Could not load loading screen audio.", ("kind", music ? "music" : "voice"),
           ("file", relativePath), ("error", request.error)));
       if (music) _musicLoad = null;
@@ -271,7 +271,7 @@ public sealed class LoadingAudio : MonoBehaviour {
 
     AudioClip clip = DownloadHandlerAudioClip.GetContent(request);
     if (!clip) {
-      LoadingScreen.LogWarningOnce($"audio-decode:{relativePath}", LogContext.Message(
+      Log.Audio.WarningOnce($"audio-decode:{relativePath}", LogContext.Message(
           "Could not decode loading screen audio.", ("kind", music ? "music" : "voice"),
           ("file", relativePath)));
       if (music) _musicLoad = null;
@@ -280,7 +280,7 @@ public sealed class LoadingAudio : MonoBehaviour {
     }
     _fade = _handover.Opacity(ScreenOpacity());
     source.volume = music ? MusicVolume() : VoiceVolume();
-    LoadingScreen.LogDebug(LogContext.Message("Playing loading screen audio.",
+    Log.Audio.Debug(LogContext.Message("Playing loading screen audio.",
         ("kind", music ? "music" : "voice"), ("file", relativePath),
         ("volume", source.volume),
         ("configuredPercent", music ? MusicVolumePercent.Value : VoiceVolumePercent.Value)));

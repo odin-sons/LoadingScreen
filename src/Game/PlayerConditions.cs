@@ -83,7 +83,7 @@ public sealed class PlayerConditions : IConditionContext {
     string itemName = prefab && prefab.TryGetComponent(out ItemDrop itemDrop) ? itemDrop.m_itemData.m_shared.m_name : null;
 
     if (itemName == null && _reportedUnknown.Add(name)) {
-      LoadingScreen.LogWarning(LogContext.Message("Condition item prefab was not found.",
+      Log.Config.Warning(LogContext.Message("Condition item prefab was not found.",
           ("key", "when.*.entries[].when"), ("prefab", name), ("expected", "item prefab name, e.g. Demister")));
     }
 
