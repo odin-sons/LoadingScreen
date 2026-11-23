@@ -1,0 +1,33 @@
+defaults:
+  place: ~
+  animation:
+  background:
+  vignette:
+  mask: ~
+  tip:
+  separator: { show: ~ }
+layouts:
+  plain:
+    place:
+    sound:
+    showSleepUi:
+    layers:
+      - image: entry
+        animation: ~
+        place: { fit: ~, position: ~, opacity: null, fade: }
+      - text: caption
+        size:
+        color:
+        align:
+when:
+  general:
+    layout:
+    sound:
+    order:
+    entries:
+      - image: a.png
+        text:
+        place:
+        when:
+      - ~
+  sleep:

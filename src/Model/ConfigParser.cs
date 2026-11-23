@@ -14,6 +14,7 @@ using YamlDotNet.RepresentationModel;
 public sealed class ConfigLoadResult {
   public ScreenConfig Config { get; } = new();
   public List<string> Warnings { get; } = [];
+  public List<(long Line, string Detail)> Problems { get; } = [];
   public bool IsValid { get; set; } = true;
   public bool HasDeclaredEntries { get; set; }
 }
@@ -1256,6 +1257,7 @@ public sealed class ConfigParser {
   }
 
   void Warn(long line, string message, string value = null) {
+    _result.Problems.Add((line, message));
     _result.Warnings.Add(LogContext.Message("Configuration warning.",
         ("file", "loadingscreen.yaml"), ("line", line), ("detail", message), ("value", value)));
   }

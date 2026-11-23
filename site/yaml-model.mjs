@@ -71,3 +71,57 @@ export function parseSource(text) {
   if (!isNullNode(root) && !isMap(root)) return { error: { line: lineOf(root) ?? 1, message: 'the top level must be a mapping, config ignored' } };
   return { doc, lineOf, config: isMap(root) ? toModel(root) : {} };
 }
+
+export function renameKey(object, from, to) {
+  const entries = Object.entries(object).map(([name, value]) => [name === from ? to : name, value]);
+  for (const name of Object.keys(object)) delete object[name];
+  for (const [name, value] of entries) define(object, name, value);
+}
+
+const PLACE = { fit: { width: {}, height: {} }, position: { anchor: {}, x: {}, y: {} }, opacity: {}, fade: { sides: {}, color: {}, size: {}, curve: {} }, animate: {} };
+const ANIMATION = { enter: {}, idle: {}, exit: {}, speed: {}, origin: {} };
+const VIGNETTE = { color: {}, size: {}, strength: {} };
+const MASK = { color: {}, opacity: {} };
+const TEXT_SECTION = { x: {}, bottom: {}, size: {}, color: {} };
+const LAYER = { id: {}, color: {}, image: {}, text: {}, spinner: {}, progress: {}, size: {}, align: {}, background: {}, place: PLACE, animation: ANIMATION };
+const LAYOUT = { layers: { '[]': LAYER }, sound: {}, showSleepUi: {}, vignette: VIGNETTE, mask: MASK, place: PLACE };
+
+function schema(conditions) {
+  const when = Object.fromEntries(conditions.map((condition) => [condition, {}]));
+  const entry = { image: {}, sound: {}, voice: {}, text: {}, layout: {}, place: PLACE, when };
+  const list = { layout: {}, sound: {}, order: {}, entries: { '[]': entry }, '[]': entry };
+  const named = { '*': list };
+  return {
+    defaults: {
+      place: PLACE, background: {}, tint: {}, vignette: VIGNETTE, mask: MASK, animation: ANIMATION,
+      tip: TEXT_SECTION, continuePrompt: TEXT_SECTION, separator: { show: {}, x: {}, bottom: {}, onLayouts: {} },
+      spinner: { center: {}, x: {}, bottom: {} }, zoom: { enabled: {}, amount: {}, seconds: {} }
+    },
+    layouts: { '*': LAYOUT },
+    order: {},
+    when: { general: list, sleep: list, biome: named, death: named, enemy: named }
+  };
+}
+
+export function canonicalizeKeys(config, conditions) {
+  const renamed = [];
+  const walk = (value, shape) => {
+    if (Array.isArray(value)) {
+      if (shape['[]']) value.forEach((item) => walk(item, shape['[]']));
+      return;
+    }
+    if (value === null || typeof value !== 'object') return;
+    for (const name of Object.keys(value)) {
+      if (shape['*']) { walk(value[name], shape['*']); continue; }
+      const canonical = Object.keys(shape).find((candidate) => candidate !== '[]' && candidate.toLowerCase() === name.trim().toLowerCase());
+      if (!canonical) continue;
+      if (canonical !== name && !Object.hasOwn(value, canonical)) {
+        renameKey(value, name, canonical);
+        renamed.push(name + ' → ' + canonical);
+      }
+      walk(value[Object.hasOwn(value, canonical) ? canonical : name], shape[canonical]);
+    }
+  };
+  walk(config, schema(conditions));
+  return renamed;
+}

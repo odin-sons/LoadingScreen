@@ -1,0 +1,4 @@
+base: &base { image: entry }
+layouts:
+  a:
+    layers: [*base]

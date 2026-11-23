@@ -5,7 +5,7 @@ using System.Collections.Generic;
 using System.Linq;
 
 public static class LanguageText {
-  static readonly Dictionary<string, string> GameCodes = new(StringComparer.OrdinalIgnoreCase) {
+  internal static readonly Dictionary<string, string> GameCodes = new(StringComparer.OrdinalIgnoreCase) {
     ["English"] = "en", ["Russian"] = "ru", ["German"] = "de", ["French"] = "fr",
     ["Spanish"] = "es", ["Italian"] = "it", ["Japanese"] = "ja", ["Korean"] = "ko",
     ["Chinese"] = "zh-CN", ["Chinese_Trad"] = "zh-TW", ["Portuguese_European"] = "pt",

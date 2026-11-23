@@ -1,0 +1,48 @@
+layouts:
+  broken:
+    layers:
+      - image: entry
+        color: "#ffffff"
+      - text: title
+      - text: prompt
+        size: -3
+        place: { fit: cover }
+      - text: caption
+        color: blue
+        background: AUTO
+        align: justify
+      - spinner: ""
+      - spinner: dots
+        color: "#fff000"
+      - spinner: images/spin.gif
+      - progress: line
+      - progress: Ring
+        size: big
+        align: left
+      - image: [a.png, ../b.png, c.bmp, C:/d.png]
+      - image: [x.gif]
+      - image: separator
+        color: gold
+      - color: nope
+      - size: 3
+      - id: named
+        image: logo.png
+        text: caption
+      - just-a-string
+      - image: img.png
+        size: 4
+        align: left
+        background: "#000000"
+        animation: { idle: pulse }
+        place: { animate: maybe }
+      - image: img.png
+        place: { animate: maybe }
+  shorthand:
+    - image: entry
+  empty:
+    layers: []
+  BROKEN:
+    layers: [{ image: entry }]
+  noentry:
+    layers: [{ color: "#000000" }]
+  weird: 5
