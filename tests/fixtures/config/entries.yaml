@@ -1,0 +1,32 @@
+when:
+  General:
+    entries:
+      - image: Entry.PNG
+        text: { en: Hi, xx: Bad, en-GB: Bad, English: "", RU: "   " }
+      - text: 1945
+      - text: 2024-05-01
+      - image: 0x10.png
+        sound: /abs.ogg
+        voice: voice/v.mp3
+      - image: "../up.png"
+      - image: "   "
+      - image: [a.png]
+      - text: [a, b]
+      - layout: nowhere
+        image: a.png
+      - image: a.png
+        when: { hasItem: [], knownItem: "" }
+      - image: a.png
+        when: { notHasItem: Wood, isNight: true }
+      - image: a.png
+        when: [globalKey]
+      - image: a.png
+        when: { 0: x, notnotHasItem: y }
+      - image: a.png
+        extra: x
+        place: { fit: { depth: 3 } }
+      - image: c:relative.png
+      - image: a.png
+        sound: "music/a:b.ogg"
+      - image: a.png
+        sound: "music/track."

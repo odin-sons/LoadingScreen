@@ -1,0 +1,51 @@
+defaults:
+  background: "#000000"
+  tint: "#FFFFFF"
+  place: { fit: contain, position: { anchor: center } }
+  animation: { idle: ken-burns, speed: 1.5, origin: top-left }
+  vignette: { color: "#000000", size: 25%, strength: 0.6 }
+  mask: { color: "#101010", opacity: 0.2 }
+  tip: { x: 0, bottom: 90, size: 24, color: "#FFFFFF" }
+  continuePrompt: { x: 10, bottom: 30, size: 20, color: "#FFFFFFCC" }
+  separator: { show: true, x: 0, bottom: 150, onLayouts: false }
+  spinner: { center: true, x: 0, bottom: 200 }
+order: sequential
+layouts:
+  story:
+    sound: music/forest.ogg
+    showSleepUi: false
+    layers:
+      - color: "#172b3a"
+      - image: entry
+        place: { fit: cover, fade: { sides: [bottom, left], color: "#000000", size: 15%, curve: smooth } }
+      - image: separator
+        color: "#FFD27F"
+      - text: caption
+        size: 28
+        color: auto
+        background: "#00000099"
+        align: center
+        place: { fit: { width: 75% }, position: { anchor: bottom, y: -8% } }
+      - spinner: ring
+        place: { position: bottom-right }
+      - progress: bar
+        size: 4
+        color: "#FFFFFF"
+when:
+  general:
+    layout: story
+    order: random
+    entries:
+      - screens/one.jpg
+      - image: screens/two.png
+        text: The journey continues.
+      - text: { en: Hello, Russian: Привет, Chinese_Trad: 你好 }
+        when: { globalKey: defeated_eikthyr, notKnownBiome: [Swamp, mountain] }
+  sleep:
+    entries: [sleep/night.jpg]
+  biome:
+    meadows: [biomes/meadows.jpg]
+  death:
+    fall: { entries: [death/fall.jpg], layout: STORY }
+  enemy:
+    Troll: [enemy/troll.jpg]

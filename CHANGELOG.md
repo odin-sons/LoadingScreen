@@ -1,5 +1,26 @@
 ## Changelog
 
+### 0.9.2 (2026-11-23)
+
+Fixes in the online editor from the architecture and security review.
+
+#### Fixes
+
+  * **YAML source.** Edits in the YAML box apply to the form as soon as they parse, and the form is locked while
+    the YAML has an error, so a form edit can no longer overwrite unapplied text. Files with aliases, nesting
+    deeper than 32 levels or over 512 KB are rejected instead of freezing the tab.
+  * **Validation.** The editor checks configs with the same rules as the mod, including empty values,
+    case-insensitive keys, language names and the tip, prompt, separator and spinner settings, and reports the
+    line of the offending value. Text such as `Press *any* key` is no longer mistaken for an alias.
+  * **Round trip.** Form edits keep comments, quoting and untouched values in the YAML, renamed layouts and lists
+    keep their place, and values such as `2024-05-01` or `0x10` stay as written.
+  * **Privacy.** Colours from a loaded file reach the preview only as `#RRGGBB` or `#RRGGBBAA`, so a shared config
+    cannot make the browser load a remote address. The page also sets a Content-Security-Policy.
+  * **Robustness.** Switching tabs no longer rewrites short forms in the YAML, values the form cannot show get a
+    note instead of breaking the section, and a failed data load shows a message.
+  * **Accessibility.** Keyboard focus stays in place when the form updates, the section tabs work as a tab list
+    with arrow keys, buttons name the card they act on, and validation results are announced once.
+
 ### 0.9.1 (2026-11-23)
 
 Fixes from the architecture and security review.

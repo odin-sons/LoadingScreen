@@ -2,6 +2,8 @@
 <html lang="en">
 <head>
   <meta charset="utf-8">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self' blob:; connect-src 'self'; base-uri 'none'; form-action 'none'">
+  <meta name="referrer" content="no-referrer">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="theme-color" content="#101b2b">
   <title>LoadingScreen · Configuration editor</title>
@@ -20,19 +22,21 @@
     <div class="workspace">
       <section class="panel editor-panel" aria-labelledby="form-title">
         <div class="panel-head"><div><p class="eyebrow">01 / COMPOSE</p><h2 id="form-title">Editor</h2></div><span id="edit-status" class="status">Ready</span></div>
-        <nav class="tabs" aria-label="Editor sections">
-          <button class="tab active" type="button" data-tab="defaults">Defaults</button>
-          <button class="tab" type="button" data-tab="layouts">Layouts</button>
-          <button class="tab" type="button" data-tab="when">When</button>
-        </nav>
-        <div id="form" class="form-content"></div>
+        <div class="tabs" role="tablist" aria-label="Editor sections">
+          <button id="tab-defaults" class="tab active" type="button" role="tab" aria-selected="true" aria-controls="form" data-tab="defaults">Defaults</button>
+          <button id="tab-layouts" class="tab" type="button" role="tab" aria-selected="false" aria-controls="form" tabindex="-1" data-tab="layouts">Layouts</button>
+          <button id="tab-when" class="tab" type="button" role="tab" aria-selected="false" aria-controls="form" tabindex="-1" data-tab="when">When</button>
+        </div>
+        <p id="form-lock" class="form-lock" role="status" hidden>The YAML source has an error. Fix it to keep editing in the form.</p>
+        <div id="form" class="form-content" role="tabpanel" aria-labelledby="tab-defaults"></div>
       </section>
       <section class="panel result-panel" aria-labelledby="yaml-title">
-        <div class="panel-head"><div><p class="eyebrow">02 / SOURCE</p><h2 id="yaml-title">loadingscreen.yaml</h2></div><button id="apply-yaml" class="text-button" type="button">Apply YAML → form</button></div>
+        <div class="panel-head"><div><p class="eyebrow">02 / SOURCE</p><h2 id="yaml-title">loadingscreen.yaml</h2></div></div>
         <label class="sr-only" for="yaml">Editable YAML configuration</label>
         <textarea id="yaml" spellcheck="false" autocapitalize="off" autocomplete="off" aria-describedby="yaml-hint"></textarea>
-        <p id="yaml-hint" class="hint">Paste or edit YAML, then apply it to the form. Form changes regenerate this source.</p>
-        <div class="problems"><h3>Validation <span id="problem-count">0</span></h3><ul id="problem-list" aria-live="polite"></ul></div>
+        <p id="yaml-hint" class="hint">Paste or edit YAML here; the form follows as soon as the YAML is valid. Form changes are written into this source, keeping comments and formatting.</p>
+        <div class="problems"><h3>Validation <span id="problem-count">0</span></h3><ul id="problem-list"></ul><p id="problem-status" class="sr-only" aria-live="polite"></p></div>
+        <p id="source-note" class="hint" hidden></p>
       </section>
     </div>
     <section class="panel preview-panel" aria-labelledby="preview-title">

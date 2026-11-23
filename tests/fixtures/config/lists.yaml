@@ -1,0 +1,22 @@
+layouts:
+  main: { layers: [{ image: entry }] }
+when:
+  general: [a.png, b.png]
+  sleep: just-a-string.png
+  biome:
+    MEADOWS: [m.png]
+    Meadows: [n.png]
+    Atlantis: [x.png]
+  death:
+    fall: [f.png]
+    FALL: [f.png]
+    gravity: [g.png]
+  enemy:
+    Troll:
+      layout: Main
+      order: 3
+      sound: [music/a.ogg]
+      entries: { a: b }
+      colour: red
+  rain: []
+  biome2: {}

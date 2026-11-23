@@ -1,0 +1,10 @@
+5	'sleep' entries must be a list
+8	duplicate biome name 'Meadows', ignored
+12	duplicate death name 'Fall', ignored
+13	unknown death name 'gravity', known: Undefined, EnemyHit, PlayerHit, Fall, Drowning, Burning, Freezing, Poisoned, Water, Smoke, EdgeOfWorld, Impact, Cart, Tree, Self, Structural, Turret, Boat, Stalagtite, Catapult, CinderFire, AshlandsOcean, AshlandsLava, Incinerator, DrawBridge, Blunt, Slash, Pierce, Chop, Pickaxe, Fire, Frost, Lightning, Poison, Spirit
+20	enemy.Troll: unknown key 'colour'
+18	enemy.Troll: 'sound' needs an audio path, ignored
+17	'enemy.Troll' order: use 'random' or 'sequential', got '3'
+19	'enemy.Troll' entries must be a list
+21	unknown situation 'rain', use 'general', 'sleep', 'biome', 'death' or 'enemy'
+22	unknown situation 'biome2', use 'general', 'sleep', 'biome', 'death' or 'enemy'

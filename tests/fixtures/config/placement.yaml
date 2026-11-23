@@ -1,0 +1,20 @@
+layouts:
+  p:
+    place:
+      fit: { width: -10%, height: abc }
+      position: [center]
+      opacity: NaN
+      fade: { sides: [left, nowhere, "Left, Right", 15], size: -5px, curve: wavy, color: "#12345" }
+    layers:
+      - image: entry
+        place:
+          fit: 1
+          position: { anchor: 0, x: 1e2px, y: " 5 PX ", z: 1 }
+          opacity: 1.5
+          fade: { color: "#000000" }
+      - image: entry
+        place: { fit: Box, opacity: "+.5", fade: top }
+      - image: entry
+        place: { fit: {}, fade: [] }
+      - image: entry
+        place: [1]

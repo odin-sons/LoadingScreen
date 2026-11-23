@@ -1,0 +1,30 @@
+5	layout 'broken' layer '0': 'color' is ignored on an image layer
+6	layout 'broken' layer '1': 'text' needs caption or prompt, layer ignored
+8	layout 'broken' layer '2': 'size' must be a positive font size
+9	layout 'broken' layer '2': a text layer supports only 'fit: { width }' (the text width)
+11	layout 'broken' layer '3': invalid color 'blue', use #RRGGBB or #RRGGBBAA
+13	layout 'broken' layer '3': invalid align 'justify', use left, center or right
+14	layout 'broken' layer '4': 'spinner' needs hammer, ring, dots or an image path; layer ignored
+15	layout 'broken' layer '5': use only one of 'color' and 'spinner' in a layer, ignored
+17	layout 'broken' layer '6': unsupported image type 'images/spin.gif', use .png, .jpg, .jpeg
+18	layout 'broken' layer '7': 'progress' needs bar, ring or percent; layer ignored
+20	layout 'broken' layer '8': 'size' must be positive
+22	layout 'broken' layer '9': image path '../b.png' must be relative to the config folder, ignored
+22	layout 'broken' layer '9': unsupported image type 'c.bmp', use .png, .jpg, .jpeg
+22	layout 'broken' layer '9': image path 'C:/d.png' must be relative to the config folder, ignored
+23	layout 'broken' layer '10': unsupported image type 'x.gif', use .png, .jpg, .jpeg
+23	layout 'broken' layer '10': a layer has no usable images, ignored
+25	layout 'broken' layer '11': invalid color 'gold', use #RRGGBB or #RRGGBBAA; tint ignored
+26	layout 'broken' layer '12': invalid color 'nope', use #RRGGBB or #RRGGBBAA; layer ignored
+27	layout 'broken' layer '13': 'size' applies only to text layers
+27	layout 'broken' layer '13': a layer needs 'image', 'text' or 'color', ignored
+28	layout 'broken' layer 'named': use only one of 'image', 'text', 'spinner' and 'progress' in a layer, ignored
+31	layout 'broken' layer '15': a layer must be a mapping, ignored
+33	layout 'broken' layer '16': 'size' applies only to text layers
+34	layout 'broken' layer '16': 'align' applies only to text layers
+35	layout 'broken' layer '16': 'background' applies only to text layers
+39	layout 'broken' layer '17': 'place': 'animate' must be true or false
+43	layout 'empty' has no valid layers, ignored
+44	duplicate layout 'BROKEN', ignored
+48	layout 'weird' needs a 'layers' list, ignored
+0	layout 'noentry' has no 'image: entry' layer, so entry images are not shown with it

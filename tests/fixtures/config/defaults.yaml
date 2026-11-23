@@ -1,0 +1,14 @@
+Defaults:
+  Background: red
+  tint: "##ff00ff"
+  zoom: { enabled: yes, seconds: 0 }
+  tip: { x: left, bottom: 1e3, size: 65, color: white, font: big }
+  continuePrompt: { SIZE: 12.5, Color: "#fff" }
+  separator: { show: maybe, onlayouts: FALSE, x: " 4 " }
+  spinner: [1, 2]
+  vignette: { size: 120%, strength: 2 }
+  mask: { opacity: -0.1, colour: "#000000" }
+  animation: { enter: "", idle: [a], speed: 0, origin: middle, loop: yes }
+  place: { animate: sometimes, fit: 4, position: { anchor: "top left", x: 10 percent } }
+order: shuffled
+extra: 1
