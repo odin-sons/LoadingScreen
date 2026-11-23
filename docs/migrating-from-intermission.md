@@ -49,5 +49,7 @@ defaults:
 
 ## 3. Remove Intermission
 
-Both mods change the same loading screens. Remove Intermission after the move so only one of them draws the
-screen.
+LoadingScreen declares itself incompatible with Intermission: while Intermission is installed, BepInEx does not
+load LoadingScreen and writes `Could not load [LoadingScreen ...] because it is incompatible with:
+redseiko.valheim.intermission` to `BepInEx/LogOutput.log`. Remove Intermission, and ComfyLoadingScreens if you use
+it (it installs Intermission as a dependency). Move its images into the LoadingScreen folder first.

@@ -17,6 +17,8 @@ using static PluginConfig;
 [BepInPlugin(PluginGuid, PluginName, PluginVersion)]
 [BepInDependency(ConditionalConfigSyncAPI.ConfigSync.PluginGuid, BepInDependency.DependencyFlags.SoftDependency)]
 [BepInDependency("expand_world_data", BepInDependency.DependencyFlags.SoftDependency)]
+[BepInIncompatibility("redseiko.valheim.intermission")]
+[BepInIncompatibility("cjayride.CustomLoadingScreens")]
 public sealed class LoadingScreen : BaseUnityPlugin {
   public const string PluginGuid = "Odin_Sons.LoadingScreen";
   public const string PluginName = "LoadingScreen";
