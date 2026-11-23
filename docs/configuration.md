@@ -18,6 +18,16 @@ folder holds `loadingscreen.yaml`, tip files, images and audio clips.
 
 Behavior switches are in `BepInEx/config/Odin_Sons.LoadingScreen.cfg`; appearance is in the YAML `defaults` section.
 
+## Built-in tips
+
+With `[1 - General] Built-in tips` on (the default), the mod shows English and Russian text-only gameplay tips when
+`loadingscreen.yaml` has no entries in `when`. The commented example counts as empty. Tips can appear over your plain
+images or the game's image; biome, death, and sleep tips appear in their situations, and general tips cover other
+loads. Progress conditions keep later advice from appearing too early. Any entry you add to `when` makes your YAML
+the only situational source. A server's shared config also takes priority. The built-in set is never shared by a
+server. When no built-in entry is usable, `tips.txt` remains the fallback. Turn the cfg setting off to use only your
+own files; changing it reloads the loading screen configuration.
+
 `[5 - Sound] Play loading screen sounds` turns configured music and voices on or off (on by default). `Music volume
 percent` and `Voice volume percent` each range from 0 to 100 and default to 100. Music also follows Valheim's master
 and music sliders; voices follow its master and effects sliders. Music follows the loading screen's fade and stops

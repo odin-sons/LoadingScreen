@@ -11,6 +11,7 @@ layouts, captions, progress, and audio locally.
 - **Custom layouts.** Combine images, captions, progress, and spinners with placement, fades, and animations.
 - **Useful tips.** Show translated captions or tips, and target entries to players by items, recipes, biomes, or
   world progress.
+- **Built-in tips.** Start with translated, situation-aware gameplay tips before adding any custom entries.
 - **Music and voice.** Play looping music and voiced entry captions with independent volume controls.
 - **Shared server screens.** Server owners can distribute their config and images to connected players in the
   background.
@@ -30,7 +31,7 @@ BepInEx then writes `Could not load [LoadingScreen ...] because it is incompatib
 Image packs that depend on Intermission, such as ComfyLoadingScreens, install Intermission and count as it.
 
 On first start the mod creates `BepInEx/config/LoadingScreen/loadingscreen.yaml` with a commented example. While
-everything in it stays commented out, the mod behaves like Intermission.
+everything in it stays commented out, built-in gameplay tips appear over your images or the game's image.
 
 ## Quick start
 

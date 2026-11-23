@@ -1,5 +1,14 @@
 ## Changelog
 
+### 0.8.0 (2026-11-23)
+
+Adds translated gameplay tips that make loading screens useful immediately after installation.
+
+#### Features
+
+  * **Built-in tips.** Text-only tips cover ordinary loads, biome travel, deaths, and sleep until you define your own
+    entries; a local cfg switch turns them off.
+
 ### 0.7.0 (2026-11-23)
 
 Adds progress, spinner and animated layers, layouts that draw only their own layers, a safer key hold, audio
