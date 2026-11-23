@@ -141,7 +141,7 @@ static class SceneLoaderPatch {
     _ringColor = ring ? ring.color : new(1f, 0.6f, 0.1f);
     _ringColor.a = 1f;
     _ringSprite = ring ? ring.sprite : null;
-    Log.Render.Info(LogContext.Message("Captured the game start indicator.",
+    Log.Render.Debug(LogContext.Message("Captured the game start indicator.",
         ("ringFound", (bool)ring), ("ringSprite", _ringSprite ? _ringSprite.name : "none"),
         ("ringDiameter", _ringDiameter), ("ringCenter", _ringCenter), ("ringColor", _ringColor),
         ("ringType", ring ? ring.type : Image.Type.Simple), ("spinnerCenter", _spinnerCenter)));
