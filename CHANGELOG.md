@@ -1,5 +1,20 @@
 ## Changelog
 
+### 0.9.1 (2026-11-23)
+
+Fixes from the architecture and security review.
+
+#### Fixes
+
+  * **Held screen.** Movement, attacks and interaction are blocked while a loading screen is held, so the
+    damage protection can no longer be used in combat. Any key, mouse button, gamepad stick or trigger ends the
+    hold, including voice and exit-animation waits.
+  * **Game updates.** If any patch fails after a Valheim update, all patches are rolled back and the mod stays
+    fully off instead of half-working.
+  * **Shared files.** The server sends its loading screen files only to players who passed the password,
+    whitelist and ban checks.
+  * **Text colour.** Automatic text and box colours no longer sample layers from the previous screen.
+
 ### 0.9.0 (2026-11-23)
 
 Adds a browser-based helper for creating loading screen configurations.

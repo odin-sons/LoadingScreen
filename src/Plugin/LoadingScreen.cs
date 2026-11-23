@@ -27,7 +27,7 @@ using static PluginConfig;
 public sealed class LoadingScreen : BaseUnityPlugin {
   public const string PluginGuid = "Odin_Sons.LoadingScreen";
   public const string PluginName = "LoadingScreen";
-  public const string PluginVersion = "0.9.0";
+  public const string PluginVersion = "0.9.1";
 
   void Awake() {
     Log.Attach(Logger);
@@ -46,6 +46,7 @@ public sealed class LoadingScreen : BaseUnityPlugin {
     }
 
     IsModEnabled.SettingChanged += (_, _) => {
+      if (!_patched) return;
       if (IsModEnabled.Value) LoadingManager.Enable();
       ServerImages.OnSettingsChanged();
       if (!IsModEnabled.Value) LoadingManager.Disable();
@@ -56,17 +57,26 @@ public sealed class LoadingScreen : BaseUnityPlugin {
     ReadableText.SettingChanged += (_, _) => LoadingManager.RefreshAppearance();
     MinimumTextSize.SettingChanged += (_, _) => LoadingManager.RefreshAppearance();
 
+    Harmony harmony = new(PluginGuid);
     try {
-      Harmony.CreateAndPatchAll(Assembly.GetExecutingAssembly(), harmonyInstanceId: PluginGuid);
+      harmony.PatchAll(Assembly.GetExecutingAssembly());
+      _patched = true;
     } catch (Exception exception) {
       Log.Plugin.Fatal(LogContext.Message("Harmony patching failed; the loading screen is disabled.",
           ("operation", "patch"), ("harmony", PluginGuid), ("error", exception.Message)));
       Log.Plugin.Fatal(exception);
+      try {
+        harmony.UnpatchSelf();
+      } catch (Exception unpatch) {
+        Log.Plugin.Fatal(unpatch);
+      }
     }
   }
 
+  bool _patched;
+
   void Update() {
-    if (!IsModEnabled.Value) return;
+    if (!_patched || !IsModEnabled.Value) return;
     ServerImages.Tick();
     ConfigProblemReport.Tick();
     ScreenConfigLoader.TickBiomeWarnings();
