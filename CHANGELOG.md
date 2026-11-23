@@ -60,6 +60,8 @@ cfg and clearer logs.
 
 #### Changes
 
+  * **Incompatible mods.** LoadingScreen does not load while Intermission or CustomLoadingScreens is installed;
+    BepInEx logs the reason. The mods patched the same loading screens and broke each other.
   * **Biome lists.** `when.biome` replaces `when.teleport` for destination biome lists and death biome tips.
   * **`when` key.** The YAML top-level `situations` key is renamed to `when`; existing YAML files must use `when`.
   * **Zoom fields.** `animation` replaces the old `animate` and `defaults.zoom` fields. Files from 0.6.0 still
