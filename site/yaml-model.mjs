@@ -25,6 +25,14 @@ function checkStructure(root, lineOf) {
   while (stack.length) {
     const [node, depth] = stack.pop();
     if (isAlias(node)) return { line: lineOf(node), message: 'YAML aliases (*name) are not supported' };
+    if (isMap(node)) {
+      const names = new Set();
+      for (const pair of node.items) {
+        const name = isScalar(pair.key) ? keyText(pair.key) : pair.key;
+        if (names.has(name)) return { line: lineOf(pair.key), message: 'duplicate key \'' + keyText(pair.key) + '\'', invalid: true };
+        names.add(name);
+      }
+    }
     if (isPair(node)) {
       stack.push([node.value, depth], [node.key, depth]);
     } else if (isMap(node) || isSeq(node)) {
@@ -60,13 +68,13 @@ export function parseSource(text) {
   const lineOf = (node) => Array.isArray(node?.range) ? lineCounter.linePos(node.range[0]).line : undefined;
   let doc;
   try {
-    doc = parseDocument(text, { schema: 'failsafe', lineCounter, uniqueKeys: true });
+    doc = parseDocument(text, { schema: 'failsafe', lineCounter, uniqueKeys: false });
   } catch (error) {
     return { error: yamlError(error, lineOf) };
   }
   if (doc.errors.length) return { error: yamlError(doc.errors[0], lineOf) };
   const structure = checkStructure(doc.contents, lineOf);
-  if (structure) return { error: { line: structure.line ?? 1, message: structure.message + ', config ignored' } };
+  if (structure) return { error: { line: structure.line ?? 1, message: (structure.invalid ? 'invalid YAML, config ignored: ' + structure.message : structure.message + ', config ignored') } };
   const root = doc.contents;
   if (!isNullNode(root) && !isMap(root)) return { error: { line: lineOf(root) ?? 1, message: 'the top level must be a mapping, config ignored' } };
   return { doc, lineOf, config: isMap(root) ? toModel(root) : {} };
