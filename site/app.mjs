@@ -40,7 +40,9 @@ async function loadOptions() {
 
 const isMapping = (value) => value !== null && typeof value === 'object' && !Array.isArray(value);
 const mappingOr = (value) => isMapping(value) ? value : {};
-const choice = (value) => value === undefined || value === null ? '' : String(value);
+const scalarText = (value) => typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean' ? String(value) : '';
+const choice = scalarText;
+const listText = (value, separator) => Array.isArray(value) ? value.map(scalarText).join(separator) : value;
 
 function el(tag, className, text) {
   const node = document.createElement(tag);
@@ -59,7 +61,8 @@ function field(parent, label, value, write, { type = 'text', values, list, wide 
   const id = 'f-' + Math.random().toString(36).slice(2);
   const title = el('label', '', label);
   title.htmlFor = id;
-  const current = value === undefined || value === null ? '' : String(value);
+  const complex = value !== null && typeof value === 'object';
+  const current = scalarText(value);
   let input;
   if (multiline) input = el('textarea');
   else if (values) {
@@ -83,7 +86,8 @@ function field(parent, label, value, write, { type = 'text', values, list, wide 
     input.setAttribute('list', data.id);
     wrap.append(data);
   }
-  input.placeholder = placeholder;
+  input.placeholder = complex ? 'Edit this value in the YAML source' : placeholder;
+  input.disabled = complex;
   input.value = current;
   input.addEventListener(onChange ? 'change' : 'input', () => {
     write(input.value);
@@ -138,7 +142,7 @@ function sourceOnly(parent, what) {
 
 function set(target, key, value, numeric = false) {
   if (value === '') delete target[key];
-  else target[key] = numeric && Number.isFinite(Number(value)) ? Number(value) : value;
+  else define(target, key, numeric && Number.isFinite(Number(value)) ? Number(value) : value);
 }
 
 function mover(items, index, attach, title) {
@@ -178,7 +182,7 @@ function placeEditor(parent, owner, title, attach = () => {}) {
   const fade = mappingOr(place.fade);
   const keepFade = () => { keep(); place.fade = fade; };
   const fadeFields = grid(group(box, 'Edge fade'));
-  field(fadeFields, 'Sides', Array.isArray(fade.sides) ? fade.sides.join(', ') : fade.sides, (v) => { keep(); if (!v) delete place.fade; else { place.fade = fade; fade.sides = v.split(',').map((s) => s.trim()).filter(Boolean); } }, { placeholder: 'bottom, left' });
+  field(fadeFields, 'Sides', listText(fade.sides, ', '), (v) => { keep(); if (!v) delete place.fade; else { place.fade = fade; fade.sides = v.split(',').map((s) => s.trim()).filter(Boolean); } }, { placeholder: 'bottom, left' });
   field(fadeFields, 'Fade color', fade.color, (v) => { keepFade(); set(fade, 'color', v); }, { placeholder: '#000000' });
   field(fadeFields, 'Fade size', fade.size, (v) => { keepFade(); set(fade, 'size', v); }, { placeholder: '15%' });
   field(fadeFields, 'Curve', choice(fade.curve), (v) => { keepFade(); set(fade, 'curve', v); }, { values: ['', 'smooth', 'linear'] });
@@ -268,7 +272,7 @@ function layerForm(parent, layer, layers, index) {
     render();
   }, { values: LAYER_KINDS });
   field(fields, 'Layer ID', layer.id, (v) => set(layer, 'id', v), { placeholder: 'optional' });
-  if (kind === 'image') field(fields, 'Image path or keyword', Array.isArray(layer.image) ? layer.image.join('\n') : layer.image, (v) => { layer.image = v.includes('\n') ? v.split('\n').map((s) => s.trim()).filter(Boolean) : v; }, { multiline: true, wide: true, placeholder: 'entry, separator, or images/logo.png\nOne path per line for alternatives' });
+  if (kind === 'image') field(fields, 'Image path or keyword', listText(layer.image, '\n'), (v) => { layer.image = v.includes('\n') ? v.split('\n').map((s) => s.trim()).filter(Boolean) : v; }, { multiline: true, wide: true, placeholder: 'entry, separator, or images/logo.png\nOne path per line for alternatives' });
   if (kind === 'text') {
     field(fields, 'Text source', choice(layer.text), (v) => { layer.text = v; }, { values: ['caption', 'prompt'] });
     field(fields, 'Font size', layer.size, (v) => set(layer, 'size', v, true), { type: 'number' });
@@ -372,7 +376,7 @@ function entryForm(parent, entries, index, attachEntries) {
       }
     }, { list: options.conditions, onChange: true });
     const suggestions = key.toLowerCase().includes('biome') ? options.biomes : key.toLowerCase().includes('global') ? options.globalKeys : [];
-    field(fields, 'Name or comma-separated names', Array.isArray(value) ? value.join(', ') : value, (v) => { keepWhen(); when[key] = v.includes(',') ? v.split(',').map((s) => s.trim()).filter(Boolean) : v; }, { list: suggestions });
+    field(fields, 'Name or comma-separated names', listText(value, ', '), (v) => { keepWhen(); define(when, key, v.includes(',') ? v.split(',').map((s) => s.trim()).filter(Boolean) : v); }, { list: suggestions });
   });
 }
 
@@ -547,7 +551,12 @@ function updatePreview() {
   const layout = Array.isArray(layouts[previewName]) ? { layers: layouts[previewName] } : mappingOr(layouts[previewName]);
   const entries = allEntries();
   const entry = entries.find((candidate) => candidate.layout === previewName) || entries[0] || {};
-  drawPreview($('#screen'), layout, entry, mappingOr(config.defaults), images, $('#ratio').value);
+  try {
+    drawPreview($('#screen'), layout, entry, mappingOr(config.defaults), images, $('#ratio').value);
+  } catch (error) {
+    console.error('Editor: the preview could not be drawn', error);
+    $('#screen').replaceChildren(el('div', 'layer placeholder', 'The preview cannot show this layout'));
+  }
 }
 
 const tabButtons = [...document.querySelectorAll('[data-tab]')];
@@ -579,10 +588,11 @@ $('#file-input').addEventListener('change', async (event) => {
     return;
   }
   yamlBox.value = await file.text();
+  sourceDirty = true;
   applySource();
 });
 $('#download').addEventListener('click', () => {
-  if (sourceDirty && !applySource()) return;
+  if ((sourceDirty || form.inert) && !applySource()) return;
   const blob = new Blob([yamlBox.value.endsWith('\n') ? yamlBox.value : yamlBox.value + '\n'], { type: 'text/yaml;charset=utf-8' });
   const url = URL.createObjectURL(blob);
   const link = el('a');

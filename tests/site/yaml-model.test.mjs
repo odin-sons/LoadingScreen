@@ -57,3 +57,12 @@ test('known keys get their documented spelling', () => {
   assert.equal(renamed.length, 7);
   assert.deepEqual(config, { defaults: { continuePrompt: { size: '3' } }, when: { general: [{ image: 'a.png', when: { hasItem: 'Wood' } }] } });
 });
+
+test('duplicate keys are refused without slowing down large maps', () => {
+  assert.match(parseSource('a: 1\nb: 2\na: 3\n').error.message, /duplicate key 'a'/);
+  let source = '';
+  for (let index = 0; source.length < 400000; index++) source += 'k' + index + ': x\n';
+  const started = Date.now();
+  assert.equal(parseSource(source).error, undefined);
+  assert.ok(Date.now() - started < 3000);
+});
