@@ -54,7 +54,7 @@ static class HudPatch {
     bool exitActive = ready && allowed && WaitForExitAnimation.Value && LoadingManager.HudHost
         && LoadingManager.HudHost.BeginExit(Time.realtimeSinceStartup);
     bool dismissed = Input.anyKeyDown || ZInput.GetMouseButtonDown(0) || ZInput.GetMouseButtonDown(1)
-        || ZInput.GetMouseButtonDown(2);
+        || ZInput.GetMouseButtonDown(2) || GamepadMoved();
     float now = Time.realtimeSinceStartup;
     LoadingHoldDecision hold = _holdState.Update(
         _loadingScreenState, ready, allowed, HoldLoadingScreen.Value, voiceActive, dismissed,
@@ -85,6 +85,10 @@ static class HudPatch {
 
     return !hold.Holding;
   }
+
+  static bool GamepadMoved() =>
+      ZInput.GetJoyLeftStick().sqrMagnitude > 0.25f || ZInput.GetJoyRightStick().sqrMagnitude > 0.25f
+      || ZInput.GetJoyLTrigger() > 0.5f || ZInput.GetJoyRTrigger() > 0.5f;
 
   static bool HasHostileMonsterNoticed(Player player) {
     _nextThreatScanAt = Time.realtimeSinceStartup + 0.5f;
