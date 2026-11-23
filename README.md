@@ -34,7 +34,7 @@ on Unity, but **the mod has not been tested in the game yet**. See the
 - **Layered layouts.** A screen is a stack of layers (solid colors, fixed images, random image pools, spinners, progress, the chosen
   entry's image, the caption), each sized and positioned on its own, with gradient edges and enter, idle and exit animations.
   Two presets are included in the example config.
-- **Captions.** An entry can carry plain or translated text; without it, a tip from the selected language's tip file is shown.
+- **Captions.** An entry can carry plain or translated text; without it, a tip from the selected language's tip file is shown on screens without a layout or through a layout's `text: caption` layer.
 - **Loading sounds.** Loop music for a layout, list or entry; play an entry's voiced tip once when its text appears.
 - **Conditions.** An entry can be limited to players who, for example, have never held a Wisplight or have not
   defeated a boss yet, so a tip only reaches the players who need it.
@@ -136,8 +136,8 @@ works with a layout's `text: caption` layer. The game's arrow keys still advance
 tip, the next pick differs from the previous one.
 
 Set `[2 - When to show] Loading screen while sleeping` to `true` to show an image and tip during sleep (default: off).
-The game's sleep text and spinner stay visible above the image. A sleep-specific layout can hide them with
-`showSleepUi: false` and use its own layers instead. Image slideshows and tip rotation also apply while sleeping.
+The game's sleep text and spinner stay visible above plain images. A sleep-specific layout hides them and draws
+only its layers. Image slideshows and tip rotation also apply while sleeping.
 
 Set `[3 - Timing] Hold loading screen until a key is pressed` to `true` to keep the HUD loading screen and tip
 visible after loading finishes (default: off). A separate "Press any key to continue" line appears; any key or mouse
@@ -153,7 +153,8 @@ both settings are on, the screen closes after both the voice and key hold are do
 to finish` to play the layer exit phases before closing (default: off); otherwise the screen closes immediately and
 the exit phases are skipped. This also applies when sleep or the game start scene loader ends. `[3 - Timing] Maximum hold time in
 seconds` closes any hold automatically after 30 seconds by default (allowed: 1 to 300). Holds do not run on
-dedicated servers or during cinematics. Style the key prompt with `defaults.continuePrompt` in `loadingscreen.yaml`.
+dedicated servers or during cinematics. On screens without a layout, style the key prompt with
+`defaults.continuePrompt` in `loadingscreen.yaml`. A layout needs a `text: prompt` layer to show it.
 
 ### Selection
 
@@ -525,7 +526,6 @@ when:
 ```yaml
 layouts:
   logo-over-backdrops:
-    showSleepUi: false         # only during sleep: hide the game's sleep text and spinner
     vignette: { strength: 0.7 } # override one default effect value on this layout
     layers:                    # drawn in order, the first is at the back
       - color: "#000000"       # solid fill
@@ -537,7 +537,10 @@ layouts:
           fade: { sides: [bottom], color: "#000000", size: 25% }
       - image: common/logo.png # one fixed image; "image: [a.png, b.png]" picks one per screen
         place: { fit: { width: 30% }, position: { anchor: top, y: 8% } }
-      - spinner: ring        # also accepts hammer, dots, or a relative image path
+      - progress: ring       # shows loading progress on the game start screen
+        size: 96
+        place: { position: { anchor: bottom, y: -20% } }
+      - spinner: hammer      # also accepts ring, dots, or a relative image path
         place: { fit: { width: 48px }, position: { anchor: bottom, y: -20% } }
       - progress: bar         # also accepts ring or percent
         color: "#FFFFFF"
@@ -549,6 +552,9 @@ layouts:
         align: center
         background: "#00000099"
         place: { fit: { width: 50% }, position: { anchor: bottom, y: -6% } }
+      - text: prompt           # shown only while waiting for a key
+        size: 20
+        place: { fit: { width: 50% }, position: { anchor: bottom, y: -2% } }
       - image: separator        # the game's ornament line
         color: "#FFFFFFCC"     # optional tint
         place: { fit: { width: 35% }, position: { anchor: bottom, y: -14% } }
@@ -567,7 +573,8 @@ for Valheim's loading indicator sprite, `spinner: ring` or `spinner: dots` for g
 `spinner: common/indicator.png` for a custom image. Custom images use the same path rules and server transfer as
 image layers. Spinner layers use `place` like images and keep their native size unless `fit` is set. They use
 `spin` as their idle animation by default; `animation: pulse` or an `animation` phase mapping replaces it.
-An explicit spinner layer on the game start layout replaces the legacy game start indicator.
+On game start layouts, add `progress: ring` and `spinner: hammer` layers if you want a progress ring and Valheim's hammer.
+Valheim's own indicator stays hidden while a layout is shown.
 
 Use `progress: bar`, `progress: ring`, or `progress: percent` in any layout. It uses `place` like an image;
 `color` sets its color and `size` sets bar height, ring diameter, or percentage font size. Defaults are a 240 px
@@ -652,7 +659,7 @@ defaults:
   animation: { enter: fade-in, idle: breathe, exit: fly-out-left }
   tip: { x: 0, bottom: 90, size: 24, color: "#FFFFFF" }
   continuePrompt: { x: 0, bottom: 30, size: 20, color: "#FFFFFF" }
-  separator: { show: true, x: 0, bottom: 150, onLayouts: true }
+  separator: { show: true, x: 0, bottom: 150 }
   spinner: { center: true, x: 0, bottom: 200 }
 ```
 
@@ -664,19 +671,15 @@ built-ins; a layout can override individual values from `defaults`. Set `strengt
 layout to disable an inherited effect there. Color alpha also affects the final opacity. Effects cover
 layered screens and plain-image fallbacks.
 
-`continuePrompt` positions and styles the line shown when the optional loading hold is active; its `size` accepts
-`0` to `64`.
-`separator.onLayouts` keeps the built-in line on layout screens unless a layout has its own `image: separator`
-layer. The legacy `defaults.spinner` setting still applies to game start: with `center: true`, it becomes an
-implicit `progress: ring` layer and an implicit `spinner: hammer` layer centered in it, drawn after the layout's
-other layers at `x` and `bottom` with Valheim's ring sprite, color and size. Valheim's own indicator is hidden.
-A layout's explicit spinner replaces both; an explicit progress layer replaces only the ring. With `center: false`,
-Valheim's original indicator remains at its original position. For new layouts, move the setting into explicit
-spinner and progress layers to control their order, style, placement, and animation.
+`continuePrompt` positions and styles the line shown during a key hold on screens without a layout; its `size`
+accepts `0` to `64`. `defaults.spinner` styles Valheim's game start indicator on screens without a layout. It
+does not add layers. Layouts show only their declared layers, regardless of `defaults` tip, separator, spinner,
+and continue prompt settings. An older `separator.onLayouts` value is accepted but has no effect.
 
 A text layer accepts `place` with `position`, `opacity`, and `fit: { width }` (the text box width, default 80% of the screen), plus
 `size`, `color`, `align` (`left`, `center`, `right`), `background` (a color box behind the text). Without a text
-layer, the caption goes to the usual tip line.
+layer, a layout shows no caption. `text: caption` shows the entry text or a tip. `text: prompt` shows the localized
+continue prompt only while the screen waits for a key; it accepts the same style and animation keys.
 
 Set a text layer's `color: auto` to choose light or dark text from the average brightness of the image behind its
 text box. `background: auto` chooses a light or dark box at 60% opacity; `color: auto` also accounts for that box.
@@ -688,14 +691,12 @@ text hue while adjusting its lightness toward WCAG AA 4.5:1 contrast against the
 it strengthens the text box and renders the text opaque. `[6 - Accessibility] Minimum text size` is also personal. Its default `0` disables the
 minimum; positive values apply to text layers, tips, captions, and progress labels.
 
-Layouts show the game's sleep text and spinner by default. Set `showSleepUi: false` on the layout selected by a
-`sleep` entry to hide both; add a `text: caption` layer to display the entry text or a tip in their place. Other
-image and text layers can supply a fully custom sleep screen. This key has no effect outside sleep.
+Layouts hide the game's sleep text and spinner. Add `text: caption` or other layers if the sleep layout needs
+them. Screens without a layout keep the game's sleep UI. An older `showSleepUi` value is accepted but has no effect.
 
 A `image: separator` layer draws the game's ornament line as an image layer. It takes the placement options and an
-optional `color` tint; without placement it keeps its native size near the bottom. A layout with such a layer hides
-the built-in separator line; set `defaults.separator.onLayouts: false` to hide it on every screen drawn by a layout.
-To use your own line, add it as an `image` layer and set `defaults.separator.show: false`.
+optional `color` tint; without placement it keeps its native size near the bottom. Layouts never show the built-in
+separator. To use your own line, add it as an `image` layer.
 
 ### Settings
 

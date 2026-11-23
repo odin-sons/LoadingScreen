@@ -633,25 +633,13 @@ public class ConfigParserTests {
   }
 
   [Fact]
-  public void LegacySpinnerDefaultsTranslateToGameStartLayer() {
+  public void SpinnerDefaultsStillParseForScreensWithoutLayouts() {
     ConfigLoadResult result = Parse("defaults: { spinner: { center: true, x: -5, bottom: 180 } }");
-
-    Layer layer = result.Config.Defaults.Spinner.ToLayer();
-    Assert.Equal(LayerKind.Spinner, layer.Kind);
-    Assert.Equal(SpinnerStyle.Hammer, layer.SpinnerStyle);
-    Assert.Equal("spin", layer.Animation.Idle);
-    Assert.Equal(Anchor.Bottom, layer.Placement.Anchor);
-    Assert.Equal(-5f, layer.Placement.X.Value.Value);
-    Assert.Equal(-180f, layer.Placement.Y.Value.Value);
-    Layer centered = result.Config.Defaults.Spinner.ToLayer(centerX: 2f, centerY: 60f, height: 40f);
-    Assert.Equal(-3f, centered.Placement.X.Value.Value);
-    Assert.Equal(-220f, centered.Placement.Y.Value.Value);
-    Layer ring = result.Config.Defaults.Spinner.ToRingLayer(2f, 60f, 80f, new ColorValue(255, 150, 20));
-    Assert.Equal(LayerKind.Progress, ring.Kind);
-    Assert.Equal(ProgressStyle.Ring, ring.ProgressStyle);
-    Assert.Equal(80f, ring.ProgressSize);
-    Assert.Equal(-200f, ring.Placement.Y.Value.Value);
-    Assert.Null(Parse("defaults: { spinner: { center: false } }").Config.Defaults.Spinner.ToLayer());
+    Assert.Empty(result.Warnings);
+    Assert.True(result.Config.Defaults.Spinner.Center);
+    Assert.Equal(-5f, result.Config.Defaults.Spinner.X);
+    Assert.Equal(180f, result.Config.Defaults.Spinner.Bottom);
+    Assert.False(Parse("defaults: { spinner: { center: false } }").Config.Defaults.Spinner.Center);
   }
 
   [Fact]
@@ -831,11 +819,41 @@ public class TextLayerTests {
 
     Assert.Empty(result.Warnings);
     Assert.Equal(LayerKind.Text, text.Kind);
+    Assert.Equal(TextSource.Caption, text.TextSource);
     Assert.Equal(32f, text.Text.FontSize);
     Assert.Equal(TextAlign.Left, text.Text.Align);
     Assert.Equal(128, text.Text.Background.Value.A);
     Assert.Equal(Anchor.BottomLeft, text.Placement.Anchor);
     Assert.True(result.Config.Layouts["captioned"].ShowsText);
+  }
+
+  [Fact]
+  public void ParsesPromptTextLayerWithCaptionStyling() {
+    const string yaml = """
+        layouts:
+          held:
+            layers:
+              - image: entry
+              - text: prompt
+                size: 26
+                color: "#FFFFFF"
+                align: right
+                background: "#00000080"
+                place: { fit: { width: 40% }, position: { anchor: bottom } }
+                animation: { enter: fade-in }
+        """;
+
+    ConfigLoadResult result = new ConfigParser(_ => true).Parse(yaml);
+    Layer prompt = result.Config.Layouts["held"].Layers[1];
+
+    Assert.Empty(result.Warnings);
+    Assert.Equal(LayerKind.Text, prompt.Kind);
+    Assert.Equal(TextSource.Prompt, prompt.TextSource);
+    Assert.Equal(26f, prompt.Text.FontSize);
+    Assert.Equal(TextAlign.Right, prompt.Text.Align);
+    Assert.Equal(128, prompt.Text.Background.Value.A);
+    Assert.Equal(Anchor.Bottom, prompt.Placement.Anchor);
+    Assert.Equal("fade-in", prompt.Animation.Enter);
   }
 
   [Fact]
@@ -846,6 +864,7 @@ public class TextLayerTests {
             layers:
               - image: entry
               - text: weather
+              - text: 1
               - text: caption
                 image: a.png
               - text: caption
@@ -861,7 +880,7 @@ public class TextLayerTests {
     Assert.Equal(3, layout.Layers.Count);
     Assert.Null(layout.Layers[1].Placement.Fit);
     Assert.Null(layout.Layers[1].Text.FontSize);
-    Assert.Contains(result.Warnings, warning => warning.Contains("'caption'"));
+    Assert.Contains(result.Warnings, warning => warning.Contains("caption or prompt"));
     Assert.Contains(result.Warnings, warning => warning.Contains("only one of"));
     Assert.Contains(result.Warnings, warning => warning.Contains("text width"));
     Assert.Contains(result.Warnings, warning => warning.Contains("positive font size"));

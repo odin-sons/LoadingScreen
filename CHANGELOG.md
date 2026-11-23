@@ -7,6 +7,8 @@ cfg and clearer logs.
 
 #### Features
 
+  * **Continue prompt layer.** `text: prompt` shows the localized key prompt only while a layout waits for input;
+    it accepts the same styling and animation as `text: caption`.
   * **Safe held screens.** A server-synced setting protects the local player from damage during a held HUD screen by
     default. When disabled, PvP or a nearby hostile monster noticing the player closes the screen automatically.
   * **Progress layer.** `progress` layers with bar, ring, and percentage styles. Game start uses real scene-load
@@ -14,16 +16,15 @@ cfg and clearer logs.
     shows localized connection stages. Ready area progress stays at 100% with a soft pulse during game delays.
   * **Spinner layer.** `spinner` layers for game start, portal, death and sleep layouts, with Valheim's hammer sprite,
     generated ring and dots, or a custom image. Spinners use `place` and spin by default; layer animations can replace
-    the spin. Existing `defaults.spinner` settings keep their game start behavior through an implicit hammer layer
-    when centered; an explicit spinner layer takes precedence.
+    the spin. `defaults.spinner` continues to style game start screens without a layout.
   * **Death tip order.** Death tries enemy, dominant damage type, hit type, death biome, custom biome's base biome,
     then general.
   * **Custom biomes.** Expand World Data custom biomes use their `biome:` identifiers in `when.biome` lists and
     `knownBiome` conditions; unresolved names warn at runtime.
   * **Layer animations.** Enter, idle and exit animations for YAML layers, built-in motion presets, and custom presets
     in `animations.yaml`. Server screen sharing and reload include custom presets.
-  * **Layered game start ring.** With the legacy centered spinner, the game start ring is now a `progress: ring`
-    layer drawn with Valheim's ring sprite, and the hammer turns in its center; Valheim's indicator is hidden.
+  * **Layered game start ring.** A `progress: ring` layer draws a game start ring, and `spinner: hammer` can turn in
+    its center. Valheim's indicator is hidden while a layout is shown.
   * **Animation origin.** `animation.origin` picks the point a layer scales and rotates around, like CSS
     `transform-origin`; layers default to their center, so spinners turn in place.
   * **Exit animation wait.** Server-synced `Wait for the exit animation to finish` timing setting, off by default.
@@ -62,6 +63,9 @@ cfg and clearer logs.
 
 #### Changes
 
+  * **Layout-only layers.** Layout screens now draw only their declared layers, including text, separators, progress,
+    spinners, and key prompts. Existing layouts must add layers for elements they previously received implicitly;
+    screens without a layout keep their previous appearance.
   * **Incompatible mods.** LoadingScreen does not load while Intermission or CustomLoadingScreens is installed;
     BepInEx logs the reason. The mods patched the same loading screens and broke each other.
   * **Biome lists.** `when.biome` replaces `when.teleport` for destination biome lists and death biome tips.

@@ -345,12 +345,16 @@ public sealed class ConfigParser {
   }
 
   Layer ParseTextLayer(Layer layer, YamlMappingNode mapping, YamlNode text, string where) {
-    if (!string.Equals(Scalar(text), "caption", StringComparison.OrdinalIgnoreCase)) {
-      Warn(text, $"{where}: 'text' supports only 'caption' (the entry text or a tip), layer ignored");
+    string sourceName = Scalar(text);
+    if (!string.Equals(sourceName, "caption", StringComparison.OrdinalIgnoreCase)
+        && !string.Equals(sourceName, "prompt", StringComparison.OrdinalIgnoreCase)) {
+      Warn(text, $"{where}: 'text' needs caption or prompt, layer ignored");
       return null;
     }
 
     layer.Kind = LayerKind.Text;
+    layer.TextSource = string.Equals(sourceName, "prompt", StringComparison.OrdinalIgnoreCase)
+        ? TextSource.Prompt : TextSource.Caption;
     layer.Text = new();
 
     YamlNode size = Child(mapping, "size");
