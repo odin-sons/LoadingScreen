@@ -9,6 +9,7 @@ public static class PluginConfig {
   public static ConfigEntry<bool> IsModEnabled { get; private set; }
   public static ConfigEntry<string> ImageFolder { get; private set; }
   public static ConfigEntry<string> TextLanguage { get; private set; }
+  public static ConfigEntry<bool> BuiltinTips { get; private set; }
   public static ConfigEntry<ModLogLevel> LogLevel { get; private set; }
   public static ConfigEntry<int> ChangeImageEverySeconds { get; private set; }
   public static ConfigEntry<int> ChangeTipEverySeconds { get; private set; }
@@ -71,6 +72,15 @@ public static class PluginConfig {
             "Game",
             "Language for tips and entry text. Game follows Valheim's language; enter an ISO language code "
                 + "such as ru or pt-BR to override it. Unknown codes use the game language. [Not Synced with Server]");
+
+    BuiltinTips =
+        config.BindInOrder(
+            General,
+            "Built-in tips",
+            true,
+            "Show built-in, translated gameplay tips when loadingscreen.yaml has no entries of its own. "
+                + "Turn off to use only your own tips.txt and images. [Not Synced with Server]");
+    BuiltinTips.SettingChanged += (_, _) => ScreenConfigLoader.Reload();
 
     LogLevel =
         config.BindInOrder(

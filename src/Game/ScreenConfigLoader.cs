@@ -17,6 +17,9 @@ public static class ScreenConfigLoader {
   public static string PluginDir { get; private set; }
   public static ScreenConfig LocalConfig { get; private set; } = new();
   public static bool IsUsingServerConfig { get; private set; }
+  public static bool IsUsingBuiltinTips { get; private set; }
+
+  static ScreenConfig _effectiveLocalConfig = new();
 
   static Func<string, string> _resolver = LocalImagePath;
   static int _lastWarningCount;
@@ -56,12 +59,12 @@ public static class ScreenConfigLoader {
   static bool IsEntryUsable(Entry entry) {
     if (entry.Image != null && !IsImageAvailable(entry.Image)) {
       Log.Config.Debug(LogContext.Message("Skipped loading screen entry because its image is unavailable.",
-          ("image", entry.Image), ("source", IsUsingServerConfig ? "server" : "local")));
+          ("image", entry.Image), ("source", IsUsingServerConfig ? "server" : IsUsingBuiltinTips ? "builtin" : "local")));
       return false;
     }
     if (!Conditions.AreMet(entry.Conditions, PlayerConditions.Instance)) {
       Log.Config.Debug(LogContext.Message("Skipped loading screen entry because conditions are not met.",
-          ("image", entry.Image), ("source", IsUsingServerConfig ? "server" : "local")));
+          ("image", entry.Image), ("source", IsUsingServerConfig ? "server" : IsUsingBuiltinTips ? "builtin" : "local")));
       return false;
     }
     return true;
@@ -84,9 +87,9 @@ public static class ScreenConfigLoader {
     }
 
     IsUsingServerConfig = false;
-    Activate(LocalConfig, LocalImagePath);
+    Activate(_effectiveLocalConfig, LocalImagePath);
     Log.Config.Info(LogContext.Message("Activated loading screen configuration.",
-        ("side", "client"), ("source", "local"), ("file", ConfigFileName)));
+        ("side", "client"), ("source", IsUsingBuiltinTips ? "builtin" : "local"), ("file", ConfigFileName)));
   }
 
   public static void Reload() {
@@ -183,21 +186,39 @@ public static class ScreenConfigLoader {
       Log.Config.Warning(warning);
     }
 
-    if (!result.IsValid && !LocalConfig.IsEmpty) {
+    if (!result.IsValid && (!LocalConfig.IsEmpty || IsUsingBuiltinTips)) {
       Log.Config.Warning(LogContext.Message("Kept the previous loading screen configuration after parsing failed.",
           ("file", ConfigFileName), ("source", "local"), ("warnings", result.Warnings.Count)));
       return false;
     }
 
+    ScreenConfig effective = result.Config;
+    bool useBuiltin = BuiltinTipsSelection.ShouldUse(result, PluginConfig.BuiltinTips.Value);
+    if (useBuiltin) {
+      ConfigLoadResult builtin = ParseWithYaml(BuiltinConfigText.Text, _ => true);
+      foreach (string warning in builtin.Warnings) Log.Config.Warning(warning);
+      result.Warnings.AddRange(builtin.Warnings);
+      if (builtin.IsValid) {
+        builtin.Config.Defaults = result.Config.Defaults;
+        builtin.Config.Order = result.Config.Order;
+        effective = builtin.Config;
+      } else {
+        useBuiltin = false;
+      }
+    }
+
     LocalConfig = result.Config;
+    _effectiveLocalConfig = effective;
+    IsUsingBuiltinTips = useBuiltin;
     _lastWarningCount = result.Warnings.Count;
 
     if (!IsUsingServerConfig) {
-      Activate(LocalConfig, LocalImagePath);
+      Activate(_effectiveLocalConfig, LocalImagePath);
     }
 
     Log.Config.Message(LogContext.Message("Loaded loading screen configuration.",
-        ("file", ConfigFileName), ("source", "local"), ("summary", Summary())), _lastWarningCount);
+        ("file", ConfigFileName), ("source", IsUsingBuiltinTips ? "builtin" : "local"),
+        ("summary", Summary())), _lastWarningCount);
     ServerImages.OnLocalConfigLoaded();
 
     return true;

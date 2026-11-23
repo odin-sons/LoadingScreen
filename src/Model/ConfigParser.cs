@@ -15,6 +15,7 @@ public sealed class ConfigLoadResult {
   public ScreenConfig Config { get; } = new();
   public List<string> Warnings { get; } = [];
   public bool IsValid { get; set; } = true;
+  public bool HasDeclaredEntries { get; set; }
 }
 
 public sealed class ConfigParser {
@@ -524,6 +525,7 @@ public sealed class ConfigParser {
 
     int index = 0;
     foreach (YamlNode entryNode in Sequence(entriesNode, $"'{name}' entries")) {
+      _result.HasDeclaredEntries = true;
       Entry entry = ParseEntry(entryNode, $"{name}.entries[{index++}]");
 
       if (entry != null) {
