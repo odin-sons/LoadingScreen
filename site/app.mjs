@@ -1,5 +1,5 @@
 import { stringify } from './vendor/yaml.mjs';
-import { parseSource, MAX_SOURCE_LENGTH } from './yaml-model.mjs';
+import { parseSource, canonicalizeKeys, define, MAX_SOURCE_LENGTH } from './yaml-model.mjs';
 import { validate } from './validate.mjs';
 import { drawPreview } from './preview.mjs';
 
@@ -189,6 +189,16 @@ function defaultsForm() {
   });
 }
 
+function isMapping(value) {
+  return value !== null && typeof value === 'object' && !Array.isArray(value);
+}
+
+function languageName(code) {
+  const lower = code.trim().toLowerCase();
+  const match = Object.entries(options.languages).find(([language, value]) => value.toLowerCase() === lower || language.toLowerCase() === lower);
+  return match ? match[0].replace(/_/g, ' ') + ' (' + match[1] + ')' : code;
+}
+
 function layerKind(layer) {
   for (const name of ['image', 'text', 'spinner', 'progress', 'color']) if (Object.hasOwn(layer, name)) return name;
   return 'image';
@@ -277,15 +287,17 @@ function entryForm(parent, entries, index) {
   field(fields, 'Layout override', entry.layout || '', (v) => set(entry, 'layout', v), { list: Object.keys(config.layouts || {}), placeholder: 'Use list layout' });
   field(fields, 'Looping sound', entry.sound || '', (v) => set(entry, 'sound', v), { placeholder: 'music/forest.ogg' });
   field(fields, 'Voice', entry.voice || '', (v) => set(entry, 'voice', v), { placeholder: 'voice/welcome.wav' });
-  const translated = typeof entry.text === 'object' && entry.text !== null;
+  const translated = isMapping(entry.text);
   field(fields, 'Text format', translated ? 'translations' : 'plain', (v) => {
-    entry.text = v === 'translations' ? { en: typeof entry.text === 'string' ? entry.text : '' } : (entry.text?.en || entry.text?.ru || '');
+    entry.text = v === 'translations' ? { en: typeof entry.text === 'string' ? entry.text : '' } : (entry.text?.en || Object.values(entry.text || {}).find((value) => typeof value === 'string') || '');
     render();
   }, { values: ['plain', 'translations'] });
   if (translated) {
-    field(fields, 'English text', entry.text.en || '', (v) => set(entry.text, 'en', v), { multiline: true, wide: true });
-    field(fields, 'Russian text', entry.text.ru || '', (v) => set(entry.text, 'ru', v), { multiline: true, wide: true });
-  } else field(fields, 'Caption text', entry.text || '', (v) => set(entry, 'text', v), { multiline: true, wide: true });
+    Object.keys(entry.text).forEach((code) => field(fields, 'Text · ' + languageName(code), entry.text[code] ?? '', (v) => set(entry.text, code, v), { multiline: true, wide: true }));
+    const used = Object.keys(entry.text).map((code) => (options.languages[Object.keys(options.languages).find((language) => language.toLowerCase() === code.trim().toLowerCase())] ?? code).toLowerCase());
+    const missing = [...new Set(Object.values(options.languages))].filter((code) => !used.includes(code.toLowerCase()));
+    if (missing.length) field(fields, 'Add translation', '', (v) => { if (v) { define(entry.text, v.split(' ')[0], ''); render(); } }, { values: ['', ...missing.map((code) => code + ' · ' + languageName(code))], onChange: true });
+  } else field(fields, 'Caption text', typeof entry.text === 'string' ? entry.text : '', (v) => set(entry, 'text', v), { multiline: true, wide: true });
   placeEditor(item, entry, 'Entry image placement');
   const conditions = group(item, 'Conditions', 'Every condition must match. A custom item or player key can be typed.');
   button(conditions, '+ Add condition', () => { const values = entry.when ??= {}; const key = options.conditions.find((name) => !Object.hasOwn(values, name)); if (key) values[key] = ''; render(); sync(); });
@@ -368,7 +380,8 @@ function sync() {
   yamlBox.value = stringify(config, { lineWidth: 100 });
   sourceDirty = false;
   $('#edit-status').textContent = 'Synced';
-  showProblems(validate(config, yamlBox.value, options));
+  $('#source-note').hidden = true;
+  showProblems(validate(parseSource(yamlBox.value), options));
   updatePreview();
 }
 
@@ -389,10 +402,13 @@ function applySource() {
     return false;
   }
   config = result.config;
+  const renamed = canonicalizeKeys(config, options.conditions);
+  $('#source-note').hidden = !renamed.length;
+  $('#source-note').textContent = renamed.length ? 'The form uses the documented key spelling (' + renamed.join(', ') + '); the source is updated on the next form edit.' : '';
   sourceDirty = false;
   lockForm(false);
   $('#edit-status').textContent = 'Loaded';
-  showProblems(validate(config, yamlBox.value, options));
+  showProblems(validate(result, options));
   render();
   return true;
 }

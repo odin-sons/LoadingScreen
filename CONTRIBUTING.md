@@ -26,6 +26,18 @@ Unit tests for the Unity-free code (config parser, selection, placement math) ne
 dotnet test tests/LoadingScreen.Tests
 ```
 
+The config editor in `site/` is plain ES modules with no build step. Its validator mirrors `ConfigParser`;
+both run over the YAML files in `tests/fixtures/config`, and each `.expected` file lists the parser's
+problems (`line<TAB>message`). After a parser change, regenerate the lists with the C# parser and check
+that the site still agrees:
+
+```sh
+LOADINGSCREEN_UPDATE_FIXTURES=1 dotnet test tests/LoadingScreen.Tests --filter SiteConformance
+node --test tests/site/
+```
+
+`SiteConformanceTests` also checks the name lists in `site/data/options.json` against the parser.
+
 ## Source layout
 
 - `src/Model`: pure logic and parsing.
@@ -33,7 +45,8 @@ dotnet test tests/LoadingScreen.Tests
 - `src/Rendering`: loading screen UI.
 - `src/Game`: game integration.
 - `src/Plugin`: plugin entry point, configuration, and logging.
-- `tests/`: unit tests.
+- `tests/`: unit tests, site tests and the shared config fixtures.
+- `site/`: the static config editor published to GitHub Pages.
 
 ## Branches and commits
 
