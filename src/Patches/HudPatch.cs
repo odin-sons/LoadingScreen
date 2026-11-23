@@ -29,6 +29,9 @@ static class HudPatch {
   static float _lastTipTime;
   static Situation _currentSituation;
   static readonly LoadingHoldState _holdState = new();
+  static float _nextThreatScanAt;
+
+  internal static bool IsHolding => _holdState.Holding;
 
   [HarmonyPrefix]
   [HarmonyPatch(nameof(Hud.UpdateBlackScreen))]
@@ -52,9 +55,21 @@ static class HudPatch {
         && LoadingManager.HudHost.BeginExit(Time.realtimeSinceStartup);
     bool dismissed = Input.anyKeyDown || ZInput.GetMouseButtonDown(0) || ZInput.GetMouseButtonDown(1)
         || ZInput.GetMouseButtonDown(2);
+    float now = Time.realtimeSinceStartup;
     LoadingHoldDecision hold = _holdState.Update(
         _loadingScreenState, ready, allowed, HoldLoadingScreen.Value, voiceActive, dismissed,
-        Time.realtimeSinceStartup, MaximumHoldSeconds.Value, exitActive);
+        now, MaximumHoldSeconds.Value, exitActive);
+    bool invulnerable = InvulnerableWhileHeld.Value;
+    bool pvp = hold.Holding && !invulnerable && player.IsPVPEnabled();
+    bool monster = hold.Holding && !invulnerable && !pvp && now >= _nextThreatScanAt
+        && HasHostileMonsterNoticed(player);
+    LoadingHoldSafetyAction safety = LoadingHoldSafety.Decide(hold.Holding, invulnerable, pvp, monster);
+    if (safety is LoadingHoldSafetyAction.CloseForPvp or LoadingHoldSafetyAction.CloseForMonster) {
+      _holdState.Reset();
+      hold = default;
+      Log.Render.Info(LogContext.Message("Closed the held loading screen.",
+          ("reason", safety == LoadingHoldSafetyAction.CloseForPvp ? "pvp" : "monster")));
+    }
     LoadingManager.ShowContinuePrompt(__instance, hold.ShowContinuePrompt);
     _sleepExitHolding = _wasSleeping && !stillSleeping && hold.Holding;
 
@@ -69,6 +84,19 @@ static class HudPatch {
     }
 
     return !hold.Holding;
+  }
+
+  static bool HasHostileMonsterNoticed(Player player) {
+    _nextThreatScanAt = Time.realtimeSinceStartup + 0.2f;
+    foreach (BaseAI ai in BaseAI.GetAllInstances()) {
+      if (ai is not MonsterAI monster || !monster) continue;
+      if ((monster.transform.position - player.transform.position).sqrMagnitude > 2500f) continue;
+      Character creature = monster.GetComponent<Character>();
+      if (!creature || creature.IsDead() || creature.IsTamed() || !monster.IsEnemy(player)) continue;
+      if (monster.GetTargetCreature() == player || monster.CanSenseTarget(player)) return true;
+    }
+
+    return false;
   }
 
   [HarmonyPostfix]

@@ -8,6 +8,8 @@ public sealed class LoadingHoldState {
   bool _keyDismissed;
   float _startedAt;
 
+  public bool Holding => _holding;
+
   public LoadingHoldDecision Update(
       bool loadingVisible, bool ready, bool allowed, bool holdUntilKey, bool voiceActive,
       bool dismissed, float now, int maximumSeconds, bool exitActive = false) {
