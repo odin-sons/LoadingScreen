@@ -134,12 +134,22 @@ public sealed class SpinnerDefaults {
     Kind = LayerKind.Spinner,
     SpinnerStyle = SpinnerStyle.Hammer,
     Animation = new() { Enter = "none", Idle = "spin", Exit = "none" },
-    Placement = new() {
-      Fit = new() { Mode = FitMode.None },
-      Anchor = Anchor.Bottom,
-      X = new(X + centerX, LengthUnit.Pixels),
-      Y = new(-(Bottom + centerY - (height / 2f)), LengthUnit.Pixels),
-    },
+    Placement = PlaceCenter(centerX, centerY, height),
+  };
+
+  public Layer ToRingLayer(float centerX, float centerY, float diameter, ColorValue color) => !Center ? null : new() {
+    Kind = LayerKind.Progress,
+    ProgressStyle = ProgressStyle.Ring,
+    ProgressSize = diameter,
+    Color = color,
+    Placement = PlaceCenter(centerX, centerY, diameter),
+  };
+
+  Placement PlaceCenter(float centerX, float centerY, float height) => new() {
+    Fit = new() { Mode = FitMode.None },
+    Anchor = Anchor.Bottom,
+    X = new(X + centerX, LengthUnit.Pixels),
+    Y = new(-(Bottom + centerY - (height / 2f)), LengthUnit.Pixels),
   };
 }
 

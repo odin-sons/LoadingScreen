@@ -658,10 +658,11 @@ layered screens and plain-image fallbacks.
 `0` to `64`.
 `separator.onLayouts` keeps the built-in line on layout screens unless a layout has its own `image: separator`
 layer. The legacy `defaults.spinner` setting still applies to game start: with `center: true`, it becomes an
-implicit `spinner: hammer` layer after the layout's other layers, positioned at
-`{ anchor: bottom, x: <x>px, y: -<bottom>px }`. A layout's explicit spinner replaces it. With `center: false`,
-Valheim's original indicator remains at its original position. For new layouts, move the setting into an explicit
-spinner layer to control its order, style, placement, and animation.
+implicit `progress: ring` layer and an implicit `spinner: hammer` layer centered in it, drawn after the layout's
+other layers at `x` and `bottom` with Valheim's ring sprite, color and size. Valheim's own indicator is hidden.
+A layout's explicit spinner replaces both; an explicit progress layer replaces only the ring. With `center: false`,
+Valheim's original indicator remains at its original position. For new layouts, move the setting into explicit
+spinner and progress layers to control their order, style, placement, and animation.
 
 A text layer accepts `place` with `position`, `opacity`, and `fit: { width }` (the text box width, default 80% of the screen), plus
 `size`, `color`, `align` (`left`, `center`, `right`), `background` (a color box behind the text). Without a text

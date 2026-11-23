@@ -646,6 +646,11 @@ public class ConfigParserTests {
     Layer centered = result.Config.Defaults.Spinner.ToLayer(centerX: 2f, centerY: 60f, height: 40f);
     Assert.Equal(-3f, centered.Placement.X.Value.Value);
     Assert.Equal(-220f, centered.Placement.Y.Value.Value);
+    Layer ring = result.Config.Defaults.Spinner.ToRingLayer(2f, 60f, 80f, new ColorValue(255, 150, 20));
+    Assert.Equal(LayerKind.Progress, ring.Kind);
+    Assert.Equal(ProgressStyle.Ring, ring.ProgressStyle);
+    Assert.Equal(80f, ring.ProgressSize);
+    Assert.Equal(-200f, ring.Placement.Y.Value.Value);
     Assert.Null(Parse("defaults: { spinner: { center: false } }").Config.Defaults.Spinner.ToLayer());
   }
 

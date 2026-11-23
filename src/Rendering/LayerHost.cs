@@ -213,6 +213,15 @@ public sealed class LayerHost : MonoBehaviour {
     }
 
     if (gameStart && !layout.ShowsSpinner) {
+      if (!layout.Layers.Any(layer => layer.Kind == LayerKind.Progress)) {
+        Vector2 ringCenter = SceneLoaderPatch.RingCenter;
+        Color32 ringColor = SceneLoaderPatch.RingColor;
+        Layer legacyRing = config.Defaults.Spinner.ToRingLayer(ringCenter.x, ringCenter.y,
+            SceneLoaderPatch.RingDiameter, new(ringColor.r, ringColor.g, ringColor.b, ringColor.a));
+        if (legacyRing != null) {
+          AddProgressLayer(legacyRing, layout, SceneLoaderPatch.ProgressTextTemplate, SceneLoaderPatch.RingSprite);
+        }
+      }
       Vector2 center = SceneLoaderPatch.SpinnerCenter;
       Layer legacySpinner = config.Defaults.Spinner.ToLayer(center.x, center.y, SceneLoaderPatch.SpinnerSize.y);
       if (legacySpinner != null) AddSpinnerLayer(legacySpinner, layout);
@@ -377,8 +386,10 @@ public sealed class LayerHost : MonoBehaviour {
   static Sprite ProgressSprite => _progressSprite ? _progressSprite : _progressSprite =
       Sprite.Create(Texture2D.whiteTexture, new Rect(0f, 0f, 1f, 1f), new Vector2(0.5f, 0.5f));
 
-  void AddProgressLayer(Layer layer, Layout layout, TMP_Text template) {
-    Sprite sprite = layer.ProgressStyle == ProgressStyle.Ring ? SpinnerSprites.ProgressRing : ProgressSprite;
+  void AddProgressLayer(Layer layer, Layout layout, TMP_Text template, Sprite ringSprite = null) {
+    Sprite sprite = layer.ProgressStyle == ProgressStyle.Ring
+        ? ringSprite ? ringSprite : SpinnerSprites.ProgressRing
+        : ProgressSprite;
     Vector2 native = layer.ProgressStyle switch {
       ProgressStyle.Bar => new(240f, layer.ProgressSize ?? 16f),
       ProgressStyle.Ring => Vector2.one * (layer.ProgressSize ?? 96f),
