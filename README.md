@@ -48,10 +48,12 @@ on Unity, but **the mod has not been tested in the game yet**. See the
 Requires `denikson-BepInExPack_Valheim` and `ValheimModding-YamlDotNet`. Put `LoadingScreen.dll` into
 `BepInEx/plugins`. Coming from Intermission? See [Migrating from Intermission](docs/migrating-from-intermission.md).
 
-LoadingScreen does not load while Intermission or CustomLoadingScreens is installed: they patch the same loading
-screens and break each other. BepInEx then writes `Could not load [LoadingScreen ...] because it is incompatible
-with: ...` to `BepInEx/LogOutput.log`. Remove the other mod to use LoadingScreen. ComfyLoadingScreens installs
-Intermission as its dependency, so it counts as Intermission.
+LoadingScreen does not load next to another loading screen mod: they patch the same screens and break each other.
+BepInEx then writes `Could not load [LoadingScreen ...] because it is incompatible with: ...` to
+`BepInEx/LogOutput.log`. Remove the other mod to use LoadingScreen. The check covers Intermission
+(`redseiko.valheim.intermission`), CustomLoadingScreens and the packs that bundle it (`aedenthorn.CustomLoadingScreens`,
+`cjayride.CustomLoadingScreens`), Loading Tales, Immersive Loading, Runeheim Loading Screen and Server Loading Screen.
+Image packs that depend on Intermission, such as ComfyLoadingScreens, install Intermission and count as it.
 
 On first start the mod creates `BepInEx/config/LoadingScreen/loadingscreen.yaml` with a commented example. While
 everything in it stays commented out, the mod behaves like Intermission.

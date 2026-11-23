@@ -66,8 +66,8 @@ cfg and clearer logs.
   * **Layout-only layers.** Layout screens now draw only their declared layers, including text, separators, progress,
     spinners, and key prompts. Existing layouts must add layers for elements they previously received implicitly;
     screens without a layout keep their previous appearance.
-  * **Incompatible mods.** LoadingScreen does not load while Intermission or CustomLoadingScreens is installed;
-    BepInEx logs the reason. The mods patched the same loading screens and broke each other.
+  * **Incompatible mods.** LoadingScreen does not load next to Intermission, CustomLoadingScreens and its forks, or
+    other loading screen replacers; BepInEx logs the reason. The mods patched the same screens and broke each other.
   * **Biome lists.** `when.biome` replaces `when.teleport` for destination biome lists and death biome tips.
   * **`when` key.** The YAML top-level `situations` key is renamed to `when`; existing YAML files must use `when`.
   * **Zoom fields.** `animation` replaces the old `animate` and `defaults.zoom` fields. Files from 0.6.0 still
