@@ -1,9 +1,9 @@
 ## Changelog
 
-### Unreleased
+### 0.7.0 (2026-11-23)
 
-Adds progress, spinner and animated layers, localized prompts, readability and audio-wait options, a reorganized
-cfg and clearer logs.
+Adds progress, spinner and animated layers, layouts that draw only their own layers, a safer key hold, audio
+sliders, localized prompts and readability options, a reorganized cfg and clearer logs.
 
 #### Features
 
