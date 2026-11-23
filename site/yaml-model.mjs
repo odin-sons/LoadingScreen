@@ -1,4 +1,4 @@
-import { parseDocument, LineCounter, isAlias, isMap, isScalar, isSeq, isPair } from './vendor/yaml.mjs';
+import { Document, parseDocument, LineCounter, isAlias, isMap, isScalar, isSeq, isPair } from './vendor/yaml.mjs';
 
 export const MAX_SOURCE_LENGTH = 512 * 1024;
 const MAX_NESTING_DEPTH = 32;
@@ -124,4 +124,56 @@ export function canonicalizeKeys(config, conditions) {
   };
   walk(config, schema(conditions));
   return renamed;
+}
+
+function plain(value) {
+  if (value === null || value === undefined) return null;
+  if (Array.isArray(value)) return value.map(plain);
+  if (typeof value === 'object') {
+    const object = {};
+    for (const [name, item] of Object.entries(value)) define(object, name, plain(item));
+    return object;
+  }
+  return String(value);
+}
+
+function patchNode(doc, node, value) {
+  if (value === null || value === undefined) return isNullNode(node) && node ? node : doc.createNode(null);
+  if (Array.isArray(value)) {
+    if (!isSeq(node)) return doc.createNode(plain(value));
+    value.forEach((item, index) => { node.items[index] = patchNode(doc, node.items[index], item); });
+    node.items.length = value.length;
+    return node;
+  }
+  if (typeof value === 'object') {
+    if (!isMap(node)) return doc.createNode(plain(value));
+    const names = Object.keys(value);
+    const known = new Set(node.items.map((pair) => keyText(pair.key)));
+    const added = names.filter((name) => !known.has(name));
+    const kept = [];
+    for (const pair of node.items) {
+      const name = keyText(pair.key);
+      if (!Object.hasOwn(value, name)) {
+        if (!added.length) continue;
+        const renamed = added.shift();
+        if (isScalar(pair.key)) pair.key.value = renamed;
+        else pair.key = doc.createNode(renamed);
+        pair.value = patchNode(doc, pair.value, value[renamed]);
+      } else pair.value = patchNode(doc, pair.value, value[name]);
+      kept.push(pair);
+    }
+    for (const name of added) kept.push(doc.createPair(name, plain(value[name])));
+    node.items = kept;
+    return node;
+  }
+  const text = String(value);
+  if (isScalar(node) && !isNullNode(node) && String(node.value) === text) return node;
+  if (isScalar(node) && !isNullNode(node)) { node.value = text; return node; }
+  return doc.createNode(text);
+}
+
+export function writeSource(doc, config) {
+  const target = doc ?? new Document(null, { schema: 'failsafe' });
+  target.contents = patchNode(target, target.contents, config);
+  return target.toString({ lineWidth: 0 });
 }
