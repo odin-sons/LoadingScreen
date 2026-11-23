@@ -132,10 +132,10 @@ public class ConditionsTests {
   }
 }
 
-public class ReadmeConditionExamplesTests {
-  static string FindReadme() {
+public class ConfigurationConditionExamplesTests {
+  static string FindConfiguration() {
     for (System.IO.DirectoryInfo dir = new(System.AppContext.BaseDirectory); dir != null; dir = dir.Parent) {
-      string path = System.IO.Path.Combine(dir.FullName, "README.md");
+      string path = System.IO.Path.Combine(dir.FullName, "docs", "configuration.md");
 
       if (System.IO.File.Exists(path) && System.IO.File.Exists(System.IO.Path.Combine(dir.FullName, "manifest.json"))) {
         return path;
@@ -147,9 +147,9 @@ public class ReadmeConditionExamplesTests {
 
   [Fact]
   public void ConditionExamplesParseWithoutWarnings() {
-    string readme = System.IO.File.ReadAllText(FindReadme());
+    string documentation = System.IO.File.ReadAllText(FindConfiguration());
     List<string> blocks = System.Text.RegularExpressions.Regex
-        .Matches(readme, "```yaml\r?\n(.*?)```", System.Text.RegularExpressions.RegexOptions.Singleline)
+        .Matches(documentation, "```yaml\r?\n(.*?)```", System.Text.RegularExpressions.RegexOptions.Singleline)
         .Select(match => match.Groups[1].Value)
         .Where(block => System.Text.RegularExpressions.Regex.IsMatch(block, @"(?m)^ {4,}.*\bwhen:"))
         .ToList();
