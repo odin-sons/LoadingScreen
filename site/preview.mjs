@@ -1,8 +1,12 @@
+import { isColor } from './validate.mjs';
+
 const node = (tag, className = '') => {
   const element = document.createElement(tag);
   element.className = className;
   return element;
 };
+
+const cssColor = (value, fallback) => typeof value === 'string' && isColor(value) ? '#' + value.trim().replace(/^#+/, '') : fallback;
 
 function resolveLength(value, reference, scale) {
   if (value === undefined || value === null) return 0;
@@ -53,7 +57,7 @@ function position(element, place, width, height, itemWidth, itemHeight, scale) {
 function fade(element, value, width, height, scale) {
   if (!value || !value.sides) return;
   const sides = Array.isArray(value.sides) ? value.sides : [value.sides];
-  const color = value.color || '#000000';
+  const color = cssColor(value.color, '#000000');
   const size = value.size || '15%';
   for (const side of sides.flatMap((item) => item === 'all' ? ['left', 'right', 'top', 'bottom'] : [item])) {
     if (!['left', 'right', 'top', 'bottom'].includes(side)) continue;
@@ -80,7 +84,7 @@ function imagePath(value, entry) {
 export function drawPreview(screen, layout, entry, defaults, images, ratio) {
   screen.replaceChildren();
   screen.style.aspectRatio = ratio || '16/9';
-  screen.style.background = defaults.background || '#000000';
+  screen.style.background = cssColor(defaults.background, '#000000');
   if (!layout || !Array.isArray(layout.layers)) {
     const hint = node('div', 'layer placeholder');
     hint.textContent = 'Select a layout to preview';
@@ -99,12 +103,12 @@ export function drawPreview(screen, layout, entry, defaults, images, ratio) {
     const element = node('div', 'layer');
     position(element, place, width, height, itemWidth, itemHeight, scale);
     if (kind === 'color') {
-      element.style.background = layer.color || '#000000';
+      element.style.background = cssColor(layer.color, '#000000');
     } else if (kind === 'image') {
       const path = imagePath(layer.image, entry);
       if (path === 'separator') {
         element.classList.add('separator');
-        element.style.background = 'linear-gradient(90deg,transparent,' + (layer.color || '#fff') + ',transparent)';
+        element.style.background = 'linear-gradient(90deg,transparent,' + cssColor(layer.color, '#fff') + ',transparent)';
       } else {
         const url = path && images.get(String(path).split(/[\\/]/).pop().toLowerCase());
         if (url) {
@@ -128,15 +132,15 @@ export function drawPreview(screen, layout, entry, defaults, images, ratio) {
       element.style.fontWeight = '600';
       element.style.textAlign = layer.align || 'center';
       element.style.justifyContent = layer.align === 'left' ? 'flex-start' : layer.align === 'right' ? 'flex-end' : 'center';
-      element.style.color = layer.color === 'auto' ? '#fff' : layer.color || '#fff';
-      element.style.background = layer.background === 'auto' ? '#0009' : layer.background || 'transparent';
+      element.style.color = cssColor(layer.color, '#fff');
+      element.style.background = String(layer.background).trim().toLowerCase() === 'auto' ? '#0009' : cssColor(layer.background, 'transparent');
       element.style.padding = '8px';
     } else if (kind === 'spinner') {
       if (layer.spinner === 'ring') element.classList.add('spinner-ring');
       else if (layer.spinner === 'dots') { element.classList.add('spinner-dots'); element.textContent = '•••'; }
       else { element.classList.add('placeholder'); element.textContent = layer.spinner === 'hammer' ? '⚒' : String(layer.spinner || 'Spinner'); }
     } else {
-      element.style.color = layer.color || '#fff';
+      element.style.color = cssColor(layer.color, '#fff');
       if (layer.progress === 'ring') {
         element.classList.add('progress-ring');
         element.style.width = Math.max(36, Number(layer.size || 96) * scale) + 'px';
@@ -149,7 +153,7 @@ export function drawPreview(screen, layout, entry, defaults, images, ratio) {
   if (layout.mask?.opacity) {
     const overlay = node('div');
     overlay.style.cssText = 'position:absolute;inset:0;pointer-events:none';
-    overlay.style.background = layout.mask.color || '#000000';
+    overlay.style.background = cssColor(layout.mask.color, '#000000');
     overlay.style.opacity = String(layout.mask.opacity);
     screen.append(overlay);
   }
