@@ -46,7 +46,7 @@ on Unity, but **the mod has not been tested in the game yet**. See the
 ## Installation
 
 Requires `denikson-BepInExPack_Valheim` and `ValheimModding-YamlDotNet`. Put `LoadingScreen.dll` into
-`BepInEx/plugins`. It can be installed next to the original Intermission.
+`BepInEx/plugins`. Coming from Intermission? See [Migrating from Intermission](docs/migrating-from-intermission.md).
 
 On first start the mod creates `BepInEx/config/LoadingScreen/loadingscreen.yaml` with a commented example. While
 everything in it stays commented out, the mod behaves like Intermission.
@@ -581,8 +581,8 @@ phase. The full form is `animation: { enter: fly-in-left, idle: breathe, exit: f
 `origin` sets the point the layer scales and rotates around, like CSS `transform-origin`: `center` (default),
 `left`, `right`, `top`, `bottom` or a corner such as `top-left`, so `animation: { idle: zoom-in, origin: top }`
 zooms a logo away from the top edge. Layer values override the corresponding `defaults.animation` phase;
-omitted phases use `none`. The default entry image uses `zoom-in` when no animation is configured, matching the
-previous 1.05 scale over 15 seconds.
+omitted phases use `none`. The default entry image and plain images use `zoom-in` when no animation is configured,
+matching the previous 1.05 scale over 15 seconds; plain images follow the idle phase and speed of `defaults.animation`.
 Enter plays once, idle starts after all layer enter phases finish, and exit plays once when the screen closes.
 A continued menu, scene loader or HUD handover resumes idle at the last drawn time without replaying enter.
 Animation time uses real time, so a blocked world load advances the phase clock.
