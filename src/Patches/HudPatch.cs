@@ -87,7 +87,7 @@ static class HudPatch {
   }
 
   static bool HasHostileMonsterNoticed(Player player) {
-    _nextThreatScanAt = Time.realtimeSinceStartup + 0.2f;
+    _nextThreatScanAt = Time.realtimeSinceStartup + 0.5f;
     foreach (BaseAI ai in BaseAI.GetAllInstances()) {
       if (ai is not MonsterAI monster || !monster) continue;
       if ((monster.transform.position - player.transform.position).sqrMagnitude > 2500f) continue;
