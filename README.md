@@ -136,7 +136,12 @@ The game's sleep text and spinner stay visible above the image. A sleep-specific
 
 Set `[3 - Timing] Hold loading screen until a key is pressed` to `true` to keep the HUD loading screen and tip
 visible after loading finishes (default: off). A separate "Press any key to continue" line appears; any key or mouse
-click dismisses the key hold. Set `[3 - Timing] Wait for the voice to finish` to `true` to keep the HUD screen
+click dismisses the key hold. `[3 - Timing] Invulnerable while held` defaults to `true` and protects the local player
+from damage while a HUD screen is held. If turned off, the held screen closes immediately when PvP is enabled or when
+a nearby hostile monster notices the player. Deer, tamed creatures, and non-enemies do not trigger this close.
+This setting only matters while a hold is active.
+
+Set `[3 - Timing] Wait for the voice to finish` to `true` to keep the HUD screen
 visible while its entry voice is loading or playing after loading finishes (default: off). It releases when the voice
 ends or fails to load; no voice or disabled sounds do not cause a hold. A key press does not skip the voice, and when
 both settings are on, the screen closes after both the voice and key hold are done. Set `Wait for the exit animation
@@ -695,7 +700,7 @@ Behavior switches in `Odin_Sons.LoadingScreen.cfg`; each has a description in th
 |---|---|
 | `1 - General` | Lock Configuration, Mod enabled, Image folder, Text language, Log level, Share screens with players |
 | `2 - When to show` | Loading screen on portal teleport, Loading screen while sleeping, Loading screen right after death, Random tip when an entry has no text |
-| `3 - Timing` | Change image every N seconds, Change tip every N seconds, Hold loading screen until a key is pressed, Wait for the voice to finish, Wait for the exit animation to finish, Maximum hold time in seconds |
+| `3 - Timing` | Change image every N seconds, Change tip every N seconds, Hold loading screen until a key is pressed, Invulnerable while held, Wait for the voice to finish, Wait for the exit animation to finish, Maximum hold time in seconds |
 | `4 - Game start screen` | Use loading images, Show progress |
 | `5 - Sound` | Play loading screen sounds, Music volume percent, Voice volume percent, Mute game sounds on loading screens |
 | `6 - Accessibility` | Readable text, Minimum text size |

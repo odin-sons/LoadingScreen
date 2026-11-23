@@ -7,6 +7,8 @@ cfg and clearer logs.
 
 #### Features
 
+  * **Safe held screens.** A server-synced setting protects the local player from damage during a held HUD screen by
+    default. When disabled, PvP or a nearby hostile monster noticing the player closes the screen automatically.
   * **Progress layer.** `progress` layers with bar, ring, and percentage styles. Game start uses real scene-load
     progress; portal and death use destination-zone and nearby-object readiness; sleep uses game time. Server joining
     shows localized connection stages. Ready area progress stays at 100% with a soft pulse during game delays.

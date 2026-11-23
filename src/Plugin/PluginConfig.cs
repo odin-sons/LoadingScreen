@@ -20,6 +20,7 @@ public static class PluginConfig {
   public static ConfigEntry<bool> ShowLoadingScreenOnTeleport { get; private set; }
   public static ConfigEntry<bool> ShowLoadingScreenWhileSleeping { get; private set; }
   public static ConfigEntry<bool> HoldLoadingScreen { get; private set; }
+  public static ConfigEntry<bool> InvulnerableWhileHeld { get; private set; }
   public static ConfigEntry<bool> WaitForVoice { get; private set; }
   public static ConfigEntry<bool> WaitForExitAnimation { get; private set; }
   public static ConfigEntry<int> MaximumHoldSeconds { get; private set; }
@@ -137,6 +138,13 @@ public static class PluginConfig {
             false,
             "After loading finishes, keep the screen and tip visible until a key is pressed or the mouse is clicked. Never holds during cinematics or on a dedicated server. [Not Synced with Server]");
 
+    InvulnerableWhileHeld =
+        config.BindInOrder(
+            Timing,
+            "Invulnerable while held",
+            true,
+            "Protect the local player from damage while a loading screen is held. Only matters when a hold is on; when off, PvP or a monster noticing the player closes the screen. [Synced with Server]");
+
     WaitForVoice =
         config.BindInOrder(
             Timing,
@@ -205,6 +213,7 @@ public static class PluginConfig {
     sync.Register(ShowLoadingScreenOnTeleport);
     sync.Register(ShowLoadingScreenWhileSleeping);
     sync.Register(HoldLoadingScreen, clientControlled: true);
+    sync.Register(InvulnerableWhileHeld);
     sync.Register(WaitForVoice);
     sync.Register(WaitForExitAnimation);
     sync.Register(MaximumHoldSeconds);

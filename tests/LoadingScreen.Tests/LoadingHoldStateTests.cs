@@ -34,7 +34,9 @@ public class LoadingHoldStateTests {
 
     Assert.False(state.Update(true, false, true, true, false, false, 0f, 30).Holding);
     Assert.True(state.Update(true, true, true, true, false, false, 1f, 30).ShowContinuePrompt);
+    Assert.True(state.Holding);
     Assert.False(state.Update(true, true, true, true, false, true, 2f, 30).Holding);
+    Assert.False(state.Holding);
     Assert.False(state.Update(true, true, true, true, false, false, 3f, 30).Holding);
   }
 
