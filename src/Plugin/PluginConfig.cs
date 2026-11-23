@@ -160,14 +160,14 @@ public static class PluginConfig {
             Timing,
             "Wait for the voice to finish",
             false,
-            "After loading finishes, keep the screen visible while its entry voice is playing or loading. Never holds during cinematics or on a dedicated server. [Synced with Server]");
+            "After loading finishes, keep the screen visible while its entry voice is playing or loading. A key press skips it. Never holds during cinematics or on a dedicated server. [Synced with Server]");
 
     WaitForExitAnimation =
         config.BindInOrder(
             Timing,
             "Wait for the exit animation to finish",
             false,
-            "After loading finishes, play layer exit animations before closing the screen. Limited by Maximum hold time in seconds. Never holds during cinematics or on a dedicated server. [Synced with Server]");
+            "After loading finishes, play layer exit animations before closing the screen. A key press skips it. Limited by Maximum hold time in seconds. Never holds during cinematics or on a dedicated server. [Synced with Server]");
 
     MaximumHoldSeconds =
         config.BindInOrder(
