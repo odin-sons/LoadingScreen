@@ -31,7 +31,7 @@ Intermission's cfg settings are not read. Use this table to set the same values 
 | `SceneLoader` `progressIndicatorOffset` | `spinner: { x: 0, bottom: 200 }` in `defaults` |
 | `LoadingImage.Image` `baseColor` | `tint: "#FFFFFF"` in `defaults` |
 | `LoadingImage.ScaleLerp` `useScaleLerp` | On by default; `animation: none` in `defaults` turns it off |
-| `LoadingImage.ScaleLerp` `lerpEndScale`, `lerpDuration` | A custom `zoom-in` preset in `animations.yaml` (see the README) |
+| `LoadingImage.ScaleLerp` `lerpEndScale`, `lerpDuration` | A custom `zoom-in` preset in `animations.yaml` (see [Configuration](configuration.md#layouts-and-layers)) |
 | `LoadingTip.Text` `textPosition`, `textFontSize`, `textColor` | `tip: { x: 0, bottom: 90, size: 24, color: "#FFFFFF" }` in `defaults` |
 | `LoadingScreen.Background` `backgroundColor` | `background: "#000000"` in `defaults` |
 | `LoadingScreen.PanelSeparator` `showPanelSeparator`, `panelSeparatorPosition` | `separator: { show: true, x: 0, bottom: 150 }` in `defaults` |
