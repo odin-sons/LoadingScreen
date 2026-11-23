@@ -21,6 +21,8 @@ let previewName = 'my-layout';
 let sourceDirty = false;
 let pendingApply = 0;
 let sourceDoc = null;
+let focusHint = null;
+let announceTimer = 0;
 
 async function loadOptions() {
   try {
@@ -123,7 +125,7 @@ function card(parent, title, remove, move) {
     button(actions, '↑', () => move(-1)).setAttribute('aria-label', 'Move ' + title + ' up');
     button(actions, '↓', () => move(1)).setAttribute('aria-label', 'Move ' + title + ' down');
   }
-  button(actions, 'Remove', remove, true);
+  labelled(button(actions, 'Remove', remove, true), 'Remove ' + title);
   append(head, actions);
   append(node, head);
   parent.append(node);
@@ -139,14 +141,20 @@ function set(target, key, value, numeric = false) {
   else target[key] = numeric && Number.isFinite(Number(value)) ? Number(value) : value;
 }
 
-function mover(items, index, attach) {
+function mover(items, index, attach, title) {
   return (direction) => {
     const next = index + direction;
     if (next < 0 || next >= items.length) return;
     attach();
     [items[index], items[next]] = [items[next], items[index]];
+    focusHint = { label: 'Move ' + title(next) + (direction < 0 ? ' up' : ' down') };
     render(); sync();
   };
+}
+
+function labelled(node, label) {
+  node.setAttribute('aria-label', label);
+  return node;
 }
 
 function placeEditor(parent, owner, title, attach = () => {}) {
@@ -244,13 +252,14 @@ function layerKind(layer) {
 
 function layerForm(parent, layer, layers, index) {
   const remove = () => { layers.splice(index, 1); render(); sync(); };
-  const move = mover(layers, index, () => {});
+  const layerTitle = (position) => 'Layer ' + (position + 1) + (isMapping(layers[position]) ? ' · ' + layerKind(layers[position]) : '');
+  const move = mover(layers, index, () => {}, layerTitle);
   if (!isMapping(layer)) {
-    sourceOnly(card(parent, 'Layer ' + (index + 1), remove, move), 'layer');
+    sourceOnly(card(parent, layerTitle(index), remove, move), 'layer');
     return;
   }
   const kind = layerKind(layer);
-  const item = card(parent, 'Layer ' + (index + 1) + ' · ' + kind, remove, move);
+  const item = card(parent, layerTitle(index), remove, move);
   const fields = grid(item);
   field(fields, 'Kind', kind, (v) => {
     LAYER_KINDS.forEach((key) => delete layer[key]);
@@ -304,7 +313,7 @@ function layoutsForm() {
     effectsEditor(item, layout);
     const layersBox = group(item, 'Layers');
     const layers = Array.isArray(layout.layers) ? layout.layers : [];
-    button(layersBox, '+ Add layer', () => { layout.layers = layers; layers.push({ image: 'entry' }); render(); sync(); });
+    labelled(button(layersBox, '+ Add layer', () => { layout.layers = layers; layers.push({ image: 'entry' }); render(); sync(); }), 'Add layer to ' + name);
     layers.forEach((layer, index) => layerForm(layersBox, layer, layers, index));
   });
 }
@@ -319,7 +328,8 @@ function entryForm(parent, entries, index, attachEntries) {
   const raw = entries[index];
   const entry = isMapping(raw) ? raw : typeof raw === 'string' ? { image: raw } : {};
   const keep = () => { attachEntries(); entries[index] = entry; };
-  const item = card(parent, 'Entry ' + (index + 1), () => { attachEntries(); entries.splice(index, 1); render(); sync(); }, mover(entries, index, attachEntries));
+  const entryTitle = (position) => 'Entry ' + (position + 1);
+  const item = card(parent, entryTitle(index), () => { attachEntries(); entries.splice(index, 1); render(); sync(); }, mover(entries, index, attachEntries, entryTitle));
   if (raw !== null && raw !== undefined && typeof raw !== 'string' && !isMapping(raw)) { sourceOnly(item, 'entry'); return; }
   const fields = grid(item);
   field(fields, 'Image path', entry.image, (v) => {
@@ -346,11 +356,11 @@ function entryForm(parent, entries, index, attachEntries) {
   const conditions = group(item, 'Conditions', 'Every condition must match. A custom item or player key can be typed.');
   const when = mappingOr(entry.when);
   const keepWhen = () => { keep(); entry.when = when; };
-  button(conditions, '+ Add condition', () => {
+  labelled(button(conditions, '+ Add condition', () => {
     const key = options.conditions.find((name) => !Object.hasOwn(when, name));
     if (key) { keepWhen(); when[key] = ''; }
     render(); sync();
-  });
+  }), 'Add condition to ' + entryTitle(index));
   Object.entries(when).forEach(([key, value]) => {
     const row = card(conditions, key, () => { keepWhen(); delete when[key]; render(); sync(); });
     const fields = grid(row);
@@ -390,7 +400,7 @@ function listForm(parent, bucket, name, named = false) {
   field(fields, 'Order', choice(list.order), (v) => { keepList(); set(list, 'order', v); }, { values: ['', 'random', 'sequential'] });
   field(fields, 'Looping sound', list.sound, (v) => { keepList(); set(list, 'sound', v); }, { placeholder: 'music/forest.ogg' });
   const entriesBox = group(item, 'Entries');
-  button(entriesBox, '+ Add entry', () => { keepEntries(); entries.push({ image: 'screens/image.jpg' }); render(); sync(); });
+  labelled(button(entriesBox, '+ Add entry', () => { keepEntries(); entries.push({ image: 'screens/image.jpg' }); render(); sync(); }), 'Add entry to ' + (named ? bucket + ' ' + name : name));
   entries.forEach((entry, index) => entryForm(entriesBox, entries, index, keepEntries));
 }
 
@@ -418,7 +428,22 @@ function whenForm() {
 
 const SECTIONS = { defaults: defaultsForm, layouts: layoutsForm, when: whenForm };
 
+const controls = () => [...form.querySelectorAll('input, select, textarea, button')];
+const controlLabel = (node) => node.getAttribute('aria-label') || node.labels?.[0]?.textContent || node.textContent;
+
+function restoreFocus(target) {
+  const list = controls();
+  if (!list.length) return;
+  const index = Math.max(0, target.index);
+  const distance = (position) => Math.abs(position - index);
+  const matches = list.map((node, position) => [node, position]).filter(([node]) => controlLabel(node) === target.label);
+  const best = matches.sort((a, b) => distance(a[1]) - distance(b[1]))[0]?.[0] ?? list[Math.min(index, list.length - 1)];
+  best.focus();
+}
+
 function render() {
+  const active = form.contains(document.activeElement) ? document.activeElement : null;
+  const before = active ? { index: controls().indexOf(active), label: controlLabel(active) } : null;
   form.replaceChildren();
   try {
     SECTIONS[tab]();
@@ -426,11 +451,32 @@ function render() {
     console.error('Editor: the ' + tab + ' section could not be rendered', error);
     form.replaceChildren(el('p', 'section-note', 'The ' + tab + ' section could not be shown in the form (' + error.message + '). Edit it in the YAML source.'));
   }
+  if (before) restoreFocus(focusHint ? { ...before, ...focusHint } : before);
+  focusHint = null;
   updatePreview();
 }
 
+function selectTab(buttonNode, moveFocus = false) {
+  flushSource();
+  tab = buttonNode.dataset.tab;
+  document.querySelectorAll('[data-tab]').forEach((node) => {
+    const selected = node === buttonNode;
+    node.classList.toggle('active', selected);
+    node.setAttribute('aria-selected', String(selected));
+    node.tabIndex = selected ? 0 : -1;
+  });
+  form.setAttribute('aria-labelledby', buttonNode.id);
+  if (moveFocus) buttonNode.focus();
+  render();
+}
+
 function showProblems(problems) {
-  $('#problem-count').textContent = String(problems.length);
+  const count = String(problems.length);
+  if ($('#problem-count').textContent !== count) {
+    clearTimeout(announceTimer);
+    announceTimer = setTimeout(() => { $('#problem-status').textContent = problems.length ? count + ' validation problems' : 'No validation problems'; }, 1000);
+  }
+  $('#problem-count').textContent = count;
   const list = $('#problem-list');
   list.replaceChildren();
   if (!problems.length) list.append(el('li', 'ok', 'No parser rule problems found.'));
@@ -504,12 +550,18 @@ function updatePreview() {
   drawPreview($('#screen'), layout, entry, mappingOr(config.defaults), images, $('#ratio').value);
 }
 
-document.querySelectorAll('[data-tab]').forEach((buttonNode) => buttonNode.addEventListener('click', () => {
-  flushSource();
-  tab = buttonNode.dataset.tab;
-  document.querySelectorAll('[data-tab]').forEach((node) => node.classList.toggle('active', node === buttonNode));
-  render();
-}));
+const tabButtons = [...document.querySelectorAll('[data-tab]')];
+tabButtons.forEach((buttonNode, index) => {
+  buttonNode.addEventListener('click', () => selectTab(buttonNode));
+  buttonNode.addEventListener('keydown', (event) => {
+    const step = { ArrowRight: 1, ArrowLeft: -1 }[event.key];
+    const target = step ? tabButtons[(index + step + tabButtons.length) % tabButtons.length]
+      : event.key === 'Home' ? tabButtons[0] : event.key === 'End' ? tabButtons.at(-1) : null;
+    if (!target) return;
+    event.preventDefault();
+    selectTab(target, true);
+  });
+});
 form.addEventListener('focusin', flushSource, true);
 form.addEventListener('pointerdown', flushSource, true);
 yamlBox.addEventListener('input', () => {
