@@ -1,5 +1,4 @@
-import { stringify } from './vendor/yaml.mjs';
-import { parseSource, canonicalizeKeys, define, MAX_SOURCE_LENGTH } from './yaml-model.mjs';
+import { parseSource, canonicalizeKeys, define, renameKey, writeSource, MAX_SOURCE_LENGTH } from './yaml-model.mjs';
 import { validate } from './validate.mjs';
 import { drawPreview } from './preview.mjs';
 
@@ -21,6 +20,7 @@ let images = new Map();
 let previewName = 'my-layout';
 let sourceDirty = false;
 let pendingApply = 0;
+let sourceDoc = null;
 
 function el(tag, className, text) {
   const node = document.createElement(tag);
@@ -253,7 +253,7 @@ function layoutsForm() {
     field(fields, 'Layout name', name, (v) => {
       const next = v.trim();
       if (next && next !== name && !config.layouts[next]) {
-        delete config.layouts[name]; config.layouts[next] = layout;
+        renameKey(config.layouts, name, next);
         if (previewName === name) previewName = next;
         render();
       }
@@ -305,8 +305,8 @@ function entryForm(parent, entries, index) {
     const row = card(conditions, key, () => { delete entry.when[key]; render(); sync(); });
     const fields = grid(row);
     field(fields, 'Condition', key, (v) => {
-      if (v && v !== key) {
-        delete entry.when[key]; entry.when[v] = value;
+      if (v && v !== key && !Object.hasOwn(entry.when, v)) {
+        renameKey(entry.when, key, v);
         render();
       }
     }, { list: options.conditions, onChange: true });
@@ -325,7 +325,7 @@ function listForm(parent, bucket, name, named = false) {
   const fields = grid(item);
   if (named) field(fields, 'Name', name, (v) => {
     const next = v.trim();
-    if (next && next !== name && !lists[next]) { delete lists[name]; lists[next] = list; render(); }
+    if (next && next !== name && !lists[next]) { renameKey(lists, name, next); render(); }
   }, { list: bucket === 'biome' ? options.biomes : bucket === 'death' ? options.deathCauses : [], onChange: true });
   field(fields, 'List layout', list.layout || '', (v) => set(list, 'layout', v), { list: Object.keys(config.layouts || {}), placeholder: 'Use default' });
   field(fields, 'Order', list.order || '', (v) => set(list, 'order', v), { values: ['', 'random', 'sequential'] });
@@ -377,11 +377,13 @@ function showProblems(problems) {
 }
 
 function sync() {
-  yamlBox.value = stringify(config, { lineWidth: 100 });
+  yamlBox.value = writeSource(sourceDoc, config);
+  const parsed = parseSource(yamlBox.value);
+  sourceDoc = parsed.doc ?? null;
   sourceDirty = false;
   $('#edit-status').textContent = 'Synced';
   $('#source-note').hidden = true;
-  showProblems(validate(parseSource(yamlBox.value), options));
+  showProblems(validate(parsed, options));
   updatePreview();
 }
 
@@ -402,6 +404,7 @@ function applySource() {
     return false;
   }
   config = result.config;
+  sourceDoc = result.doc;
   const renamed = canonicalizeKeys(config, options.conditions);
   $('#source-note').hidden = !renamed.length;
   $('#source-note').textContent = renamed.length ? 'The form uses the documented key spelling (' + renamed.join(', ') + '); the source is updated on the next form edit.' : '';
