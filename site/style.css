@@ -176,6 +176,17 @@ input[type=file] {
   max-height:665px;
   overflow:auto
 }
+.form-content.locked {
+  opacity:.45
+}
+.form-lock {
+  margin:16px 24px 0;
+  padding:10px 14px;
+  border:1px solid #8a4b3f;
+  border-radius:6px;
+  background:#3a1f1c;
+  color:#f3c2b5
+}
 .form-content h3,.preview-body h3 {
   font:normal 20px Georgia,serif;
   margin:0 0 6px

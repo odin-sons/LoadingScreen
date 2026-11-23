@@ -25,13 +25,14 @@
           <button class="tab" type="button" data-tab="layouts">Layouts</button>
           <button class="tab" type="button" data-tab="when">When</button>
         </nav>
+        <p id="form-lock" class="form-lock" role="status" hidden>The YAML source has an error. Fix it to keep editing in the form.</p>
         <div id="form" class="form-content"></div>
       </section>
       <section class="panel result-panel" aria-labelledby="yaml-title">
-        <div class="panel-head"><div><p class="eyebrow">02 / SOURCE</p><h2 id="yaml-title">loadingscreen.yaml</h2></div><button id="apply-yaml" class="text-button" type="button">Apply YAML → form</button></div>
+        <div class="panel-head"><div><p class="eyebrow">02 / SOURCE</p><h2 id="yaml-title">loadingscreen.yaml</h2></div></div>
         <label class="sr-only" for="yaml">Editable YAML configuration</label>
         <textarea id="yaml" spellcheck="false" autocapitalize="off" autocomplete="off" aria-describedby="yaml-hint"></textarea>
-        <p id="yaml-hint" class="hint">Paste or edit YAML, then apply it to the form. Form changes regenerate this source.</p>
+        <p id="yaml-hint" class="hint">Paste or edit YAML here; the form follows as soon as the YAML is valid. Form changes regenerate this source.</p>
         <div class="problems"><h3>Validation <span id="problem-count">0</span></h3><ul id="problem-list" aria-live="polite"></ul></div>
       </section>
     </div>

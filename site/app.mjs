@@ -1,4 +1,5 @@
-import { load, dump } from './vendor/js-yaml.mjs';
+import { stringify } from './vendor/yaml.mjs';
+import { parseSource, MAX_SOURCE_LENGTH } from './yaml-model.mjs';
 import { validate } from './validate.mjs';
 import { drawPreview } from './preview.mjs';
 
@@ -19,6 +20,7 @@ let tab = 'defaults';
 let images = new Map();
 let previewName = 'my-layout';
 let sourceDirty = false;
+let pendingApply = 0;
 
 function el(tag, className, text) {
   const node = document.createElement(tag);
@@ -348,7 +350,7 @@ function render() {
     if (tab === 'layouts') layoutsForm();
     if (tab === 'when') whenForm();
   } catch {
-    form.replaceChildren(el('p', 'section-note', 'This section has an invalid structure. Correct the YAML and apply it again to edit in the form.'));
+    form.replaceChildren(el('p', 'section-note', 'This section has an invalid structure. Correct the YAML to edit it in the form.'));
     $('#edit-status').textContent = 'Fix YAML';
   }
   updatePreview();
@@ -363,28 +365,40 @@ function showProblems(problems) {
 }
 
 function sync() {
-  yamlBox.value = dump(config, { lineWidth: 100, noRefs: true, quotingType: '"' });
+  yamlBox.value = stringify(config, { lineWidth: 100 });
   sourceDirty = false;
   $('#edit-status').textContent = 'Synced';
   showProblems(validate(config, yamlBox.value, options));
   updatePreview();
 }
 
-function applyYaml() {
-  try {
-    const parsed = load(yamlBox.value, { json: false });
-    if (parsed !== null && (typeof parsed !== 'object' || Array.isArray(parsed))) {
-      showProblems([{ line: 1, message: 'the top level must be a mapping, config ignored' }]);
-      return;
-    }
-    config = parsed || {};
-    sourceDirty = false;
-    $('#edit-status').textContent = 'Loaded';
-    showProblems(validate(config, yamlBox.value, options));
-    render();
-  } catch (error) {
-    showProblems([{ line: error.mark?.line + 1 || 1, message: 'invalid YAML, config ignored: ' + error.reason }]);
+function lockForm(locked) {
+  form.inert = locked;
+  form.classList.toggle('locked', locked);
+  $('#form-lock').hidden = !locked;
+}
+
+function applySource() {
+  clearTimeout(pendingApply);
+  pendingApply = 0;
+  const result = parseSource(yamlBox.value);
+  if (result.error) {
+    lockForm(true);
+    $('#edit-status').textContent = 'Fix YAML';
+    showProblems([result.error]);
+    return false;
   }
+  config = result.config;
+  sourceDirty = false;
+  lockForm(false);
+  $('#edit-status').textContent = 'Loaded';
+  showProblems(validate(config, yamlBox.value, options));
+  render();
+  return true;
+}
+
+function flushSource() {
+  if (pendingApply) applySource();
 }
 
 function allEntries() {
@@ -407,31 +421,32 @@ function updatePreview() {
 }
 
 document.querySelectorAll('[data-tab]').forEach((buttonNode) => buttonNode.addEventListener('click', () => {
+  flushSource();
   tab = buttonNode.dataset.tab;
   document.querySelectorAll('[data-tab]').forEach((node) => node.classList.toggle('active', node === buttonNode));
   render();
 }));
-$('#apply-yaml').addEventListener('click', applyYaml);
+form.addEventListener('focusin', flushSource, true);
+form.addEventListener('pointerdown', flushSource, true);
 yamlBox.addEventListener('input', () => {
   sourceDirty = true;
   $('#edit-status').textContent = 'YAML edited';
-  try {
-    const parsed = load(yamlBox.value);
-    showProblems(validate(parsed || {}, yamlBox.value, options));
-  } catch (error) {
-    showProblems([{ line: error.mark?.line + 1 || 1, message: 'invalid YAML, config ignored: ' + error.reason }]);
-  }
+  clearTimeout(pendingApply);
+  pendingApply = setTimeout(applySource, 300);
 });
 $('#file-input').addEventListener('change', async (event) => {
   const file = event.target.files[0];
-  if (!file) return;
-  yamlBox.value = await file.text();
-  applyYaml();
   event.target.value = '';
+  if (!file) return;
+  if (file.size > MAX_SOURCE_LENGTH) {
+    showProblems([{ line: 1, message: 'the file is larger than ' + MAX_SOURCE_LENGTH / 1024 + ' KB, the editor does not load it' }]);
+    return;
+  }
+  yamlBox.value = await file.text();
+  applySource();
 });
 $('#download').addEventListener('click', () => {
-  if (sourceDirty) applyYaml();
-  if (sourceDirty) return;
+  if (sourceDirty && !applySource()) return;
   const blob = new Blob([yamlBox.value.endsWith('\n') ? yamlBox.value : yamlBox.value + '\n'], { type: 'text/yaml;charset=utf-8' });
   const url = URL.createObjectURL(blob);
   const link = el('a');

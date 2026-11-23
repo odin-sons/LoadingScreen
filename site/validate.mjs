@@ -3,6 +3,7 @@ const text = (value) => value === undefined || value === null ? '' : String(valu
 const color = (value) => /^#?[0-9a-f]{6}(?:[0-9a-f]{2})?$/i.test(text(value));
 const length = (value) => /^[+-]?(?:\d+(?:\.\d*)?|\.\d+)(?:%|px)?$/i.test(text(value).trim());
 const number = (value) => value !== '' && Number.isFinite(Number(value));
+const boolean = (value) => ['true', 'false'].includes(text(value).trim().toLowerCase());
 const names = (values) => new Set(values.map((value) => value.toLowerCase()));
 
 export function validate(config, source, options) {
@@ -81,7 +82,7 @@ export function validate(config, source, options) {
           warn(fadeWhere + ": invalid curve '" + fade.curve + "', use linear or smooth", 'curve', fade.curve);
       }
     }
-    if (allowAnimate && value.animate !== undefined && typeof value.animate !== 'boolean')
+    if (allowAnimate && value.animate !== undefined && !boolean(value.animate))
       warn(where + ": 'animate' must be true or false", 'animate');
   }
   function animation(value, where) {
@@ -196,8 +197,6 @@ export function validate(config, source, options) {
   }
 
   if (!mapping(config)) return [{ line: 1, message: 'the top level must be a mapping, config ignored' }];
-  const aliasLine = lines.findIndex((line) => /(?:^|\s)\*[a-zA-Z0-9_-]+/.test(line));
-  if (aliasLine >= 0) problems.push({ line: aliasLine + 1, message: 'YAML aliases (*name) are not supported, config ignored' });
   const topKeys = names(['defaults', 'layouts', 'order', 'when']);
   Object.keys(config).forEach((key) => { if (!topKeys.has(key.toLowerCase())) warn("unknown top-level key '" + key + "'", key); });
   if (config.order !== undefined && !['random', 'sequential'].includes(text(config.order).toLowerCase()))
@@ -233,7 +232,7 @@ export function validate(config, source, options) {
       effect(value.vignette, "layout '" + name + "'.vignette", 'vignette');
       effect(value.mask, "layout '" + name + "'.mask", 'mask');
       if (value.sound !== undefined) asset(value.sound, "layout '" + name + "'", 'sound', true);
-      if (value.showSleepUi !== undefined && typeof value.showSleepUi !== 'boolean')
+      if (value.showSleepUi !== undefined && !boolean(value.showSleepUi))
         warn("layout '" + name + "': 'showSleepUi' must be true or false", 'showSleepUi');
       if (!Array.isArray(value.layers)) warn("layout '" + name + "' needs a 'layers' list, ignored", 'layers');
       else {
