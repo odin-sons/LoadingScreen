@@ -326,8 +326,14 @@ public static class ServerImages {
     return limits;
   }
 
+  static bool IsAcceptedPeer(ZRpc rpc) {
+    if (!ZNet.instance || !ZNet.instance.IsServer()) return false;
+    ZNetPeer peer = ZNet.instance.GetPeer(rpc);
+    return peer != null && peer.IsReady();
+  }
+
   static void OnRequestManifest(ZRpc rpc, ZPackage request) {
-    if (!ZNet.instance || !ZNet.instance.IsServer()) {
+    if (!IsAcceptedPeer(rpc)) {
       return;
     }
 
@@ -565,7 +571,7 @@ public static class ServerImages {
   }
 
   static void OnRequestChunk(ZRpc rpc, ZPackage request) {
-    if (!ZNet.instance || !ZNet.instance.IsServer()) {
+    if (!IsAcceptedPeer(rpc)) {
       return;
     }
 
