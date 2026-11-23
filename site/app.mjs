@@ -5,7 +5,7 @@ import { drawPreview } from './preview.mjs';
 const $ = (selector) => document.querySelector(selector);
 const form = $('#form');
 const yamlBox = $('#yaml');
-const options = await fetch('./data/options.json').then((response) => response.json());
+const options = await loadOptions();
 let config = {
   defaults: { background: '#000000', place: { fit: 'contain', position: { anchor: 'center' } } },
   layouts: { 'my-layout': { layers: [
@@ -21,6 +21,24 @@ let previewName = 'my-layout';
 let sourceDirty = false;
 let pendingApply = 0;
 let sourceDoc = null;
+
+async function loadOptions() {
+  try {
+    const response = await fetch('./data/options.json');
+    if (!response.ok) throw new Error('HTTP ' + response.status);
+    return await response.json();
+  } catch (error) {
+    console.error('Editor: data/options.json could not be loaded', error);
+    $('#edit-status').textContent = 'Not loaded';
+    form.replaceChildren(el('p', 'section-note', 'The editor data could not be loaded (' + error.message + '). Reload the page; if you opened the file directly, serve the folder over HTTP instead.'));
+    yamlBox.disabled = true;
+    throw error;
+  }
+}
+
+const isMapping = (value) => value !== null && typeof value === 'object' && !Array.isArray(value);
+const mappingOr = (value) => isMapping(value) ? value : {};
+const choice = (value) => value === undefined || value === null ? '' : String(value);
 
 function el(tag, className, text) {
   const node = document.createElement(tag);
@@ -39,13 +57,14 @@ function field(parent, label, value, write, { type = 'text', values, list, wide 
   const id = 'f-' + Math.random().toString(36).slice(2);
   const title = el('label', '', label);
   title.htmlFor = id;
+  const current = value === undefined || value === null ? '' : String(value);
   let input;
   if (multiline) input = el('textarea');
   else if (values) {
     input = el('select');
-    values.forEach((choice) => {
-      const option = el('option', '', choice);
-      option.value = choice;
+    (values.includes(current) ? values : [...values, current]).forEach((item) => {
+      const option = el('option', '', item);
+      option.value = item;
       input.append(option);
     });
   } else input = el('input');
@@ -54,16 +73,16 @@ function field(parent, label, value, write, { type = 'text', values, list, wide 
   if (list) {
     const data = el('datalist');
     data.id = id + '-list';
-    list.forEach((choice) => {
+    list.forEach((item) => {
       const option = el('option');
-      option.value = choice;
+      option.value = item;
       data.append(option);
     });
     input.setAttribute('list', data.id);
     wrap.append(data);
   }
   input.placeholder = placeholder;
-  input.value = value === undefined || value === null ? '' : String(value);
+  input.value = current;
   input.addEventListener(onChange ? 'change' : 'input', () => {
     write(input.value);
     sync();
@@ -111,86 +130,99 @@ function card(parent, title, remove, move) {
   return node;
 }
 
+function sourceOnly(parent, what) {
+  parent.append(el('p', 'section-note', 'This ' + what + ' uses a form the editor cannot show. Edit it in the YAML source.'));
+}
+
 function set(target, key, value, numeric = false) {
   if (value === '') delete target[key];
   else target[key] = numeric && Number.isFinite(Number(value)) ? Number(value) : value;
 }
 
-function placeEditor(parent, owner, title) {
+function mover(items, index, attach) {
+  return (direction) => {
+    const next = index + direction;
+    if (next < 0 || next >= items.length) return;
+    attach();
+    [items[index], items[next]] = [items[next], items[index]];
+    render(); sync();
+  };
+}
+
+function placeEditor(parent, owner, title, attach = () => {}) {
   const box = group(parent, title);
-  const place = owner.place || {};
+  const place = mappingOr(owner.place);
+  const keep = () => { attach(); owner.place = place; };
   const fit = place.fit;
-  const fitMode = typeof fit === 'object' && fit !== null ? 'box' : fit || '';
+  const fitMode = isMapping(fit) ? 'box' : choice(fit);
   const fields = grid(box);
-  field(fields, 'Fit', fitMode, (v) => { owner.place = place; if (!v) delete place.fit; else place.fit = v === 'box' ? { width: '50%' } : v; render(); }, { values: ['', 'contain', 'cover', 'stretch', 'none', 'box'] });
+  field(fields, 'Fit', fitMode, (v) => { keep(); if (!v) delete place.fit; else place.fit = v === 'box' ? { width: '50%' } : v; render(); }, { values: ['', 'contain', 'cover', 'stretch', 'none', 'box'] });
   if (fitMode === 'box') {
-    field(fields, 'Box width', fit.width, (v) => { owner.place = place; set(fit, 'width', v); }, { placeholder: '50%' });
-    field(fields, 'Box height', fit.height, (v) => { owner.place = place; set(fit, 'height', v); }, { placeholder: '250px' });
+    field(fields, 'Box width', fit.width, (v) => { keep(); set(fit, 'width', v); }, { placeholder: '50%' });
+    field(fields, 'Box height', fit.height, (v) => { keep(); set(fit, 'height', v); }, { placeholder: '250px' });
   }
-  const position = typeof place.position === 'string' ? { anchor: place.position } : place.position ?? {};
-  if (typeof place.position === 'string') place.position = position;
-  field(fields, 'Anchor', position.anchor || '', (v) => { owner.place = place; place.position = position; set(position, 'anchor', v); }, { list: options.anchors, placeholder: 'center' });
-  field(fields, 'Offset X', position.x || '', (v) => { owner.place = place; place.position = position; set(position, 'x', v); }, { placeholder: '0px or 10%' });
-  field(fields, 'Offset Y', position.y || '', (v) => { owner.place = place; place.position = position; set(position, 'y', v); }, { placeholder: '0px or -10%' });
-  field(fields, 'Opacity', place.opacity, (v) => { owner.place = place; set(place, 'opacity', v, true); }, { type: 'number', placeholder: '0–1' });
-  const fade = place.fade || {};
-  const fadeBox = group(box, 'Edge fade');
-  const fadeFields = grid(fadeBox);
-  field(fadeFields, 'Sides', Array.isArray(fade.sides) ? fade.sides.join(', ') : fade.sides || '', (v) => { owner.place = place; if (!v) delete place.fade; else { place.fade = fade; fade.sides = v.split(',').map((s) => s.trim()).filter(Boolean); } }, { placeholder: 'bottom, left' });
-  field(fadeFields, 'Fade color', fade.color || '', (v) => { owner.place = place; place.fade = fade; set(fade, 'color', v); }, { placeholder: '#000000' });
-  field(fadeFields, 'Fade size', fade.size || '', (v) => { owner.place = place; place.fade = fade; set(fade, 'size', v); }, { placeholder: '15%' });
-  field(fadeFields, 'Curve', fade.curve || '', (v) => { owner.place = place; place.fade = fade; set(fade, 'curve', v); }, { values: ['', 'smooth', 'linear'] });
+  const position = isMapping(place.position) ? place.position : typeof place.position === 'string' ? { anchor: place.position } : {};
+  const keepPosition = () => { keep(); place.position = position; };
+  field(fields, 'Anchor', position.anchor, (v) => { keepPosition(); set(position, 'anchor', v); }, { list: options.anchors, placeholder: 'center' });
+  field(fields, 'Offset X', position.x, (v) => { keepPosition(); set(position, 'x', v); }, { placeholder: '0px or 10%' });
+  field(fields, 'Offset Y', position.y, (v) => { keepPosition(); set(position, 'y', v); }, { placeholder: '0px or -10%' });
+  field(fields, 'Opacity', place.opacity, (v) => { keep(); set(place, 'opacity', v, true); }, { type: 'number', placeholder: '0–1' });
+  const fade = mappingOr(place.fade);
+  const keepFade = () => { keep(); place.fade = fade; };
+  const fadeFields = grid(group(box, 'Edge fade'));
+  field(fadeFields, 'Sides', Array.isArray(fade.sides) ? fade.sides.join(', ') : fade.sides, (v) => { keep(); if (!v) delete place.fade; else { place.fade = fade; fade.sides = v.split(',').map((s) => s.trim()).filter(Boolean); } }, { placeholder: 'bottom, left' });
+  field(fadeFields, 'Fade color', fade.color, (v) => { keepFade(); set(fade, 'color', v); }, { placeholder: '#000000' });
+  field(fadeFields, 'Fade size', fade.size, (v) => { keepFade(); set(fade, 'size', v); }, { placeholder: '15%' });
+  field(fadeFields, 'Curve', choice(fade.curve), (v) => { keepFade(); set(fade, 'curve', v); }, { values: ['', 'smooth', 'linear'] });
 }
 
-function animationEditor(parent, owner) {
+function animationEditor(parent, owner, attach = () => {}) {
   const box = group(parent, 'Animation');
-  let animation = owner.animation;
-  if (typeof animation === 'string') animation = owner.animation = { idle: animation };
-  animation ||= {};
+  const animation = isMapping(owner.animation) ? owner.animation : typeof owner.animation === 'string' ? { idle: owner.animation } : {};
+  const keep = () => { attach(); owner.animation = animation; };
   const fields = grid(box);
-  ['enter', 'idle', 'exit'].forEach((phase) => field(fields, phase[0].toUpperCase() + phase.slice(1), animation[phase] || '', (v) => { owner.animation = animation; set(animation, phase, v); }, { list: options.animations, placeholder: 'none' }));
-  field(fields, 'Speed', animation.speed, (v) => { owner.animation = animation; set(animation, 'speed', v, true); }, { type: 'number', placeholder: '1' });
-  field(fields, 'Origin', animation.origin || '', (v) => { owner.animation = animation; set(animation, 'origin', v); }, { list: options.anchors, placeholder: 'center' });
+  ['enter', 'idle', 'exit'].forEach((phase) => field(fields, phase[0].toUpperCase() + phase.slice(1), animation[phase], (v) => { keep(); set(animation, phase, v); }, { list: options.animations, placeholder: 'none' }));
+  field(fields, 'Speed', animation.speed, (v) => { keep(); set(animation, 'speed', v, true); }, { type: 'number', placeholder: '1' });
+  field(fields, 'Origin', animation.origin, (v) => { keep(); set(animation, 'origin', v); }, { list: options.anchors, placeholder: 'center' });
 }
 
-function effectsEditor(parent, owner) {
-  const box = group(parent, 'Screen effects');
-  const fields = grid(box);
-  const vignette = owner.vignette || {};
-  field(fields, 'Vignette color', vignette.color || '', (v) => { owner.vignette = vignette; set(vignette, 'color', v); }, { placeholder: '#000000' });
-  field(fields, 'Vignette size', vignette.size || '', (v) => { owner.vignette = vignette; set(vignette, 'size', v); }, { placeholder: '25%' });
-  field(fields, 'Vignette strength', vignette.strength, (v) => { owner.vignette = vignette; set(vignette, 'strength', v, true); }, { type: 'number', placeholder: '0–1' });
-  const mask = owner.mask || {};
-  field(fields, 'Mask color', mask.color || '', (v) => { owner.mask = mask; set(mask, 'color', v); }, { placeholder: '#000000' });
-  field(fields, 'Mask opacity', mask.opacity, (v) => { owner.mask = mask; set(mask, 'opacity', v, true); }, { type: 'number', placeholder: '0–1' });
+function effectsEditor(parent, owner, attach = () => {}) {
+  const fields = grid(group(parent, 'Screen effects'));
+  const vignette = mappingOr(owner.vignette);
+  const keepVignette = () => { attach(); owner.vignette = vignette; };
+  field(fields, 'Vignette color', vignette.color, (v) => { keepVignette(); set(vignette, 'color', v); }, { placeholder: '#000000' });
+  field(fields, 'Vignette size', vignette.size, (v) => { keepVignette(); set(vignette, 'size', v); }, { placeholder: '25%' });
+  field(fields, 'Vignette strength', vignette.strength, (v) => { keepVignette(); set(vignette, 'strength', v, true); }, { type: 'number', placeholder: '0–1' });
+  const mask = mappingOr(owner.mask);
+  const keepMask = () => { attach(); owner.mask = mask; };
+  field(fields, 'Mask color', mask.color, (v) => { keepMask(); set(mask, 'color', v); }, { placeholder: '#000000' });
+  field(fields, 'Mask opacity', mask.opacity, (v) => { keepMask(); set(mask, 'opacity', v, true); }, { type: 'number', placeholder: '0–1' });
 }
 
 function defaultsForm() {
   const intro = group(form, 'Base appearance', 'These values apply when a layout or layer does not override them.');
   const fields = grid(intro);
-  const defaults = config.defaults ??= {};
-  field(fields, 'Background', defaults.background || '', (v) => set(defaults, 'background', v), { placeholder: '#000000' });
-  field(fields, 'Image tint', defaults.tint || '', (v) => set(defaults, 'tint', v), { placeholder: '#FFFFFF' });
-  field(fields, 'Global entry order', config.order || '', (v) => set(config, 'order', v), { values: ['', 'random', 'sequential'] });
-  placeEditor(form, defaults, 'Default placement');
-  animationEditor(form, defaults);
-  effectsEditor(form, defaults);
+  const defaults = mappingOr(config.defaults);
+  const attach = () => { config.defaults = defaults; };
+  field(fields, 'Background', defaults.background, (v) => { attach(); set(defaults, 'background', v); }, { placeholder: '#000000' });
+  field(fields, 'Image tint', defaults.tint, (v) => { attach(); set(defaults, 'tint', v); }, { placeholder: '#FFFFFF' });
+  field(fields, 'Global entry order', choice(config.order), (v) => set(config, 'order', v), { values: ['', 'random', 'sequential'] });
+  placeEditor(form, defaults, 'Default placement', attach);
+  animationEditor(form, defaults, attach);
+  effectsEditor(form, defaults, attach);
   ['tip', 'continuePrompt', 'separator', 'spinner'].forEach((name) => {
     const section = group(form, name === 'continuePrompt' ? 'Continue prompt' : name[0].toUpperCase() + name.slice(1));
-    const object = defaults[name] || {};
+    const object = mappingOr(defaults[name]);
+    const keep = () => { attach(); defaults[name] = object; };
     const row = grid(section);
-    ['x', 'bottom'].forEach((key) => field(row, key === 'x' ? 'Offset X (px)' : 'Bottom (px)', object[key], (v) => { defaults[name] = object; set(object, key, v, true); }, { type: 'number' }));
+    ['x', 'bottom'].forEach((key) => field(row, key === 'x' ? 'Offset X (px)' : 'Bottom (px)', object[key], (v) => { keep(); set(object, key, v, true); }, { type: 'number' }));
     if (name === 'tip' || name === 'continuePrompt') {
-      field(row, 'Font size', object.size, (v) => { defaults[name] = object; set(object, 'size', v, true); }, { type: 'number' });
-      field(row, 'Color', object.color || '', (v) => { defaults[name] = object; set(object, 'color', v); });
+      field(row, 'Font size', object.size, (v) => { keep(); set(object, 'size', v, true); }, { type: 'number' });
+      field(row, 'Color', object.color, (v) => { keep(); set(object, 'color', v); });
     }
-    if (name === 'separator') field(row, 'Show', object.show === undefined ? '' : String(object.show), (v) => { defaults[name] = object; set(object, 'show', v === '' ? '' : v === 'true'); }, { values: ['', 'true', 'false'] });
-    if (name === 'spinner') field(row, 'Center', object.center === undefined ? '' : String(object.center), (v) => { defaults[name] = object; set(object, 'center', v === '' ? '' : v === 'true'); }, { values: ['', 'true', 'false'] });
+    const flag = name === 'separator' ? ['show', 'Show'] : name === 'spinner' ? ['center', 'Center'] : null;
+    if (flag) field(row, flag[1], choice(object[flag[0]]).toLowerCase(), (v) => { keep(); set(object, flag[0], v === '' ? '' : v === 'true'); }, { values: ['', 'true', 'false'] });
   });
-}
-
-function isMapping(value) {
-  return value !== null && typeof value === 'object' && !Array.isArray(value);
 }
 
 function languageName(code) {
@@ -199,71 +231,81 @@ function languageName(code) {
   return match ? match[0].replace(/_/g, ' ') + ' (' + match[1] + ')' : code;
 }
 
-function layerKind(layer) {
-  for (const name of ['image', 'text', 'spinner', 'progress', 'color']) if (Object.hasOwn(layer, name)) return name;
-  return 'image';
+function languageCode(key) {
+  const name = Object.keys(options.languages).find((language) => language.toLowerCase() === key.trim().toLowerCase());
+  return name ? options.languages[name] : key;
 }
 
-function layerForm(parent, layer, layout, index) {
+const LAYER_KINDS = ['image', 'text', 'spinner', 'progress', 'color'];
+
+function layerKind(layer) {
+  return LAYER_KINDS.find((name) => Object.hasOwn(layer, name)) ?? 'image';
+}
+
+function layerForm(parent, layer, layers, index) {
+  const remove = () => { layers.splice(index, 1); render(); sync(); };
+  const move = mover(layers, index, () => {});
+  if (!isMapping(layer)) {
+    sourceOnly(card(parent, 'Layer ' + (index + 1), remove, move), 'layer');
+    return;
+  }
   const kind = layerKind(layer);
-  const item = card(parent, 'Layer ' + (index + 1) + ' · ' + kind, () => { layout.layers.splice(index, 1); render(); sync(); }, (direction) => {
-    const next = index + direction;
-    if (next >= 0 && next < layout.layers.length) {
-      [layout.layers[index], layout.layers[next]] = [layout.layers[next], layout.layers[index]];
-      render(); sync();
-    }
-  });
+  const item = card(parent, 'Layer ' + (index + 1) + ' · ' + kind, remove, move);
   const fields = grid(item);
   field(fields, 'Kind', kind, (v) => {
-    ['image', 'text', 'spinner', 'progress', 'color'].forEach((key) => delete layer[key]);
+    LAYER_KINDS.forEach((key) => delete layer[key]);
     delete layer.size; delete layer.align; delete layer.background;
     layer[v] = { image: 'entry', text: 'caption', spinner: 'ring', progress: 'bar', color: '#000000' }[v];
     render();
-  }, { values: ['image', 'text', 'spinner', 'progress', 'color'] });
-  field(fields, 'Layer ID', layer.id || '', (v) => set(layer, 'id', v), { placeholder: 'optional' });
-  if (kind === 'image') field(fields, 'Image path or keyword', Array.isArray(layer.image) ? layer.image.join('\n') : layer.image || '', (v) => { layer.image = v.includes('\n') ? v.split('\n').map((s) => s.trim()).filter(Boolean) : v; }, { multiline: true, wide: true, placeholder: 'entry, separator, or images/logo.png\nOne path per line for alternatives' });
+  }, { values: LAYER_KINDS });
+  field(fields, 'Layer ID', layer.id, (v) => set(layer, 'id', v), { placeholder: 'optional' });
+  if (kind === 'image') field(fields, 'Image path or keyword', Array.isArray(layer.image) ? layer.image.join('\n') : layer.image, (v) => { layer.image = v.includes('\n') ? v.split('\n').map((s) => s.trim()).filter(Boolean) : v; }, { multiline: true, wide: true, placeholder: 'entry, separator, or images/logo.png\nOne path per line for alternatives' });
   if (kind === 'text') {
-    field(fields, 'Text source', layer.text, (v) => { layer.text = v; }, { values: ['caption', 'prompt'] });
+    field(fields, 'Text source', choice(layer.text), (v) => { layer.text = v; }, { values: ['caption', 'prompt'] });
     field(fields, 'Font size', layer.size, (v) => set(layer, 'size', v, true), { type: 'number' });
-    field(fields, 'Text color', layer.color || '', (v) => set(layer, 'color', v), { placeholder: '#FFFFFF or auto' });
-    field(fields, 'Box background', layer.background || '', (v) => set(layer, 'background', v), { placeholder: '#00000099 or auto' });
-    field(fields, 'Align', layer.align || '', (v) => set(layer, 'align', v), { values: ['', 'left', 'center', 'right'] });
+    field(fields, 'Text color', layer.color, (v) => set(layer, 'color', v), { placeholder: '#FFFFFF or auto' });
+    field(fields, 'Box background', layer.background, (v) => set(layer, 'background', v), { placeholder: '#00000099 or auto' });
+    field(fields, 'Align', choice(layer.align), (v) => set(layer, 'align', v), { values: ['', 'left', 'center', 'right'] });
   }
-  if (kind === 'spinner') field(fields, 'Spinner style or image path', layer.spinner || '', (v) => set(layer, 'spinner', v), { list: ['hammer', 'ring', 'dots'] });
+  if (kind === 'spinner') field(fields, 'Spinner style or image path', layer.spinner, (v) => set(layer, 'spinner', v), { list: ['hammer', 'ring', 'dots'] });
   if (kind === 'progress') {
-    field(fields, 'Progress style', layer.progress || '', (v) => set(layer, 'progress', v), { values: ['bar', 'ring', 'percent'] });
+    field(fields, 'Progress style', choice(layer.progress), (v) => set(layer, 'progress', v), { values: ['bar', 'ring', 'percent'] });
     field(fields, 'Size', layer.size, (v) => set(layer, 'size', v, true), { type: 'number' });
-    field(fields, 'Color', layer.color || '', (v) => set(layer, 'color', v));
+    field(fields, 'Color', layer.color, (v) => set(layer, 'color', v));
   }
-  if (kind === 'color') field(fields, 'Fill color', layer.color || '', (v) => set(layer, 'color', v), { placeholder: '#000000' });
+  if (kind === 'color') field(fields, 'Fill color', layer.color, (v) => set(layer, 'color', v), { placeholder: '#000000' });
   placeEditor(item, layer, 'Placement');
   animationEditor(item, layer);
 }
 
 function layoutsForm() {
   const head = group(form, 'Layouts', 'Layers draw in order, from back to front. Use image: entry to show an entry’s image.');
+  const layouts = mappingOr(config.layouts);
   button(head, '+ Add layout', () => {
-    const name = uniqueName(config.layouts ??= {}, 'new-layout');
-    config.layouts[name] = { layers: [{ image: 'entry', place: { fit: 'cover' } }] };
+    config.layouts = layouts;
+    const name = uniqueName(layouts, 'new-layout');
+    layouts[name] = { layers: [{ image: 'entry', place: { fit: 'cover' } }] };
     previewName = name; render(); sync();
   });
-  Object.entries(config.layouts ??= {}).forEach(([name, layout]) => {
-    const item = card(form, name, () => { delete config.layouts[name]; render(); sync(); });
+  Object.entries(layouts).forEach(([name, layout]) => {
+    const item = card(form, name, () => { delete layouts[name]; render(); sync(); });
     const fields = grid(item);
     field(fields, 'Layout name', name, (v) => {
       const next = v.trim();
-      if (next && next !== name && !config.layouts[next]) {
-        renameKey(config.layouts, name, next);
+      if (next && next !== name && !Object.hasOwn(layouts, next)) {
+        renameKey(layouts, name, next);
         if (previewName === name) previewName = next;
         render();
       }
     }, { onChange: true });
-    field(fields, 'Looping sound', layout.sound || '', (v) => set(layout, 'sound', v), { placeholder: 'music/forest.ogg' });
+    if (!isMapping(layout)) { sourceOnly(item, 'layout'); return; }
+    field(fields, 'Looping sound', layout.sound, (v) => set(layout, 'sound', v), { placeholder: 'music/forest.ogg' });
     placeEditor(item, layout, 'Layout placement');
     effectsEditor(item, layout);
-    const layers = group(item, 'Layers');
-    button(layers, '+ Add layer', () => { (layout.layers ??= []).push({ image: 'entry' }); render(); sync(); });
-    (layout.layers ??= []).forEach((layer, index) => layerForm(layers, layer, layout, index));
+    const layersBox = group(item, 'Layers');
+    const layers = Array.isArray(layout.layers) ? layout.layers : [];
+    button(layersBox, '+ Add layer', () => { layout.layers = layers; layers.push({ image: 'entry' }); render(); sync(); });
+    layers.forEach((layer, index) => layerForm(layersBox, layer, layers, index));
   });
 }
 
@@ -273,97 +315,116 @@ function uniqueName(collection, base) {
   return name;
 }
 
-function entryForm(parent, entries, index) {
-  const entry = typeof entries[index] === 'string' ? entries[index] = { image: entries[index] } : entries[index];
-  const item = card(parent, 'Entry ' + (index + 1), () => { entries.splice(index, 1); render(); sync(); }, (direction) => {
-    const next = index + direction;
-    if (next >= 0 && next < entries.length) {
-      [entries[index], entries[next]] = [entries[next], entries[index]];
-      render(); sync();
-    }
-  });
+function entryForm(parent, entries, index, attachEntries) {
+  const raw = entries[index];
+  const entry = isMapping(raw) ? raw : typeof raw === 'string' ? { image: raw } : {};
+  const keep = () => { attachEntries(); entries[index] = entry; };
+  const item = card(parent, 'Entry ' + (index + 1), () => { attachEntries(); entries.splice(index, 1); render(); sync(); }, mover(entries, index, attachEntries));
+  if (raw !== null && raw !== undefined && typeof raw !== 'string' && !isMapping(raw)) { sourceOnly(item, 'entry'); return; }
   const fields = grid(item);
-  field(fields, 'Image path', entry.image || '', (v) => set(entry, 'image', v), { placeholder: 'screens/example.jpg' });
-  field(fields, 'Layout override', entry.layout || '', (v) => set(entry, 'layout', v), { list: Object.keys(config.layouts || {}), placeholder: 'Use list layout' });
-  field(fields, 'Looping sound', entry.sound || '', (v) => set(entry, 'sound', v), { placeholder: 'music/forest.ogg' });
-  field(fields, 'Voice', entry.voice || '', (v) => set(entry, 'voice', v), { placeholder: 'voice/welcome.wav' });
+  field(fields, 'Image path', entry.image, (v) => {
+    if (typeof raw === 'string' && v) { attachEntries(); entries[index] = v; return; }
+    keep(); set(entry, 'image', v);
+  }, { placeholder: 'screens/example.jpg' });
+  field(fields, 'Layout override', entry.layout, (v) => { keep(); set(entry, 'layout', v); }, { list: Object.keys(mappingOr(config.layouts)), placeholder: 'Use list layout' });
+  field(fields, 'Looping sound', entry.sound, (v) => { keep(); set(entry, 'sound', v); }, { placeholder: 'music/forest.ogg' });
+  field(fields, 'Voice', entry.voice, (v) => { keep(); set(entry, 'voice', v); }, { placeholder: 'voice/welcome.wav' });
   const translated = isMapping(entry.text);
   field(fields, 'Text format', translated ? 'translations' : 'plain', (v) => {
-    entry.text = v === 'translations' ? { en: typeof entry.text === 'string' ? entry.text : '' } : (entry.text?.en || Object.values(entry.text || {}).find((value) => typeof value === 'string') || '');
+    keep();
+    entry.text = v === 'translations' ? { en: typeof entry.text === 'string' ? entry.text : '' } : (entry.text?.en || Object.values(mappingOr(entry.text)).find((value) => typeof value === 'string') || '');
     render();
   }, { values: ['plain', 'translations'] });
   if (translated) {
-    Object.keys(entry.text).forEach((code) => field(fields, 'Text · ' + languageName(code), entry.text[code] ?? '', (v) => set(entry.text, code, v), { multiline: true, wide: true }));
-    const used = Object.keys(entry.text).map((code) => (options.languages[Object.keys(options.languages).find((language) => language.toLowerCase() === code.trim().toLowerCase())] ?? code).toLowerCase());
+    const text = entry.text;
+    Object.keys(text).forEach((code) => field(fields, 'Text · ' + languageName(code), text[code], (v) => { keep(); set(text, code, v); }, { multiline: true, wide: true }));
+    const used = Object.keys(text).map((code) => languageCode(code).toLowerCase());
     const missing = [...new Set(Object.values(options.languages))].filter((code) => !used.includes(code.toLowerCase()));
-    if (missing.length) field(fields, 'Add translation', '', (v) => { if (v) { define(entry.text, v.split(' ')[0], ''); render(); } }, { values: ['', ...missing.map((code) => code + ' · ' + languageName(code))], onChange: true });
-  } else field(fields, 'Caption text', typeof entry.text === 'string' ? entry.text : '', (v) => set(entry, 'text', v), { multiline: true, wide: true });
-  placeEditor(item, entry, 'Entry image placement');
+    if (missing.length) field(fields, 'Add translation', '', (v) => { if (v) { keep(); define(text, v.split(' ')[0], ''); render(); } }, { values: ['', ...missing.map((code) => code + ' · ' + languageName(code))], onChange: true });
+  } else field(fields, 'Caption text', typeof entry.text === 'string' ? entry.text : '', (v) => { keep(); set(entry, 'text', v); }, { multiline: true, wide: true });
+  placeEditor(item, entry, 'Entry image placement', keep);
   const conditions = group(item, 'Conditions', 'Every condition must match. A custom item or player key can be typed.');
-  button(conditions, '+ Add condition', () => { const values = entry.when ??= {}; const key = options.conditions.find((name) => !Object.hasOwn(values, name)); if (key) values[key] = ''; render(); sync(); });
-  Object.entries(entry.when || {}).forEach(([key, value]) => {
-    const row = card(conditions, key, () => { delete entry.when[key]; render(); sync(); });
+  const when = mappingOr(entry.when);
+  const keepWhen = () => { keep(); entry.when = when; };
+  button(conditions, '+ Add condition', () => {
+    const key = options.conditions.find((name) => !Object.hasOwn(when, name));
+    if (key) { keepWhen(); when[key] = ''; }
+    render(); sync();
+  });
+  Object.entries(when).forEach(([key, value]) => {
+    const row = card(conditions, key, () => { keepWhen(); delete when[key]; render(); sync(); });
     const fields = grid(row);
     field(fields, 'Condition', key, (v) => {
-      if (v && v !== key && !Object.hasOwn(entry.when, v)) {
-        renameKey(entry.when, key, v);
+      if (v && v !== key && !Object.hasOwn(when, v)) {
+        keepWhen();
+        renameKey(when, key, v);
         render();
       }
     }, { list: options.conditions, onChange: true });
     const suggestions = key.toLowerCase().includes('biome') ? options.biomes : key.toLowerCase().includes('global') ? options.globalKeys : [];
-    field(fields, 'Name or comma-separated names', Array.isArray(value) ? value.join(', ') : value ?? '', (v) => { entry.when[key] = v.includes(',') ? v.split(',').map((s) => s.trim()).filter(Boolean) : v; }, { list: suggestions });
+    field(fields, 'Name or comma-separated names', Array.isArray(value) ? value.join(', ') : value, (v) => { keepWhen(); when[key] = v.includes(',') ? v.split(',').map((s) => s.trim()).filter(Boolean) : v; }, { list: suggestions });
   });
 }
 
 function listForm(parent, bucket, name, named = false) {
-  const lists = named ? (config.when[bucket] ??= {}) : config.when;
-  let list = lists[name];
-  if (Array.isArray(list)) list = lists[name] = { entries: list };
-  else if (typeof list === 'string') list = lists[name] = { entries: [list] };
-  list ??= lists[name] = { entries: [] };
-  const item = card(parent, named ? bucket + ' · ' + name : name, () => { delete lists[name]; render(); sync(); });
+  const when = mappingOr(config.when);
+  const container = named ? mappingOr(when[bucket]) : when;
+  const raw = container[name];
+  const list = isMapping(raw) ? raw : { entries: Array.isArray(raw) ? raw : typeof raw === 'string' ? [raw] : [] };
+  const entries = Array.isArray(list.entries) ? list.entries : [];
+  const attachContainer = () => { config.when = when; if (named) when[bucket] = container; };
+  const keepList = () => { attachContainer(); container[name] = list; };
+  const keepEntries = () => {
+    if (raw === entries) { attachContainer(); return; }
+    keepList();
+    list.entries = entries;
+  };
+  const item = card(parent, named ? bucket + ' · ' + name : name, () => { attachContainer(); delete container[name]; render(); sync(); });
   const fields = grid(item);
   if (named) field(fields, 'Name', name, (v) => {
     const next = v.trim();
-    if (next && next !== name && !lists[next]) { renameKey(lists, name, next); render(); }
+    if (next && next !== name && !Object.hasOwn(container, next)) { renameKey(container, name, next); render(); }
   }, { list: bucket === 'biome' ? options.biomes : bucket === 'death' ? options.deathCauses : [], onChange: true });
-  field(fields, 'List layout', list.layout || '', (v) => set(list, 'layout', v), { list: Object.keys(config.layouts || {}), placeholder: 'Use default' });
-  field(fields, 'Order', list.order || '', (v) => set(list, 'order', v), { values: ['', 'random', 'sequential'] });
-  field(fields, 'Looping sound', list.sound || '', (v) => set(list, 'sound', v), { placeholder: 'music/forest.ogg' });
-  const entries = group(item, 'Entries');
-  button(entries, '+ Add entry', () => { (list.entries ??= []).push({ image: 'screens/image.jpg' }); render(); sync(); });
-  (list.entries ??= []).forEach((entry, index) => entryForm(entries, list.entries, index));
+  if (raw !== null && raw !== undefined && typeof raw !== 'string' && !Array.isArray(raw) && !isMapping(raw)) { sourceOnly(item, 'list'); return; }
+  field(fields, 'List layout', list.layout, (v) => { keepList(); set(list, 'layout', v); }, { list: Object.keys(mappingOr(config.layouts)), placeholder: 'Use default' });
+  field(fields, 'Order', choice(list.order), (v) => { keepList(); set(list, 'order', v); }, { values: ['', 'random', 'sequential'] });
+  field(fields, 'Looping sound', list.sound, (v) => { keepList(); set(list, 'sound', v); }, { placeholder: 'music/forest.ogg' });
+  const entriesBox = group(item, 'Entries');
+  button(entriesBox, '+ Add entry', () => { keepEntries(); entries.push({ image: 'screens/image.jpg' }); render(); sync(); });
+  entries.forEach((entry, index) => entryForm(entriesBox, entries, index, keepEntries));
 }
 
 function whenForm() {
-  config.when ??= {};
-  const intro = group(form, 'Situations', 'General covers ordinary loading. Biome covers teleport and death fallback; death covers hit and damage types.');
+  const when = mappingOr(config.when);
+  group(form, 'Situations', 'General covers ordinary loading. Biome covers teleport and death fallback; death covers hit and damage types.');
   ['general', 'sleep'].forEach((name) => {
     const section = group(form, name === 'general' ? 'General' : 'Sleep');
-    if (config.when[name]) listForm(section, name, name);
-    else button(section, '+ Add ' + name + ' list', () => { config.when[name] = { entries: [] }; render(); sync(); });
+    if (Object.hasOwn(when, name)) listForm(section, name, name);
+    else button(section, '+ Add ' + name + ' list', () => { config.when = when; when[name] = { entries: [] }; render(); sync(); });
   });
   ['biome', 'death', 'enemy'].forEach((bucket) => {
     const section = group(form, bucket[0].toUpperCase() + bucket.slice(1) + ' lists');
     button(section, '+ Add ' + bucket + ' list', () => {
       const names = bucket === 'biome' ? options.biomes : bucket === 'death' ? options.deathCauses : ['Troll'];
-      const collection = config.when[bucket] ??= {};
+      const collection = mappingOr(when[bucket]);
+      config.when = when;
+      when[bucket] = collection;
       const name = names.find((candidate) => !Object.hasOwn(collection, candidate)) || uniqueName(collection, 'custom');
       collection[name] = { entries: [] }; render(); sync();
     });
-    Object.keys(config.when[bucket] || {}).forEach((name) => listForm(section, bucket, name, true));
+    Object.keys(mappingOr(when[bucket])).forEach((name) => listForm(section, bucket, name, true));
   });
 }
+
+const SECTIONS = { defaults: defaultsForm, layouts: layoutsForm, when: whenForm };
 
 function render() {
   form.replaceChildren();
   try {
-    if (tab === 'defaults') defaultsForm();
-    if (tab === 'layouts') layoutsForm();
-    if (tab === 'when') whenForm();
-  } catch {
-    form.replaceChildren(el('p', 'section-note', 'This section has an invalid structure. Correct the YAML to edit it in the form.'));
-    $('#edit-status').textContent = 'Fix YAML';
+    SECTIONS[tab]();
+  } catch (error) {
+    console.error('Editor: the ' + tab + ' section could not be rendered', error);
+    form.replaceChildren(el('p', 'section-note', 'The ' + tab + ' section could not be shown in the form (' + error.message + '). Edit it in the YAML source.'));
   }
   updatePreview();
 }
@@ -421,22 +482,26 @@ function flushSource() {
 }
 
 function allEntries() {
-  const when = config.when || {};
-  const lists = [when.general, when.sleep, ...Object.values(when.biome || {}), ...Object.values(when.death || {}), ...Object.values(when.enemy || {})];
-  return lists.flatMap((list) => Array.isArray(list) ? list : list?.entries || []).map((entry) => typeof entry === 'string' ? { image: entry } : entry);
+  const when = mappingOr(config.when);
+  const lists = [when.general, when.sleep, ...['biome', 'death', 'enemy'].flatMap((bucket) => Object.values(mappingOr(when[bucket])))];
+  return lists.flatMap((list) => Array.isArray(list) ? list : Array.isArray(list?.entries) ? list.entries : [])
+    .map((entry) => typeof entry === 'string' ? { image: entry } : entry)
+    .filter(isMapping);
 }
 
 function updatePreview() {
   const select = $('#preview-layout');
-  const names = Object.keys(config.layouts || {});
+  const layouts = mappingOr(config.layouts);
+  const names = Object.keys(layouts);
   if (!names.includes(previewName)) previewName = names[0] || '';
   select.replaceChildren();
   names.forEach((name) => { const option = el('option', '', name); option.value = name; select.append(option); });
   if (!names.length) { const option = el('option', '', 'No layouts'); option.value = ''; select.append(option); }
   select.value = previewName;
-  const layout = config.layouts?.[previewName];
-  const entry = allEntries().find((candidate) => candidate.layout === previewName) || allEntries()[0] || {};
-  drawPreview($('#screen'), layout, entry, config.defaults || {}, images, $('#ratio').value);
+  const layout = Array.isArray(layouts[previewName]) ? { layers: layouts[previewName] } : mappingOr(layouts[previewName]);
+  const entries = allEntries();
+  const entry = entries.find((candidate) => candidate.layout === previewName) || entries[0] || {};
+  drawPreview($('#screen'), layout, entry, mappingOr(config.defaults), images, $('#ratio').value);
 }
 
 document.querySelectorAll('[data-tab]').forEach((buttonNode) => buttonNode.addEventListener('click', () => {
