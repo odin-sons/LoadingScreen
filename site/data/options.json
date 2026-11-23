@@ -1,0 +1,8 @@
+{
+  "biomes": ["Meadows", "BlackForest", "Swamp", "Mountain", "Plains", "Mistlands", "AshLands", "DeepNorth", "Ocean"],
+  "deathCauses": ["Undefined", "EnemyHit", "PlayerHit", "Fall", "Drowning", "Burning", "Freezing", "Poisoned", "Water", "Smoke", "EdgeOfWorld", "Impact", "Cart", "Tree", "Self", "Structural", "Turret", "Boat", "Stalagtite", "Catapult", "CinderFire", "AshlandsOcean", "AshlandsLava", "Incinerator", "DrawBridge", "Blunt", "Slash", "Pierce", "Chop", "Pickaxe", "Fire", "Frost", "Lightning", "Poison", "Spirit"],
+  "animations": ["none", "zoom-in", "zoom-out", "pan", "ken-burns", "fade-in", "pulse", "breathe", "spin", "sway", "drift", "fly-in-left", "fly-in-right", "fly-in-top", "fly-in-bottom", "fly-out-left", "fly-out-right", "fly-out-top", "fly-out-bottom"],
+  "anchors": ["center", "left", "right", "top", "bottom", "top-left", "top-right", "bottom-left", "bottom-right"],
+  "globalKeys": ["defeated_eikthyr", "defeated_gdking", "defeated_bonemass", "defeated_dragon", "defeated_goblinking", "defeated_queen", "defeated_fader", "KilledTroll", "killed_surtling", "KilledBat"],
+  "conditions": ["knownItem", "hasItem", "knownRecipe", "knownBiome", "globalKey", "playerKey", "notKnownItem", "notHasItem", "notKnownRecipe", "notKnownBiome", "notGlobalKey", "notPlayerKey"]
+}

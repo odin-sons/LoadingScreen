@@ -62,6 +62,7 @@ spinner provide loading feedback. See the full configuration reference for situa
 
 ## Documentation
 
+- [Online editor](https://odin-sons.github.io/LoadingScreen/)
 - [Configuration reference](https://github.com/odin-sons/LoadingScreen/blob/main/docs/configuration.md)
 - [Migrating from Intermission](https://github.com/odin-sons/LoadingScreen/blob/main/docs/migrating-from-intermission.md)
 - [Changelog](https://github.com/odin-sons/LoadingScreen/blob/main/CHANGELOG.md)
