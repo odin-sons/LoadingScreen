@@ -1,5 +1,14 @@
 ## Changelog
 
+### 0.9.0 (2026-11-23)
+
+Adds a browser-based helper for creating loading screen configurations.
+
+#### Features
+
+  * **Online editor.** Build defaults, layouts and situational entries in a static browser editor at
+    <https://odin-sons.github.io/LoadingScreen/> with YAML output, validation and a local image preview.
+
 ### 0.8.0 (2026-11-23)
 
 Adds translated gameplay tips that make loading screens useful immediately after installation.
