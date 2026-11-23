@@ -43,6 +43,7 @@ public static class LoadingManager {
   static Material _tipMaterial;
   static FontStyles _tipStyle;
   static TMP_Text _continuePrompt;
+  static bool _keyPromptWaiting;
   static Image _cachedLoadingImage;
   static Image _cachedLoadingBackground;
   static Transform _cachedPanelSeparator;
@@ -59,6 +60,7 @@ public static class LoadingManager {
     PruneDestroyedUi();
     Session.Reset();
     CurrentCaption = null;
+    _keyPromptWaiting = false;
     LoadingAudio.StopAllSounds();
     if (HudHost) HudHost.Hide();
     if (FejdStartupHost) FejdStartupHost.Hide();
@@ -183,6 +185,10 @@ public static class LoadingManager {
             continueSession, stage == LoadingStage.Scene, stage, situation)) {
       return false;
     }
+    if (host.IsShowingLayout) {
+      host.SetPrompt(stage == LoadingStage.Hud && _keyPromptWaiting);
+      if (_continuePrompt) _continuePrompt.gameObject.SetActive(false);
+    }
 
     LoadingAudio.Play(host, selection, hasEntryText && tipText, continueSession);
 
@@ -196,7 +202,7 @@ public static class LoadingManager {
     if (continueSession) Session.Continue(stage);
     else Session.Record(stage, selection, caption, CurrentCaption, startedAt);
 
-    if (tipText && !host.ShowsOwnText) {
+    if (tipText && !host.IsShowingLayout) {
       tipText.SetText(caption ?? string.Empty);
       ApplyTipReadability(tipText, host.ReadableImageFor(tipText.rectTransform));
     } else if (tipText) {
@@ -505,6 +511,9 @@ public static class LoadingManager {
   }
 
   public static void ShowContinuePrompt(Hud hud, bool show) {
+    _keyPromptWaiting = show;
+    if (HudHost) HudHost.SetPrompt(show);
+    show = show && (!HudHost || !HudHost.IsShowingLayout);
     if (show && !_continuePrompt) {
       _continuePrompt = Object.Instantiate(hud.m_loadingTip, hud.m_loadingProgress.transform);
       _continuePrompt.name = "ContinuePrompt";

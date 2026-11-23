@@ -146,6 +146,14 @@ static class SceneLoaderPatch {
         ("ringDiameter", _ringDiameter), ("ringCenter", _ringCenter), ("ringColor", _ringColor),
         ("ringType", ring ? ring.type : Image.Type.Simple), ("spinnerCenter", _spinnerCenter)));
 
+    if (SceneLoaderShowProgressText.Value) {
+      TMP_Text sourceLoadingText = sceneLoader.savingNotification.GetComponentInChildren<TMP_Text>();
+      _loadingText = Object.Instantiate(sourceLoadingText, _loadingImage.transform.parent);
+
+      LoadingManager.SetupTipText(_loadingText);
+      LoadingManager.SetLoadingTip(_loadingText);
+    }
+
     if (SceneLoaderUseLoadingImages.Value && HasImages()) {
       sceneLoader._showLogos = false;
       sceneLoader._showSaveNotification = false;
@@ -157,14 +165,6 @@ static class SceneLoaderPatch {
       ShowNextImage(sceneLoader);
 
       sceneLoader.gameLogo = _loadingImage.gameObject;
-    }
-
-    if (SceneLoaderShowProgressText.Value) {
-      TMP_Text sourceLoadingText = sceneLoader.savingNotification.GetComponentInChildren<TMP_Text>();
-      _loadingText = Object.Instantiate(sourceLoadingText, _loadingImage.transform.parent);
-
-      LoadingManager.SetupTipText(_loadingText);
-      LoadingManager.SetLoadingTip(_loadingText);
     }
 
     RefreshAppearance();
@@ -185,9 +185,10 @@ static class SceneLoaderPatch {
 
     RectTransform rectTransform = _indicator.transform.GetComponent<RectTransform>();
     SpinnerDefaults spinner = ScreenConfigLoader.Current.Defaults.Spinner;
-    bool layeredSpinner = _host && _host.IsShowing && _host.HasSpinner;
-    _indicator.m_spinner.enabled = !layeredSpinner && _spinnerWasEnabled;
-    _indicator.m_showProgressIndicator = !layeredSpinner && (spinner.Center || _indicatorShowsProgress);
+    bool layoutShowing = _host && _host.IsShowingLayout;
+    _indicator.m_spinner.enabled = !layoutShowing && _spinnerWasEnabled;
+    _indicator.m_showProgressIndicator = !layoutShowing && (spinner.Center || _indicatorShowsProgress);
+    if (_loadingText) _loadingText.gameObject.SetActive(!layoutShowing);
     rectTransform.anchorMin = spinner.Center ? new(0.5f, 0f) : _indicatorAnchorMin;
     rectTransform.anchorMax = spinner.Center ? new(0.5f, 0f) : _indicatorAnchorMax;
     rectTransform.pivot = spinner.Center ? new(0.5f, 0f) : _indicatorPivot;
@@ -201,7 +202,7 @@ static class SceneLoaderPatch {
     if (!_indicator) SetupSceneLoader(__instance);
     if (!_wasEnabled) {
       _wasEnabled = true;
-      if (_loadingText) _loadingText.gameObject.SetActive(true);
+      if (_loadingText) _loadingText.gameObject.SetActive(!_host || !_host.IsShowingLayout);
       if (_host && SceneLoaderUseLoadingImages.Value && HasImages()) ShowNextImage(__instance);
     }
     float time = Time.time;

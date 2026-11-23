@@ -20,6 +20,7 @@ public sealed class LayerHost : MonoBehaviour {
   }
 
   sealed class PlacedText {
+    public TextSource Source;
     public RectTransform Rect;
     public TMP_Text Text;
     public Placement Placement;
@@ -69,7 +70,6 @@ public sealed class LayerHost : MonoBehaviour {
   ScreenEffectOverlay _effects;
   Graphic _vanillaImage;
   Vector2 _lastSize;
-  bool _layoutShowsSeparator;
   float _animationStartedAt;
   float _idleBase;
   float _idleAtExit;
@@ -79,9 +79,9 @@ public sealed class LayerHost : MonoBehaviour {
   bool _skipEnter;
 
   public bool IsShowing { get; private set; }
+  public bool IsShowingLayout { get; private set; }
   public bool ShowSleepUi { get; private set; } = true;
   public bool HasSpinner { get; private set; }
-  public bool HasExplicitSpinner { get; private set; }
   public Selection CurrentSelection { get; private set; }
   public Image ReadableImageFor(RectTransform text) {
     Vector3[] textCorners = new Vector3[4];
@@ -154,6 +154,7 @@ public sealed class LayerHost : MonoBehaviour {
         selection.LayoutName != null && config.Layouts.TryGetValue(selection.LayoutName, out Layout named)
             ? named
             : DefaultLayout;
+    bool showingLayout = layout != DefaultLayout;
 
     gameObject.SetActive(true);
     _progressStage = stage;
@@ -168,8 +169,10 @@ public sealed class LayerHost : MonoBehaviour {
       }
 
       if (layer.Kind == LayerKind.Text) {
-        if (textTemplate) {
-          AddTextLayer(layer, Placement.Merge(layer.Placement, layout.Placement), caption ?? string.Empty, textTemplate);
+        TMP_Text template = textTemplate ? textTemplate : gameStart ? SceneLoaderPatch.ProgressTextTemplate : null;
+        if (template) {
+          string value = layer.TextSource == TextSource.Prompt ? UiText.Get("continuePrompt") : caption ?? string.Empty;
+          AddTextLayer(layer, Placement.Merge(layer.Placement, layout.Placement), value, template);
         }
 
         continue;
@@ -212,28 +215,13 @@ public sealed class LayerHost : MonoBehaviour {
       drewEntryImage |= layer.FromEntry;
     }
 
-    if (gameStart && !layout.ShowsSpinner) {
-      if (!layout.Layers.Any(layer => layer.Kind == LayerKind.Progress)) {
-        Vector2 ringCenter = SceneLoaderPatch.RingCenter;
-        Color32 ringColor = SceneLoaderPatch.RingColor;
-        Layer legacyRing = config.Defaults.Spinner.ToRingLayer(ringCenter.x, ringCenter.y,
-            SceneLoaderPatch.RingDiameter, new(ringColor.r, ringColor.g, ringColor.b, ringColor.a));
-        if (legacyRing != null) {
-          AddProgressLayer(legacyRing, layout, SceneLoaderPatch.ProgressTextTemplate, SceneLoaderPatch.RingSprite);
-        }
-      }
-      Vector2 center = SceneLoaderPatch.SpinnerCenter;
-      Layer legacySpinner = config.Defaults.Spinner.ToLayer(center.x, center.y, SceneLoaderPatch.SpinnerSize.y);
-      if (legacySpinner != null) AddSpinnerLayer(legacySpinner, layout);
-    }
-    HasExplicitSpinner = gameStart && layout.ShowsSpinner && HasSpinner;
 
     if (!drewEntryImage && layout.ShowsEntryImage && selection.Entry.Image != null) {
       Hide();
       return false;
     }
 
-    if (_vanillaImage && _placed.Count > 0) {
+    if (_vanillaImage && (showingLayout || _placed.Count > 0)) {
       _vanillaImage.enabled = false;
     }
 
@@ -244,11 +232,15 @@ public sealed class LayerHost : MonoBehaviour {
                 && (placed.Layer.Kind != LayerKind.Spinner || placed.Layer.SpinnerStyle == SpinnerStyle.Image))
             .Select(placed => placed.Rect.GetComponent<Image>().sprite)
             .Where(sprite => sprite != LoadingManager.SeparatorSprite));
-    _layoutShowsSeparator = layout.ShowsSeparator;
-    ShowSleepUi = layout.ShowSleepUi;
-    SetSeparatorVisible(!_layoutShowsSeparator && config.Defaults.Separator.OnLayouts);
+    ShowSleepUi = !showingLayout;
+    SetSeparatorVisible(!showingLayout);
     CurrentSelection = selection;
     IsShowing = true;
+    IsShowingLayout = showingLayout;
+    if (IsShowingLayout && textTemplate) {
+      _hiddenTemplate = textTemplate;
+      textTemplate.enabled = false;
+    }
     _animationStartedAt = Time.realtimeSinceStartup;
     _idleBase = continued ? animationElapsed : 0f;
     _skipEnter = continued;
@@ -264,6 +256,7 @@ public sealed class LayerHost : MonoBehaviour {
   public void Hide() {
     Clear();
     IsShowing = false;
+    IsShowingLayout = false;
     CurrentSelection = null;
     ShowSleepUi = true;
     _exitStartedAt = -1f;
@@ -285,7 +278,7 @@ public sealed class LayerHost : MonoBehaviour {
 
     if (Separator) {
       LoadingManager.SetupPanelSeparator(Separator);
-      SetSeparatorVisible(!IsShowing || (!_layoutShowsSeparator && ScreenConfigLoader.Current.Defaults.Separator.OnLayouts));
+      SetSeparatorVisible(!IsShowingLayout);
     }
 
     if (!IsShowing) {
@@ -481,15 +474,21 @@ public sealed class LayerHost : MonoBehaviour {
     RegisterAnimation(layer, rect);
   }
 
-  public bool ShowsOwnText => _texts.Count > 0;
-
   public void SetCaption(string caption) {
     foreach (PlacedText placed in _texts) {
-      placed.Text.SetText(caption);
+      if (placed.Source == TextSource.Caption) placed.Text.SetText(caption);
     }
 
     if (_texts.Count > 0) {
       Relayout();
+    }
+  }
+
+  public void SetPrompt(bool show) {
+    foreach (PlacedText placed in _texts) {
+      if (placed.Source != TextSource.Prompt) continue;
+      if (show) placed.Text.SetText(UiText.Get("continuePrompt"));
+      placed.Rect.gameObject.SetActive(show);
     }
   }
 
@@ -505,7 +504,7 @@ public sealed class LayerHost : MonoBehaviour {
 
     TMP_Text text = Instantiate(template, container, worldPositionStays: false);
     LoadingManager.MatchTipFont(text);
-    text.name = "Caption";
+    text.name = layer.TextSource == TextSource.Prompt ? "ContinuePrompt" : "Caption";
     text.enabled = true;
     text.gameObject.SetActive(true);
     text.textWrappingMode = TextWrappingModes.Normal;
@@ -537,11 +536,12 @@ public sealed class LayerHost : MonoBehaviour {
       template.enabled = false;
     }
 
-    _texts.Add(new() { Rect = container, Text = text, Placement = placement, Padding = padding,
+    _texts.Add(new() { Source = layer.TextSource, Rect = container, Text = text, Placement = placement, Padding = padding,
         Style = style, Background = background,
         BaseColor = new(baseColor.r, baseColor.g, baseColor.b, baseColor.a),
         BaseSize = style.FontSize ?? template.fontSize });
     RegisterAnimation(layer, container);
+    if (layer.TextSource == TextSource.Prompt) container.gameObject.SetActive(false);
   }
 
   void AddImageLayer(Layer layer, Sprite sprite, Placement placement, bool defaultEntry = false,
@@ -840,7 +840,6 @@ public sealed class LayerHost : MonoBehaviour {
     _placed.Clear();
     _progress.Clear();
     HasSpinner = false;
-    HasExplicitSpinner = false;
     _animated.Clear();
     _enterDuration = 0f;
     _exitDuration = 0f;

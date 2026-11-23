@@ -31,6 +31,11 @@ public enum TextAlign {
   Right
 }
 
+public enum TextSource {
+  Caption,
+  Prompt
+}
+
 public sealed class TextStyle {
   public float? FontSize { get; set; }
   public ColorValue? Color { get; set; }
@@ -53,6 +58,7 @@ public sealed class Layer {
   public List<string> Images { get; } = [];
   public ColorValue Color { get; set; }
   public TextStyle Text { get; set; }
+  public TextSource TextSource { get; set; }
   public Placement Placement { get; set; } = new();
 }
 
@@ -129,28 +135,6 @@ public sealed class SpinnerDefaults {
   public bool Center { get; set; } = true;
   public float X { get; set; }
   public float Bottom { get; set; } = 200f;
-
-  public Layer ToLayer(float centerX = 0f, float centerY = 0f, float height = 0f) => !Center ? null : new() {
-    Kind = LayerKind.Spinner,
-    SpinnerStyle = SpinnerStyle.Hammer,
-    Animation = new() { Enter = "none", Idle = "spin", Exit = "none" },
-    Placement = PlaceCenter(centerX, centerY, height),
-  };
-
-  public Layer ToRingLayer(float centerX, float centerY, float diameter, ColorValue color) => !Center ? null : new() {
-    Kind = LayerKind.Progress,
-    ProgressStyle = ProgressStyle.Ring,
-    ProgressSize = diameter,
-    Color = color,
-    Placement = PlaceCenter(centerX, centerY, diameter),
-  };
-
-  Placement PlaceCenter(float centerX, float centerY, float height) => new() {
-    Fit = new() { Mode = FitMode.None },
-    Anchor = Anchor.Bottom,
-    X = new(X + centerX, LengthUnit.Pixels),
-    Y = new(-(Bottom + centerY - (height / 2f)), LengthUnit.Pixels),
-  };
 }
 
 public sealed class ScreenDefaults : Placement {
