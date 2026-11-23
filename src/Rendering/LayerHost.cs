@@ -851,7 +851,10 @@ public sealed class LayerHost : MonoBehaviour {
     }
 
     for (int i = _root.childCount - 1; i >= 0; i--) {
-      Destroy(_root.GetChild(i).gameObject);
+      GameObject child = _root.GetChild(i).gameObject;
+      child.SetActive(false);
+      child.transform.SetParent(null, worldPositionStays: false);
+      Destroy(child);
     }
   }
 
