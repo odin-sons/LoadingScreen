@@ -19,6 +19,11 @@ using static PluginConfig;
 [BepInDependency("expand_world_data", BepInDependency.DependencyFlags.SoftDependency)]
 [BepInIncompatibility("redseiko.valheim.intermission")]
 [BepInIncompatibility("cjayride.CustomLoadingScreens")]
+[BepInIncompatibility("aedenthorn.CustomLoadingScreens")]
+[BepInIncompatibility("agonit.valheimcustomloadingscreens")]
+[BepInIncompatibility("balrond.astafaraios.immersiveloading")]
+[BepInIncompatibility("runeheim.online.loadingscreen")]
+[BepInIncompatibility("local.serverloadingscreen")]
 public sealed class LoadingScreen : BaseUnityPlugin {
   public const string PluginGuid = "Odin_Sons.LoadingScreen";
   public const string PluginName = "LoadingScreen";
