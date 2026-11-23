@@ -33,9 +33,17 @@ static class SceneLoaderPatch {
   static Sprite _spinnerSprite;
   static Vector2 _spinnerSize;
   static Vector2 _spinnerCenter;
+  static Vector2 _ringCenter;
+  static Sprite _ringSprite;
+  static float _ringDiameter;
+  static Color _ringColor = new(1f, 0.6f, 0.1f);
   internal static Sprite SpinnerSprite => _spinnerSprite;
   internal static Vector2 SpinnerSize => _spinnerSize;
   internal static Vector2 SpinnerCenter => _spinnerCenter;
+  internal static Vector2 RingCenter => _ringCenter;
+  internal static Sprite RingSprite => _ringSprite;
+  internal static float RingDiameter => _ringDiameter;
+  internal static Color RingColor => _ringColor;
   internal static TMP_Text ProgressTextTemplate => _loadingText
       ? _loadingText : _sceneLoader ? _sceneLoader.savingNotification.GetComponentInChildren<TMP_Text>(true) : null;
   internal static ProgressValue CurrentProgress => _sceneLoader && _sceneLoader._sceneLoadOperation != null
@@ -125,10 +133,18 @@ static class SceneLoaderPatch {
     _spinnerWasEnabled = _indicator.m_spinner.enabled;
     _spinnerSprite = _indicator.m_spinner.sprite;
     _spinnerSize = _indicator.m_spinner.rectTransform.rect.size;
-    RectTransform spinnerRect = _indicator.m_spinner.rectTransform;
-    Vector3 spinnerCenter = indicatorRect.InverseTransformPoint(spinnerRect.TransformPoint(spinnerRect.rect.center));
-    _spinnerCenter = new(
-        spinnerCenter.x - indicatorRect.rect.center.x, spinnerCenter.y - indicatorRect.rect.yMin);
+    _spinnerCenter = CenterIn(indicatorRect, _indicator.m_spinner.rectTransform);
+    Image ring = _indicator.m_progressIndicator;
+    if (ring) {
+      _ringCenter = CenterIn(indicatorRect, ring.rectTransform);
+      _ringDiameter = Mathf.Max(ring.rectTransform.rect.width, ring.rectTransform.rect.height);
+      _ringColor = ring.color;
+      _ringSprite = ring.sprite;
+    } else {
+      _ringCenter = _spinnerCenter;
+      _ringSprite = null;
+      _ringDiameter = Mathf.Max(_spinnerSize.x, _spinnerSize.y) * 1.5f;
+    }
 
     if (SceneLoaderUseLoadingImages.Value && HasImages()) {
       sceneLoader._showLogos = false;
@@ -158,6 +174,11 @@ static class SceneLoaderPatch {
         ? LoadingManager.Session.StartedAt : Time.realtimeSinceStartup;
   }
 
+  static Vector2 CenterIn(RectTransform container, RectTransform child) {
+    Vector3 center = container.InverseTransformPoint(child.TransformPoint(child.rect.center));
+    return new(center.x - container.rect.center.x, center.y - container.rect.yMin);
+  }
+
   internal static void RefreshAppearance() {
     if (_host) _host.RefreshAppearance();
     if (!_indicator) return;
@@ -166,8 +187,7 @@ static class SceneLoaderPatch {
     SpinnerDefaults spinner = ScreenConfigLoader.Current.Defaults.Spinner;
     bool layeredSpinner = _host && _host.IsShowing && _host.HasSpinner;
     _indicator.m_spinner.enabled = !layeredSpinner && _spinnerWasEnabled;
-    _indicator.m_showProgressIndicator = !(_host && _host.IsShowing && _host.HasExplicitSpinner)
-        && (spinner.Center || _indicatorShowsProgress);
+    _indicator.m_showProgressIndicator = !layeredSpinner && (spinner.Center || _indicatorShowsProgress);
     rectTransform.anchorMin = spinner.Center ? new(0.5f, 0f) : _indicatorAnchorMin;
     rectTransform.anchorMax = spinner.Center ? new(0.5f, 0f) : _indicatorAnchorMax;
     rectTransform.pivot = spinner.Center ? new(0.5f, 0f) : _indicatorPivot;

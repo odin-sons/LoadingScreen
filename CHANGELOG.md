@@ -20,6 +20,8 @@ cfg and clearer logs.
     `knownBiome` conditions; unresolved names warn at runtime.
   * **Layer animations.** Enter, idle and exit animations for YAML layers, built-in motion presets, and custom presets
     in `animations.yaml`. Server screen sharing and reload include custom presets.
+  * **Layered game start ring.** With the legacy centered spinner, the game start ring is now a `progress: ring`
+    layer drawn with Valheim's ring sprite, and the hammer turns in its center; Valheim's indicator is hidden.
   * **Animation origin.** `animation.origin` picks the point a layer scales and rotates around, like CSS
     `transform-origin`; layers default to their center, so spinners turn in place.
   * **Exit animation wait.** Server-synced `Wait for the exit animation to finish` timing setting, off by default.
