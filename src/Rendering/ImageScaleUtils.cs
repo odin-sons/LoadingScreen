@@ -19,14 +19,20 @@ public static class ImageScaleUtils {
   }
 
   static IEnumerator AnimateDefaultZoom(Transform transform) {
-    AnimationPreset preset = ScreenConfigLoader.Current.Defaults.Animations.Resolve("zoom-in");
+    ScreenDefaults defaults = ScreenConfigLoader.Current.Defaults;
+    AnimationSpec spec = AnimationSpec.Merge(defaults.Animation, new() { Idle = "zoom-in" });
+    AnimationPreset preset = defaults.Animations.Resolve(spec.Idle);
+    float speed = spec.Speed ?? 1f;
+    float duration = preset.EffectiveDuration(speed);
+    bool repeats = preset.Repeat != AnimationRepeat.Once;
     float startedAt = Time.realtimeSinceStartup;
     float elapsed;
-    while ((elapsed = Time.realtimeSinceStartup - startedAt) < preset.EffectiveDuration()) {
-      transform.localScale = Vector3.one * preset.Sample(elapsed, 0f, 0f).Scale;
+    while (repeats || (elapsed = Time.realtimeSinceStartup - startedAt) < duration) {
+      elapsed = Time.realtimeSinceStartup - startedAt;
+      transform.localScale = Vector3.one * preset.Sample(elapsed, 0f, 0f, layerSpeed: speed).Scale;
       yield return null;
     }
-    transform.localScale = Vector3.one * preset.Sample(preset.EffectiveDuration(), 0f, 0f).Scale;
+    transform.localScale = Vector3.one * preset.Sample(duration, 0f, 0f, layerSpeed: speed).Scale;
   }
 
   public static void ScaleLerpLoadingImage(this MonoBehaviour component, Image loadingImage) {

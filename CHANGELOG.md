@@ -74,6 +74,8 @@ cfg and clearer logs.
 
 #### Fixes
 
+  * **Plain image animation.** Plain images follow the idle animation and speed from `defaults.animation`, so
+    `animation: none` stops their slow zoom.
   * **Above HUD mods.** The loading screen now paints above canvases added by HUD mods instead of under them.
   * **Setting sync.** Server settings and the lock now actually synchronize, while personal settings stay local.
   * **Log format.** Log lines follow the plain BepInEx format without the mod's own timestamp.
