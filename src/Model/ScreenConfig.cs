@@ -7,7 +7,22 @@ using System.Linq;
 public enum LayerKind {
   Image,
   Color,
-  Text
+  Text,
+  Spinner,
+  Progress
+}
+
+public enum ProgressStyle {
+  Bar,
+  Ring,
+  Percent
+}
+
+public enum SpinnerStyle {
+  Hammer,
+  Ring,
+  Dots,
+  Image
 }
 
 public enum TextAlign {
@@ -16,11 +31,18 @@ public enum TextAlign {
   Right
 }
 
+public enum TextSource {
+  Caption,
+  Prompt
+}
+
 public sealed class TextStyle {
   public float? FontSize { get; set; }
   public ColorValue? Color { get; set; }
+  public bool AutoColor { get; set; }
   public TextAlign? Align { get; set; }
   public ColorValue? Background { get; set; }
+  public bool AutoBackground { get; set; }
 }
 
 public sealed class Layer {
@@ -29,9 +51,14 @@ public sealed class Layer {
   public bool FromEntry { get; set; }
   public bool GameSeparator { get; set; }
   public bool HasTint { get; set; }
+  public SpinnerStyle SpinnerStyle { get; set; }
+  public ProgressStyle ProgressStyle { get; set; }
+  public float? ProgressSize { get; set; }
+  public AnimationSpec Animation { get; set; }
   public List<string> Images { get; } = [];
   public ColorValue Color { get; set; }
   public TextStyle Text { get; set; }
+  public TextSource TextSource { get; set; }
   public Placement Placement { get; set; } = new();
 }
 
@@ -49,6 +76,8 @@ public sealed class Layout {
   public bool ShowsText => Layers.Any(layer => layer.Kind == LayerKind.Text);
 
   public bool ShowsSeparator => Layers.Any(layer => layer.GameSeparator);
+
+  public bool ShowsSpinner => Layers.Any(layer => layer.Kind == LayerKind.Spinner);
 }
 
 public sealed class Entry {
@@ -79,12 +108,6 @@ public sealed class EntryList {
   public string LayoutName { get; set; }
   public PickOrder? Order { get; set; }
   public List<Entry> Entries { get; } = [];
-}
-
-public sealed class ZoomDefaults {
-  public bool Enabled { get; set; } = true;
-  public float Amount { get; set; } = 1.05f;
-  public float Seconds { get; set; } = 15f;
 }
 
 public sealed class TipDefaults {
@@ -119,7 +142,8 @@ public sealed class ScreenDefaults : Placement {
   public ColorValue Tint { get; set; } = new(255, 255, 255);
   public VignetteSettings Vignette { get; set; }
   public MaskSettings Mask { get; set; }
-  public ZoomDefaults Zoom { get; } = new();
+  public AnimationSpec Animation { get; set; }
+  public AnimationCatalog Animations { get; set; } = new();
   public TipDefaults Tip { get; } = new();
   public ContinuePromptDefaults ContinuePrompt { get; } = new();
   public SeparatorDefaults Separator { get; } = new();
@@ -132,11 +156,11 @@ public sealed class ScreenConfig {
   public Dictionary<string, Layout> Layouts { get; } = new(StringComparer.OrdinalIgnoreCase);
   public EntryList General { get; set; } = new() { Name = "general" };
   public EntryList Sleep { get; set; } = new() { Name = "sleep" };
-  public Dictionary<string, EntryList> Teleport { get; } = new(StringComparer.OrdinalIgnoreCase);
+  public Dictionary<string, EntryList> Biome { get; } = new(StringComparer.OrdinalIgnoreCase);
   public Dictionary<string, EntryList> Death { get; } = new(StringComparer.OrdinalIgnoreCase);
   public Dictionary<string, EntryList> Enemy { get; } = new(StringComparer.OrdinalIgnoreCase);
 
-  public IEnumerable<EntryList> AllLists => new[] { General, Sleep }.Concat(Teleport.Values).Concat(Death.Values).Concat(Enemy.Values);
+  public IEnumerable<EntryList> AllLists => new[] { General, Sleep }.Concat(Biome.Values).Concat(Death.Values).Concat(Enemy.Values);
 
   public int EntryCount => AllLists.Sum(list => list.Entries.Count);
 

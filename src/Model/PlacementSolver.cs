@@ -80,7 +80,7 @@ public static class PlacementSolver {
     return (width * scale, height * scale);
   }
 
-  static (float, float) AnchorPoint(Anchor anchor) {
+  public static (float X, float Y) AnchorPoint(Anchor anchor) {
     return anchor switch {
       Anchor.Left => (0f, 0.5f),
       Anchor.Right => (1f, 0.5f),

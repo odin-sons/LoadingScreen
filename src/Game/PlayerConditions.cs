@@ -30,7 +30,8 @@ public sealed class PlayerConditions : IConditionContext {
         return player.HaveUniqueKey(name);
 
       case ConditionKind.KnownBiome:
-        return Enum.TryParse(name, ignoreCase: true, out Heightmap.Biome biome) && IsBiomeKnown(player, biome);
+        return BiomeResolver.Instance.TryResolve(name, out int biome)
+            ? IsBiomeKnown(player, (Heightmap.Biome)biome) : null;
     }
 
     string itemName = ItemName(name);
@@ -50,9 +51,15 @@ public sealed class PlayerConditions : IConditionContext {
   static bool IsBiomeKnown(Player player, Heightmap.Biome biome) {
     string token = BiomeSector.GetBiomeName(biome);
     string localized = Localization.instance?.Localize(token) ?? token;
+    string numericToken = "$biome_" + ((int)biome).ToString();
+    string customName = BiomeResolver.Instance.TryGetDisplayName((int)biome, out string ewdName)
+        ? ewdName : null;
 
     return player.m_knownBiome.Any(
-        known => known == token || known.IndexOf(localized, StringComparison.OrdinalIgnoreCase) >= 0);
+        known => known == token || known == numericToken
+            || (!string.IsNullOrEmpty(localized)
+                && known.IndexOf(localized, StringComparison.OrdinalIgnoreCase) >= 0)
+            || (customName != null && string.Equals(known, customName, StringComparison.OrdinalIgnoreCase)));
   }
 
   public void ClearCache() {
@@ -76,7 +83,8 @@ public sealed class PlayerConditions : IConditionContext {
     string itemName = prefab && prefab.TryGetComponent(out ItemDrop itemDrop) ? itemDrop.m_itemData.m_shared.m_name : null;
 
     if (itemName == null && _reportedUnknown.Add(name)) {
-      LoadingScreen.LogWarning($"Unknown item '{name}' in a 'when' condition; use the item prefab name, like Demister.");
+      Log.Config.Warning(LogContext.Message("Condition item prefab was not found.",
+          ("key", "when.*.entries[].when"), ("prefab", name), ("expected", "item prefab name, e.g. Demister")));
     }
 
     _itemNames[name] = itemName;

@@ -10,11 +10,41 @@ using Xunit;
 public class ConfigParserTests {
   static readonly HashSet<string> _files = [
     "general/a.jpg", "general/b.png", "sleep/night.jpg", "mistlands/fog.jpg", "death/fall.jpg", "common/logo.png", "common/bg.jpeg",
-    "music/forest.ogg", "music/list.wav", "music/entry.ogg", "voice/tip.wav", "entry.png", "separator.png"
+    "music/forest.ogg", "music/list.wav", "music/entry.ogg", "voice/tip.wav", "entry.png", "separator.png",
+    "common/indicator.png"
   ];
 
   static ConfigLoadResult Parse(string yaml, ICollection<string> causes = null) {
     return new ConfigParser(path => _files.Contains(path), causes).Parse(yaml);
+  }
+
+  [Fact]
+  public void TextLayerAcceptsAutomaticTextAndBackgroundColors() {
+    const string yaml = """
+        layouts:
+          accessible:
+            layers:
+              - image: entry
+              - text: caption
+                color: auto
+                background: auto
+        """;
+
+    ConfigLoadResult result = Parse(yaml);
+    Assert.Empty(result.Warnings);
+    TextStyle style = result.Config.Layouts["accessible"].Layers[1].Text;
+    Assert.True(style.AutoColor);
+    Assert.True(style.AutoBackground);
+    Assert.Null(style.Color);
+    Assert.Null(style.Background);
+  }
+
+  [Fact]
+  public void OldSituationsKeyIsNotAccepted() {
+    ConfigLoadResult result = Parse("situations: { general: [ general/a.jpg ] }");
+
+    Assert.True(result.Config.IsEmpty);
+    Assert.Contains(result.Warnings, warning => warning.Contains("unknown top-level key 'situations'"));
   }
 
   [Fact]
@@ -24,7 +54,7 @@ public class ConfigParserTests {
           forest:
             sound: music/forest.ogg
             layers: [ { image: entry } ]
-        situations:
+        when:
           general:
             layout: forest
             sound: music/list.wav
@@ -47,7 +77,7 @@ public class ConfigParserTests {
   [Fact]
   public void InvalidAudioPathsWarnAndAreIgnoredWithoutLosingEntries() {
     const string yaml = """
-        situations:
+        when:
           general:
             sound: ../outside.ogg
             entries:
@@ -63,7 +93,7 @@ public class ConfigParserTests {
     Assert.Null(result.Config.General.Entries[0].Sound);
     Assert.Null(result.Config.General.Entries[0].Voice);
     Assert.Equal(3, result.Warnings.Count);
-    Assert.All(result.Warnings, warning => Assert.Contains("line ", warning));
+    Assert.All(result.Warnings, warning => Assert.Contains("line=", warning));
   }
 
   [Theory]
@@ -87,7 +117,7 @@ public class ConfigParserTests {
             layers:
               - image: entry
               - text: caption
-        situations:
+        when:
           sleep:
             layout: dream
             entries: [ sleep/night.jpg ]
@@ -115,7 +145,7 @@ public class ConfigParserTests {
         defaults:
           background: "#10203040"
           tint: "#ABCDEF"
-          zoom: { enabled: false, amount: 1.25, seconds: 8.5 }
+          animation: { enter: fade-in, idle: breathe, exit: fly-out-left, speed: 1.25 }
           tip: { x: -12, bottom: 75, size: 32, color: "#112233" }
           continuePrompt: { x: 8, bottom: 45, size: 18, color: "#445566" }
           separator: { show: false, x: 14, bottom: 120, onLayouts: false }
@@ -128,9 +158,10 @@ public class ConfigParserTests {
     Assert.Empty(result.Warnings);
     Assert.Equal(new ColorValue(0x10, 0x20, 0x30, 0x40), defaults.Background);
     Assert.Equal(new ColorValue(0xAB, 0xCD, 0xEF), defaults.Tint);
-    Assert.False(defaults.Zoom.Enabled);
-    Assert.Equal(1.25f, defaults.Zoom.Amount);
-    Assert.Equal(8.5f, defaults.Zoom.Seconds);
+    Assert.Equal("fade-in", defaults.Animation.Enter);
+    Assert.Equal("breathe", defaults.Animation.Idle);
+    Assert.Equal("fly-out-left", defaults.Animation.Exit);
+    Assert.Equal(1.25f, defaults.Animation.Speed);
     Assert.Equal(-12f, defaults.Tip.X);
     Assert.Equal(75f, defaults.Tip.Bottom);
     Assert.Equal(32, defaults.Tip.Size);
@@ -164,7 +195,7 @@ public class ConfigParserTests {
         defaults:
           background: wrong
           tint: "#123"
-          zoom: { enabled: sometimes, amount: 1.6, seconds: 0, extra: true }
+          animation: { speed: 0, extra: true }
           tip: { x: nope, bottom: .nan, size: 65, color: bad, other: 1 }
           separator: { show: maybe, x: false, bottom: {}, onLayouts: null, unknown: 2 }
           spinner: { center: nope, x: .inf, bottom: [] , unknown: 3 }
@@ -173,9 +204,9 @@ public class ConfigParserTests {
     ConfigLoadResult result = Parse(yaml);
 
     AssertBuiltInAppearance(result.Config.Defaults);
-    Assert.Equal(20, result.Warnings.Count);
-    Assert.All(result.Warnings, warning => Assert.Contains("line ", warning));
-    Assert.Contains(result.Warnings, warning => warning.Contains("zoom: unknown key 'extra'"));
+    Assert.Equal(18, result.Warnings.Count);
+    Assert.All(result.Warnings, warning => Assert.Contains("line=", warning));
+    Assert.Contains(result.Warnings, warning => warning.Contains("animation: unknown key 'extra'"));
     Assert.Contains(result.Warnings, warning => warning.Contains("tip: unknown key 'other'"));
     Assert.Contains(result.Warnings, warning => warning.Contains("separator: unknown key 'unknown'"));
     Assert.Contains(result.Warnings, warning => warning.Contains("spinner: unknown key 'unknown'"));
@@ -185,7 +216,7 @@ public class ConfigParserTests {
   public void InvalidAppearanceMapsWarnAndUseBuiltIns() {
     const string yaml = """
         defaults:
-          zoom: false
+          animation: []
           tip: null
           separator: []
           spinner: wrong
@@ -195,7 +226,7 @@ public class ConfigParserTests {
 
     AssertBuiltInAppearance(result.Config.Defaults);
     Assert.Equal(4, result.Warnings.Count);
-    Assert.All(result.Warnings, warning => Assert.Contains("line ", warning));
+    Assert.All(result.Warnings, warning => Assert.Contains("line=", warning));
   }
 
   [Fact]
@@ -213,9 +244,6 @@ public class ConfigParserTests {
   static void AssertBuiltInAppearance(ScreenDefaults defaults) {
     Assert.Equal(new ColorValue(0, 0, 0), defaults.Background);
     Assert.Equal(new ColorValue(255, 255, 255), defaults.Tint);
-    Assert.True(defaults.Zoom.Enabled);
-    Assert.Equal(1.05f, defaults.Zoom.Amount);
-    Assert.Equal(15f, defaults.Zoom.Seconds);
     Assert.Equal(90f, defaults.Tip.Bottom);
     Assert.Equal(24, defaults.Tip.Size);
     Assert.Equal(new ColorValue(255, 255, 255), defaults.Tip.Color);
@@ -234,7 +262,7 @@ public class ConfigParserTests {
 
   [Fact]
   public void InvalidYamlIsReportedNotThrown() {
-    ConfigLoadResult result = Parse("situations: [unclosed");
+    ConfigLoadResult result = Parse("when: [unclosed");
 
     Assert.True(result.Config.IsEmpty);
     Assert.Single(result.Warnings);
@@ -255,16 +283,17 @@ public class ConfigParserTests {
                 image: entry
                 place: { fade: { sides: [bottom, left], color: "#00000080", size: 25%, curve: smooth } }
               - image: common/logo.png
-                place: { fit: { width: 30% }, position: { anchor: top, y: 8% }, opacity: 0.9, animate: false }
+                animation: none
+                place: { fit: { width: 30% }, position: { anchor: top, y: 8% }, opacity: 0.9 }
 
-        situations:
+        when:
           general:
             layout: logo-over-backdrops
             entries:
               - image: general/a.jpg
                 text: Skol!
               - general/b.png
-          teleport:
+          biome:
             mistlands:
               - image: mistlands/fog.jpg
                 place: { position: { anchor: right, x: -5% } }
@@ -295,18 +324,18 @@ public class ConfigParserTests {
     Assert.Null(logo.Placement.Fit.Height);
     Assert.Equal(Anchor.Top, logo.Placement.Anchor);
     Assert.Equal(0.9f, logo.Placement.Opacity);
-    Assert.False(logo.Placement.Animate);
+    Assert.Equal("none", logo.Animation.Idle);
 
     Assert.Equal("logo-over-backdrops", config.General.LayoutName);
     Assert.Equal(2, config.General.Entries.Count);
     Assert.Equal("Skol!", config.General.Entries[0].Text);
     Assert.Equal("general/b.png", config.General.Entries[1].Image);
 
-    Entry fog = config.Teleport["Mistlands"].Entries.Single();
+    Entry fog = config.Biome["Mistlands"].Entries.Single();
     Assert.Equal(Anchor.Right, fog.Place.Anchor);
     Assert.Equal(new Length(-5, LengthUnit.Percent), fog.Place.X);
-    Assert.True(config.Teleport.ContainsKey("MISTLANDS"));
-    Assert.Equal("Mistlands", config.Teleport.Keys.Single());
+    Assert.True(config.Biome.ContainsKey("MISTLANDS"));
+    Assert.Equal("Mistlands", config.Biome.Keys.Single());
 
     Assert.Single(config.Death["fall"].Entries);
     Assert.Equal(4, config.EntryCount);
@@ -315,7 +344,7 @@ public class ConfigParserTests {
   [Fact]
   public void SkipsMissingUnsafeAndUnsupportedImages() {
     const string yaml = """
-        situations:
+        when:
           general:
             - general/missing.jpg
             - ../outside.jpg
@@ -337,8 +366,8 @@ public class ConfigParserTests {
   public void ReportsUnknownNamesAndKeys() {
     const string yaml = """
         colour: red
-        situations:
-          teleport:
+        when:
+          biome:
             Narnia: [ general/a.jpg ]
           death:
             Boredom: [ general/a.jpg ]
@@ -348,27 +377,43 @@ public class ConfigParserTests {
 
     ConfigLoadResult result = Parse(yaml, ["Fall", "Drowning"]);
 
-    Assert.Empty(result.Config.Teleport);
+    Assert.True(result.Config.Biome.ContainsKey("Narnia"));
     Assert.Equal(["Fall"], result.Config.Death.Keys);
     Assert.Contains(result.Warnings, warning => warning.Contains("'colour'"));
-    Assert.Contains(result.Warnings, warning => warning.Contains("'Narnia'"));
+    Assert.DoesNotContain(result.Warnings, warning => warning.Contains("'Narnia'"));
     Assert.Contains(result.Warnings, warning => warning.Contains("'Boredom'"));
     Assert.Contains(result.Warnings, warning => warning.Contains("'weather'"));
-    Assert.All(result.Warnings, warning => Assert.StartsWith("line ", warning));
+    Assert.All(result.Warnings, warning => Assert.StartsWith("Configuration warning. file=loadingscreen.yaml line=", warning));
   }
 
   [Fact]
   public void AcceptsAnyCauseWhenCauseListIsUnknown() {
-    ConfigLoadResult result = Parse("situations: { death: { Whatever: [ death/fall.jpg ] } }");
+    ConfigLoadResult result = Parse("when: { death: { Whatever: [ death/fall.jpg ] } }");
 
     Assert.Empty(result.Warnings);
     Assert.True(result.Config.Death.ContainsKey("whatever"));
   }
 
   [Fact]
+  public void BiomeListsParseAndLegacyTeleportIsUnknown() {
+    ConfigLoadResult result = Parse("""
+        when:
+          biome:
+            mistlands: [ mistlands/fog.jpg ]
+          teleport:
+            Meadows: [ general/a.jpg ]
+        """);
+
+    Assert.Equal(["Mistlands"], result.Config.Biome.Keys);
+    Assert.Equal("biome.Mistlands", result.Config.Biome["Mistlands"].Name);
+    Assert.Contains(result.Warnings, warning => warning.Contains("unknown situation 'teleport'"));
+    Assert.Single(result.Warnings);
+  }
+
+  [Fact]
   public void UnknownLayoutFallsBackToDefault() {
     const string yaml = """
-        situations:
+        when:
           general:
             layout: nope
             entries:
@@ -460,7 +505,7 @@ public class ConfigParserTests {
   public void ParsesEnemyListsAndOrder() {
     const string yaml = """
         order: sequential
-        situations:
+        when:
           general:
             order: random
             entries: [ general/a.jpg ]
@@ -501,7 +546,7 @@ public class ConfigParserTests {
               - image: separator
                 color: "#FFFFFF80"
                 place: { fit: { width: 40% }, position: { anchor: bottom, y: -20% } }
-        situations:
+        when:
           general:
             layout: lined
             entries: [ general/a.jpg ]
@@ -517,6 +562,84 @@ public class ConfigParserTests {
     Assert.Equal(LayerKind.Image, separator.Kind);
     Assert.True(separator.HasTint);
     Assert.Equal(Anchor.Bottom, separator.Placement.Anchor);
+  }
+
+  [Theory]
+  [InlineData("hammer", SpinnerStyle.Hammer)]
+  [InlineData("ring", SpinnerStyle.Ring)]
+  [InlineData("dots", SpinnerStyle.Dots)]
+  public void ParsesSpinnerStylesWithPlacementAndDefaultSpin(string style, SpinnerStyle expected) {
+    string yaml = """
+        layouts:
+          loading:
+            layers:
+              - spinner: STYLE
+                place: { fit: { width: 48px }, position: { anchor: bottom, y: -12% } }
+              - image: entry
+        """.Replace("STYLE", style);
+
+    ConfigLoadResult result = Parse(yaml);
+
+    Assert.Empty(result.Warnings);
+    Layer spinner = result.Config.Layouts["loading"].Layers[0];
+    Assert.Equal(LayerKind.Spinner, spinner.Kind);
+    Assert.Equal(expected, spinner.SpinnerStyle);
+    Assert.Equal("spin", spinner.Animation.Idle);
+    Assert.Equal(Anchor.Bottom, spinner.Placement.Anchor);
+    Assert.Equal(48f, spinner.Placement.Fit.Width.Value.Value);
+  }
+
+  [Fact]
+  public void ParsesCustomSpinnerImageAndAnimationOverride() {
+    const string yaml = """
+        layouts:
+          loading:
+            layers:
+              - spinner: common/indicator.png
+                animation: pulse
+              - image: entry
+        """;
+
+    ConfigLoadResult result = Parse(yaml);
+
+    Assert.Empty(result.Warnings);
+    Layer spinner = result.Config.Layouts["loading"].Layers[0];
+    Assert.Equal(SpinnerStyle.Image, spinner.SpinnerStyle);
+    Assert.Equal(["common/indicator.png"], spinner.Images);
+    Assert.Equal("pulse", spinner.Animation.Idle);
+  }
+
+  [Fact]
+  public void RejectsInvalidAndMixedSpinnerContent() {
+    const string yaml = """
+        layouts:
+          loading:
+            layers:
+              - spinner: unknown
+              - spinner: ring
+                image: entry
+              - spinner: dots
+                text: caption
+              - spinner: hammer
+              - image: entry
+        """;
+
+    ConfigLoadResult result = Parse(yaml);
+
+    Assert.Contains(result.Warnings, warning => warning.Contains("unsupported image type 'unknown'"));
+    Assert.Contains(result.Warnings, warning => warning.Contains("use only one of"));
+    Assert.All(result.Warnings, warning => Assert.Contains("line=", warning));
+    Assert.Equal(2, result.Config.Layouts["loading"].Layers.Count);
+  }
+
+  [Fact]
+  public void SpinnerDefaultsStillParseForScreensWithoutLayouts() {
+    ConfigLoadResult result = Parse("defaults: { spinner: { center: true, x: -5, bottom: 180 } }");
+    Assert.Empty(result.Warnings);
+    Assert.True(result.Config.Defaults.Spinner.Center);
+    Assert.Equal(-5f, result.Config.Defaults.Spinner.X);
+    Assert.Equal(180f, result.Config.Defaults.Spinner.Bottom);
+    Assert.False(Parse("defaults: { spinner: { center: false } }").Config.Defaults.Spinner.Center);
   }
 
   [Fact]
@@ -547,7 +670,7 @@ public class ConfigParserTests {
               - source: entry
               - images: [common/logo.png]
               - image: entry
-        situations:
+        when:
           death:
             enemy: { Troll: [death/fall.jpg] }
         """;
@@ -601,8 +724,8 @@ public class ConfigParserTests {
             layers:
               - image: entry
                 place: { opacity: 0.7 }
-                animate: false
-        situations:
+                animation: none
+        when:
           general:
             layout: placed
             entries:
@@ -615,7 +738,7 @@ public class ConfigParserTests {
     Assert.Equal(FitMode.Contain, result.Config.Defaults.Fit.Mode);
     Assert.Equal(Anchor.Top, result.Config.Layouts["placed"].Placement.Anchor);
     Assert.Equal(0.7f, result.Config.Layouts["placed"].Layers[0].Placement.Opacity);
-    Assert.True(result.Config.General.Entries[0].Place.Animate);
+    Assert.Equal("none", result.Config.Layouts["placed"].Layers[0].Animation.Idle);
     Assert.Equal(3, result.Warnings.Count);
     Assert.Contains(result.Warnings, warning => warning.Contains("unknown key 'fit'"));
     Assert.Contains(result.Warnings, warning => warning.Contains("unknown key 'opacity'"));
@@ -626,7 +749,7 @@ public class ConfigParserTests {
   public void GenericDefaultsKeepValidFieldsAndWarnForInvalidAndUnknownFields() {
     const string yaml = """
         defaults:
-          zoom: { enabled: false, amount: 1.6, seconds: 9, surprise: 1 }
+          animation: { speed: 0, surprise: 1 }
           tip: { x: 4, size: 65, color: bad, extra: true }
           continuePrompt: { size: 18, bottom: .nan }
           separator: { show: false, onLayouts: wrong }
@@ -636,9 +759,7 @@ public class ConfigParserTests {
     ConfigLoadResult result = Parse(yaml);
     ScreenDefaults defaults = result.Config.Defaults;
 
-    Assert.False(defaults.Zoom.Enabled);
-    Assert.Equal(1.05f, defaults.Zoom.Amount);
-    Assert.Equal(9f, defaults.Zoom.Seconds);
+    Assert.Null(defaults.Animation.Speed);
     Assert.Equal(4f, defaults.Tip.X);
     Assert.Equal(24, defaults.Tip.Size);
     Assert.Equal(18, defaults.ContinuePrompt.Size);
@@ -648,7 +769,7 @@ public class ConfigParserTests {
     Assert.False(defaults.Spinner.Center);
     Assert.Equal(0f, defaults.Spinner.X);
     Assert.Equal(8, result.Warnings.Count);
-    Assert.All(result.Warnings, warning => Assert.Contains("line ", warning));
+    Assert.All(result.Warnings, warning => Assert.Contains("line=", warning));
   }
 }
 
@@ -698,11 +819,41 @@ public class TextLayerTests {
 
     Assert.Empty(result.Warnings);
     Assert.Equal(LayerKind.Text, text.Kind);
+    Assert.Equal(TextSource.Caption, text.TextSource);
     Assert.Equal(32f, text.Text.FontSize);
     Assert.Equal(TextAlign.Left, text.Text.Align);
     Assert.Equal(128, text.Text.Background.Value.A);
     Assert.Equal(Anchor.BottomLeft, text.Placement.Anchor);
     Assert.True(result.Config.Layouts["captioned"].ShowsText);
+  }
+
+  [Fact]
+  public void ParsesPromptTextLayerWithCaptionStyling() {
+    const string yaml = """
+        layouts:
+          held:
+            layers:
+              - image: entry
+              - text: prompt
+                size: 26
+                color: "#FFFFFF"
+                align: right
+                background: "#00000080"
+                place: { fit: { width: 40% }, position: { anchor: bottom } }
+                animation: { enter: fade-in }
+        """;
+
+    ConfigLoadResult result = new ConfigParser(_ => true).Parse(yaml);
+    Layer prompt = result.Config.Layouts["held"].Layers[1];
+
+    Assert.Empty(result.Warnings);
+    Assert.Equal(LayerKind.Text, prompt.Kind);
+    Assert.Equal(TextSource.Prompt, prompt.TextSource);
+    Assert.Equal(26f, prompt.Text.FontSize);
+    Assert.Equal(TextAlign.Right, prompt.Text.Align);
+    Assert.Equal(128, prompt.Text.Background.Value.A);
+    Assert.Equal(Anchor.Bottom, prompt.Placement.Anchor);
+    Assert.Equal("fade-in", prompt.Animation.Enter);
   }
 
   [Fact]
@@ -713,6 +864,7 @@ public class TextLayerTests {
             layers:
               - image: entry
               - text: weather
+              - text: 1
               - text: caption
                 image: a.png
               - text: caption
@@ -728,7 +880,7 @@ public class TextLayerTests {
     Assert.Equal(3, layout.Layers.Count);
     Assert.Null(layout.Layers[1].Placement.Fit);
     Assert.Null(layout.Layers[1].Text.FontSize);
-    Assert.Contains(result.Warnings, warning => warning.Contains("'caption'"));
+    Assert.Contains(result.Warnings, warning => warning.Contains("caption or prompt"));
     Assert.Contains(result.Warnings, warning => warning.Contains("only one of"));
     Assert.Contains(result.Warnings, warning => warning.Contains("text width"));
     Assert.Contains(result.Warnings, warning => warning.Contains("positive font size"));
@@ -739,7 +891,7 @@ public class TextLayerTests {
 public class YamlLimitsTests {
   [Fact]
   public void RejectsDeepNesting() {
-    string yaml = "situations: " + new string('[', 5000) + new string(']', 5000);
+    string yaml = "when: " + new string('[', 5000) + new string(']', 5000);
     ConfigLoadResult result = new ConfigParser(_ => true).Parse(yaml);
 
     Assert.False(result.IsValid);
@@ -749,7 +901,7 @@ public class YamlLimitsTests {
   [Fact]
   public void RejectsAliases() {
     const string yaml = """
-        situations:
+        when:
           general: &list [ a.jpg ]
           death: { Fall: *list }
         """;
@@ -758,5 +910,43 @@ public class YamlLimitsTests {
 
     Assert.False(result.IsValid);
     Assert.Contains(result.Warnings, warning => warning.Contains("aliases"));
+  }
+
+  [Fact]
+  public void LegacyAnimateAndZoomKeysMapToIdleAnimation() {
+    const string yaml = """
+        defaults:
+          zoom: { enabled: true, amount: 1.05, seconds: 30 }
+        layouts:
+          main:
+            layers:
+              - id: still
+                image: entry
+                place: { fit: cover, animate: false }
+              - id: moving
+                image: common/logo.png
+                place: { animate: true }
+        """;
+
+    ConfigLoadResult result = new ConfigParser(_ => true).Parse(yaml);
+
+    Assert.Empty(result.Warnings);
+    Assert.Equal(0.5f, result.Config.Defaults.Animation.Speed);
+    List<Layer> layers = result.Config.Layouts["main"].Layers;
+    Assert.Equal("none", layers[0].Animation.Idle);
+    Assert.Equal("zoom-in", layers[1].Animation.Idle);
+  }
+
+  [Fact]
+  public void LegacyZoomDisabledTurnsDefaultIdleOff() {
+    const string yaml = """
+        defaults:
+          zoom: { enabled: false }
+        """;
+
+    ConfigLoadResult result = new ConfigParser(_ => true).Parse(yaml);
+
+    Assert.Empty(result.Warnings);
+    Assert.Equal("none", result.Config.Defaults.Animation.Idle);
   }
 }

@@ -9,6 +9,7 @@ public static class PluginConfig {
   public static ConfigEntry<bool> IsModEnabled { get; private set; }
   public static ConfigEntry<string> ImageFolder { get; private set; }
   public static ConfigEntry<string> TextLanguage { get; private set; }
+  public static ConfigEntry<ModLogLevel> LogLevel { get; private set; }
   public static ConfigEntry<int> ChangeImageEverySeconds { get; private set; }
   public static ConfigEntry<int> ChangeTipEverySeconds { get; private set; }
 
@@ -19,27 +20,41 @@ public static class PluginConfig {
   public static ConfigEntry<bool> ShowLoadingScreenOnTeleport { get; private set; }
   public static ConfigEntry<bool> ShowLoadingScreenWhileSleeping { get; private set; }
   public static ConfigEntry<bool> HoldLoadingScreen { get; private set; }
+  public static ConfigEntry<bool> InvulnerableWhileHeld { get; private set; }
+  public static ConfigEntry<bool> WaitForVoice { get; private set; }
+  public static ConfigEntry<bool> WaitForExitAnimation { get; private set; }
   public static ConfigEntry<int> MaximumHoldSeconds { get; private set; }
   public static ConfigEntry<bool> CaptionUseTipWhenNoText { get; private set; }
 
-  public static ConfigEntry<bool> ServeImagesToClients { get; private set; }
-  public static ConfigEntry<bool> DownloadServerImages { get; private set; }
+  public static ConfigEntry<bool> ShareScreensWithPlayers { get; private set; }
   public static ConfigEntry<bool> LockSyncedSettings { get; private set; }
   public static ConfigEntry<bool> PlayLoadingSounds { get; private set; }
   public static ConfigEntry<int> MusicVolumePercent { get; private set; }
   public static ConfigEntry<int> VoiceVolumePercent { get; private set; }
   public static ConfigEntry<GameSounds> MuteGameSounds { get; private set; }
+  public static ConfigEntry<bool> ReadableText { get; private set; }
+  public static ConfigEntry<int> MinimumTextSize { get; private set; }
+
+  public static ConfigEntry<bool> LoadWorldInBackground { get; private set; }
 
   const string General = "1 - General";
-  const string Screens = "2 - Situations";
-  const string StartScreen = "3 - Game start screen";
-  const string Server = "4 - Server images";
-  const string Synchronization = "5 - Config synchronization";
-  const string Sound = "6 - Sound";
+  const string Screens = "2 - When to show";
+  const string Timing = "3 - Timing";
+  const string StartScreen = "4 - Game start screen";
+  const string Sound = "5 - Sound";
+  const string Accessibility = "6 - Accessibility";
+  const string Experimental = "7 - Experimental";
 
   internal static void BindConfig(ConfigFile config, ConfigSynchronization sync) {
+    LockSyncedSettings =
+        config.BindInOrder(
+            General,
+            "Lock Configuration",
+            true,
+            "Allow only server admins to change synchronized settings while connected. [Synced with Server]");
+
     IsModEnabled =
-        config.BindInOrder(General, "Enabled", true, "Turn the whole mod on or off. Needs a game restart.");
+        config.BindInOrder(General, "Mod enabled", true, "Turn the whole mod on or off. [Synced with Server]");
 
     ImageFolder =
         config.BindInOrder(
@@ -47,7 +62,7 @@ public static class PluginConfig {
             "Image folder",
             ImageFolderPath.DefaultFolder,
             "Folder with loadingscreen.yaml, tips.txt, and images. Relative paths start at the BepInEx folder. "
-                + "Needs a game restart.");
+                + "Needs a game restart. [Not Synced with Server]");
 
     TextLanguage =
         config.BindInOrder(
@@ -55,59 +70,42 @@ public static class PluginConfig {
             "Text language",
             "Game",
             "Language for tips and entry text. Game follows Valheim's language; enter an ISO language code "
-                + "such as ru or pt-BR to override it. Unknown codes use the game language.");
+                + "such as ru or pt-BR to override it. Unknown codes use the game language. [Not Synced with Server]");
 
-    ChangeImageEverySeconds =
+    LogLevel =
         config.BindInOrder(
             General,
-            "Change image every N seconds",
-            0,
-            "Change the image while a loading screen stays visible. 0 turns the slideshow off. "
-                + "Applies to in-game and game start loading screens.");
+            "Log level",
+            ModLogLevel.Warning,
+            "Show LoadingScreen messages at this level and above: Error, Warning, Info, or Debug. The configuration summary after each load shows at Warning when it reports problems and at Info otherwise. Debug also needs Debug in LogLevels under [Logging.Disk] in BepInEx.cfg. [Not Synced with Server]");
 
-    ChangeTipEverySeconds =
+    ShareScreensWithPlayers =
         config.BindInOrder(
             General,
-            "Change tip every N seconds",
-            0,
-            "Show another tip from tips.txt while a loading screen stays visible. 0 turns tip rotation off. "
-                + "Entry text stays fixed.");
+            "Share screens with players",
+            true,
+            "Send the server's loadingscreen.yaml and its images to players with this mod; players use them while connected. [Synced with Server]");
 
     ShowLoadingScreenOnTeleport =
         config.BindInOrder(
             Screens,
             "Loading screen on portal teleport",
             true,
-            "Show a loading screen instead of the game's portal swirl. Needed for the per-biome teleport screens.");
+            "Show a loading screen instead of the game's portal swirl. Needed for the per-biome teleport screens. [Synced with Server]");
 
     ShowLoadingScreenWhileSleeping =
         config.BindInOrder(
             Screens,
             "Loading screen while sleeping",
             false,
-            "Show a loading image and tip while sleeping. Uses the sleep situation, then general; keeps the game's sleep text and spinner unless the selected layout hides them.");
-
-    HoldLoadingScreen =
-        config.BindInOrder(
-            Screens,
-            "Hold loading screen until a key is pressed",
-            false,
-            "After loading finishes, keep the screen and tip visible until a key is pressed or the mouse is clicked. Never holds during cinematics or on a dedicated server.");
-
-    MaximumHoldSeconds =
-        config.BindInOrder(
-            Screens,
-            "Maximum hold time in seconds",
-            30,
-            "Close a held loading screen automatically after this many seconds, even without input.",
-            new AcceptableValueRange<int>(1, 300));
+            "Show a loading image and tip while sleeping. Uses the sleep situation, then general; keeps the game's sleep text and spinner unless the selected layout hides them. [Synced with Server]");
 
     ShowLoadingScreenImmediatelyOnDeath =
         config.BindInOrder(
             Screens,
             "Loading screen right after death",
             true,
-            "Show the loading screen as soon as you die, instead of after the death camera.");
+            "Show the loading screen as soon as you die, instead of after the death camera. [Synced with Server]");
 
     CaptionUseTipWhenNoText =
         config.BindInOrder(
@@ -115,79 +113,127 @@ public static class PluginConfig {
             "Random tip when an entry has no text",
             true,
             "When a screen from loadingscreen.yaml has no text of its own, show a random line from tips.txt. "
-                + "Off: show no text.");
+                + "Off: show no text. [Synced with Server]");
+
+    ChangeImageEverySeconds =
+        config.BindInOrder(
+            Timing,
+            "Change image every N seconds",
+            0,
+            "Change the image while a loading screen stays visible. 0 turns the slideshow off. "
+                + "Applies to in-game and game start loading screens. [Synced with Server]");
+
+    ChangeTipEverySeconds =
+        config.BindInOrder(
+            Timing,
+            "Change tip every N seconds",
+            0,
+            "Show another tip from tips.txt while a loading screen stays visible. 0 turns tip rotation off. "
+                + "Entry text stays fixed. [Synced with Server]");
+
+    HoldLoadingScreen =
+        config.BindInOrder(
+            Timing,
+            "Hold loading screen until a key is pressed",
+            false,
+            "After loading finishes, keep the screen and tip visible until a key is pressed or the mouse is clicked. Never holds during cinematics or on a dedicated server. [Not Synced with Server]");
+
+    InvulnerableWhileHeld =
+        config.BindInOrder(
+            Timing,
+            "Invulnerable while held",
+            true,
+            "Protect the local player from damage while a loading screen is held. Only matters when a hold is on; when off, PvP or a monster noticing the player closes the screen. [Synced with Server]");
+
+    WaitForVoice =
+        config.BindInOrder(
+            Timing,
+            "Wait for the voice to finish",
+            false,
+            "After loading finishes, keep the screen visible while its entry voice is playing or loading. Never holds during cinematics or on a dedicated server. [Synced with Server]");
+
+    WaitForExitAnimation =
+        config.BindInOrder(
+            Timing,
+            "Wait for the exit animation to finish",
+            false,
+            "After loading finishes, play layer exit animations before closing the screen. Limited by Maximum hold time in seconds. Never holds during cinematics or on a dedicated server. [Synced with Server]");
+
+    MaximumHoldSeconds =
+        config.BindInOrder(
+            Timing,
+            "Maximum hold time in seconds",
+            30,
+            "Close a held loading screen automatically after this many seconds, even without input. [Synced with Server]",
+            new AcceptableValueRange<int>(1, 300));
 
     SceneLoaderUseLoadingImages =
         config.BindInOrder(
             StartScreen,
             "Use loading images",
             true,
-            "Show your loading images while the game itself starts, instead of the game's logos.");
+            "Show your loading images while the game itself starts, instead of the game's logos. [Not Synced with Server]");
 
     SceneLoaderShowProgressText =
         config.BindInOrder(
             StartScreen,
             "Show progress",
             true,
-            "Show the loading percentage and elapsed seconds while the game starts.");
-
-    ServeImagesToClients =
-        config.BindInOrder(
-            Server,
-            "Share with players (server)",
-            true,
-            "On a server: send loadingscreen.yaml and its images to players who have this mod.");
-
-    DownloadServerImages =
-        config.BindInOrder(
-            Server,
-            "Use screens from the server (player)",
-            true,
-            "As a player: while connected, use the server's loading screens and download their images in the "
-                + "background into BepInEx/cache/LoadingScreen.");
-
-    LockSyncedSettings =
-        config.BindInOrder(
-            Synchronization,
-            "Lock synced settings",
-            true,
-            "Allow only server admins to change synchronized settings while connected.");
+            "Show the loading percentage and elapsed seconds while the game starts. [Not Synced with Server]");
 
     PlayLoadingSounds =
         config.BindInOrder(Sound, "Play loading screen sounds", true,
-            "Play music and voiced tips from loadingscreen.yaml while their loading screen is visible.");
+            "Play music and voiced tips from loadingscreen.yaml while their loading screen is visible. [Not Synced with Server]");
     MusicVolumePercent =
         config.BindInOrder(Sound, "Music volume percent", 100,
-            "Volume of loading screen music, from 0 to 100 percent. Also follows the game's master and music volume.",
+            "Volume of loading screen music, from 0 to 100 percent. Also follows the game's master and music volume. [Not Synced with Server]",
             new AcceptableValueRange<int>(0, 100));
     VoiceVolumePercent =
         config.BindInOrder(Sound, "Voice volume percent", 100,
-            "Volume of voiced tips, from 0 to 100 percent. Also follows the game's master and effects volume.",
+            "Volume of voiced tips, from 0 to 100 percent. Also follows the game's master and effects volume. [Not Synced with Server]",
             new AcceptableValueRange<int>(0, 100));
     MuteGameSounds =
         config.BindInOrder(Sound, "Mute game sounds on loading screens", GameSounds.None,
-            "Game sounds to fade out while a loading screen is visible: None, or Effects (such as the portal hum), Music, or both separated by a comma.");
+            "Game sounds to fade out while a loading screen is visible: None, or Effects (such as the portal hum), Music, or both separated by a comma. [Not Synced with Server]");
+
+    ReadableText =
+        config.BindInOrder(Accessibility, "Readable text", false,
+            "Adjust text lightness for at least 4.5:1 contrast, and strengthen its background box if needed. [Not Synced with Server]");
+    MinimumTextSize =
+        config.BindInOrder(Accessibility, "Minimum text size", 0,
+            "Smallest font size for text layers, tips and captions. 0 turns the minimum off. [Not Synced with Server]",
+            new AcceptableValueRange<int>(0, 200));
+
+    LoadWorldInBackground =
+        config.BindInOrder(Experimental, "Load world in background", false,
+            "Load the world scene in the background when starting or joining a world, so the loading screen keeps animating. Menu input is blocked meanwhile. Load timings are logged at Info. [Not Synced with Server]");
 
     sync.Register(ChangeImageEverySeconds);
     sync.Register(ChangeTipEverySeconds);
     sync.Register(ShowLoadingScreenOnTeleport);
     sync.Register(ShowLoadingScreenWhileSleeping);
-    sync.Register(HoldLoadingScreen);
+    sync.Register(HoldLoadingScreen, clientControlled: true);
+    sync.Register(InvulnerableWhileHeld);
+    sync.Register(WaitForVoice);
+    sync.Register(WaitForExitAnimation);
     sync.Register(MaximumHoldSeconds);
     sync.Register(ShowLoadingScreenImmediatelyOnDeath);
     sync.Register(CaptionUseTipWhenNoText);
     sync.RegisterLock(LockSyncedSettings);
 
-    sync.Register(IsModEnabled, clientControlled: true);
+    sync.Register(IsModEnabled);
     sync.Register(ImageFolder, clientControlled: true);
     sync.Register(TextLanguage, clientControlled: true);
+    sync.Register(LogLevel, clientControlled: true);
     sync.Register(SceneLoaderUseLoadingImages, clientControlled: true);
     sync.Register(SceneLoaderShowProgressText, clientControlled: true);
-    sync.Register(ServeImagesToClients, clientControlled: true);
-    sync.Register(DownloadServerImages, clientControlled: true);
+    sync.Register(ShareScreensWithPlayers);
     sync.Register(PlayLoadingSounds, clientControlled: true);
     sync.Register(MusicVolumePercent, clientControlled: true);
     sync.Register(VoiceVolumePercent, clientControlled: true);
     sync.Register(MuteGameSounds, clientControlled: true);
+    sync.Register(ReadableText, clientControlled: true);
+    sync.Register(MinimumTextSize, clientControlled: true);
+    sync.Register(LoadWorldInBackground, clientControlled: true);
   }
 }

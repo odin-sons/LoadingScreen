@@ -9,6 +9,71 @@ using LoadingScreen.Model;
 using Xunit;
 
 public class EntrySelectorTests {
+  sealed class FakeBiomes : IBiomeResolver {
+    public bool TryResolve(string name, out int biome) {
+      biome = name.ToLowerInvariant() switch {
+        "mistlands" => 8,
+        "meadows" => 1,
+        "moon" => 1024,
+        "luna" => 1024,
+        _ => 0,
+      };
+      return biome != 0;
+    }
+
+    public int GetBaseBiome(int biome) => biome == 1024 ? 1 : biome;
+  }
+
+  [Fact]
+  public void TeleportMatchesResolvedBiomeValue() {
+    ScreenConfig config = Config();
+    config.Biome["Moon"] = List("biome.Moon", "moon.jpg");
+    EntrySelector selector = new(config, biomes: new FakeBiomes());
+
+    Assert.Equal("moon.jpg", selector.Select(Situation.Teleport(1024)).Entry.Image);
+  }
+
+  [Fact]
+  public void DebugExplainsSkippedListAndGeneralFallback() {
+    ScreenConfig config = Config();
+    List<string> messages = [];
+    EntrySelector selector = new(config, entry => entry.Image != "s1.jpg", debug: messages.Add);
+
+    Selection selected = selector.Select(Situation.Sleep);
+
+    Assert.Equal("general", selected.List.Name);
+    Assert.Contains(messages, message => message.Contains("Skipped loading screen list")
+        && message.Contains("screen=Sleep") && message.Contains("list=sleep"));
+    Assert.Contains(messages, message => message.Contains("list=general")
+        && message.Contains("reason=\"general fallback for Sleep\""));
+  }
+
+  [Fact]
+  public void DebugExplainsUnmatchedSituationKey() {
+    List<string> messages = [];
+    EntrySelector selector = new(Config(), debug: messages.Add);
+
+    selector.Select(Situation.Teleport("Plains"));
+
+    Assert.Contains(messages, message => message.Contains("No biome loading screen list matched.")
+        && message.Contains("biome=Plains"));
+    Assert.Contains(messages, message => message.Contains("reason=\"general fallback for Teleport(Plains)\""));
+  }
+
+  [Fact]
+  public void CustomBiomeFallsBackToBaseThenGeneral() {
+    ScreenConfig config = Config();
+    config.Biome["Luna"] = List("biome.Luna", "moon.jpg");
+    config.Biome["Meadows"] = List("biome.Meadows", "meadows.jpg");
+    EntrySelector selector = new(config, entry => entry.Image != "moon.jpg", biomes: new FakeBiomes());
+
+    Assert.Equal("meadows.jpg", selector.Select(Situation.Teleport(1024)).Entry.Image);
+
+    EntrySelector general = new(config, entry => entry.Image is not "moon.jpg" and not "meadows.jpg",
+        biomes: new FakeBiomes());
+    Assert.Equal("general", general.Select(Situation.Teleport(1024)).List.Name);
+  }
+
   static EntryList List(string name, params string[] images) {
     EntryList list = new() { Name = name };
     list.Entries.AddRange(images.Select(image => new Entry { Image = image }));
@@ -18,7 +83,7 @@ public class EntrySelectorTests {
   static ScreenConfig Config() {
     ScreenConfig config = new() { General = List("general", "g1.jpg", "g2.jpg") };
     config.Sleep = List("sleep", "s1.jpg");
-    config.Teleport["Mistlands"] = List("teleport.Mistlands", "m1.jpg");
+    config.Biome["Mistlands"] = List("biome.Mistlands", "m1.jpg");
     config.Death["Fall"] = List("death.Fall", "f1.jpg", "f2.jpg", "f3.jpg");
     return config;
   }
@@ -28,7 +93,7 @@ public class EntrySelectorTests {
     Selection selection = new EntrySelector(Config()).Select(Situation.Teleport("mistlands"));
 
     Assert.Equal("m1.jpg", selection.Entry.Image);
-    Assert.Equal("teleport.Mistlands", selection.List.Name);
+    Assert.Equal("biome.Mistlands", selection.List.Name);
   }
 
   [Fact]
@@ -150,8 +215,8 @@ public class EntrySelectorTests {
   [Fact]
   public void NextSelectionStaysInTheOriginalSituationalList() {
     ScreenConfig config = Config();
-    config.Teleport["Mistlands"] = List("teleport.Mistlands", "m1.jpg", "m2.jpg");
-    config.Teleport["Mistlands"].Order = PickOrder.Sequential;
+    config.Biome["Mistlands"] = List("biome.Mistlands", "m1.jpg", "m2.jpg");
+    config.Biome["Mistlands"].Order = PickOrder.Sequential;
     EntrySelector selector = new(config);
     Selection first = selector.Select(Situation.Teleport("Mistlands"));
 
@@ -193,13 +258,47 @@ public class EntrySelectorTests {
     ScreenConfig previousConfig = Config();
     Selection previous = new EntrySelector(previousConfig).Select(Situation.Teleport("Mistlands"));
     ScreenConfig currentConfig = Config();
-    currentConfig.Teleport["Mistlands"] = List("teleport.Mistlands", "new.jpg");
+    currentConfig.Biome["Mistlands"] = List("biome.Mistlands", "new.jpg");
     EntrySelector selector = new(currentConfig);
 
     Selection next = selector.SelectNext(previous, Situation.Teleport("Mistlands"));
 
-    Assert.Same(currentConfig.Teleport["Mistlands"], next.List);
+    Assert.Same(currentConfig.Biome["Mistlands"], next.List);
     Assert.Equal("new.jpg", next.Entry.Image);
+  }
+
+  [Fact]
+  public void DeathTriesEnemyDamageHitBiomeBaseAndGeneralInOrder() {
+    ScreenConfig config = new();
+    config.General.Entries.Add(new Entry { Image = "general.jpg" });
+    config.Enemy["Dragon"] = List("enemy.Dragon", "dragon.jpg");
+    config.Death["Frost"] = List("death.Frost", "frost.jpg");
+    config.Death["EnemyHit"] = List("death.EnemyHit", "hit.jpg");
+    config.Biome["Moon"] = List("biome.Moon", "moon.jpg");
+    config.Biome["Meadows"] = List("biome.Meadows", "meadows.jpg");
+    Situation death = Situation.Death(["Frost", "EnemyHit"], "Dragon", 1024);
+    string[] priority = ["dragon.jpg", "frost.jpg", "hit.jpg", "moon.jpg", "meadows.jpg", "general.jpg"];
+
+    for (int i = 0; i < priority.Length; i++) {
+      HashSet<string> skipped = [.. priority.Take(i)];
+      EntrySelector selector = new(config, entry => !skipped.Contains(entry.Image), biomes: new FakeBiomes());
+      Assert.Equal(priority[i], selector.Select(death).Entry.Image);
+    }
+  }
+
+  [Fact]
+  public void DeathWithoutSpecificListsUsesBiomeThenBaseThenGeneral() {
+    ScreenConfig config = Config();
+    config.Biome["Luna"] = List("biome.Luna", "moon.jpg");
+    config.Biome["Meadows"] = List("biome.Meadows", "meadows.jpg");
+    Situation death = Situation.Death(["Slash", "EnemyHit"], "Dragon", 1024);
+
+    Assert.Equal("moon.jpg", new EntrySelector(config, biomes: new FakeBiomes()).Select(death).Entry.Image);
+    Assert.Equal("meadows.jpg",
+        new EntrySelector(config, entry => entry.Image != "moon.jpg", biomes: new FakeBiomes()).Select(death).Entry.Image);
+    Assert.Equal("general",
+        new EntrySelector(config, entry => entry.Image is not "moon.jpg" and not "meadows.jpg",
+            biomes: new FakeBiomes()).Select(death).List.Name);
   }
 }
 

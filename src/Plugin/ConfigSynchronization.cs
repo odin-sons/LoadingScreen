@@ -1,21 +1,22 @@
 namespace LoadingScreen;
 
 using BepInEx.Configuration;
-using BepInEx.Logging;
-
 using ConditionalConfigSyncAPI;
+using global::LoadingScreen.Model;
 
 internal sealed class ConfigSynchronization {
   readonly ConfigSync _conditionalSync;
   readonly ServerSync.ConfigSync _serverSync;
 
-  public ConfigSynchronization(ManualLogSource logger) {
+  public ConfigSynchronization() {
     _conditionalSync =
         new ConfigSync(
             LoadingScreen.PluginGuid,
             LoadingScreen.PluginName,
             LoadingScreen.PluginVersion,
-            logger: logger);
+            warningLogger: warning => Log.Server.Warning(LogContext.Message(
+                "Conditional config synchronization warning.", ("feature", "ConditionalConfigSync"),
+                ("detail", warning))));
 
     if (!_conditionalSync.TryActivate()) {
       _serverSync =

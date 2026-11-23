@@ -9,19 +9,25 @@ public static class ExampleConfigText {
       # Audio paths are also relative to this folder. Supported: .ogg and .wav, up to 8 MiB per clip.
       # A layout, list or entry can set sound: music/forest.ogg; the entry wins over the list, then the layout.
       # An entry can set voice: voice/tip.ogg; it plays once when that entry's own text is shown.
-      # Reload in game with the console command: loadingscreen reload
+      # Custom animation presets belong in animations.yaml beside this file.
+      # Reload both files in game with: loadingscreen reload
       #
-      # Selection: sleep uses situations.sleep, a portal teleport uses situations.teleport.<destination biome>,
-      # and a respawn uses situations.death.<cause>; if that list is missing or empty, situations.general is used; if that is
+      # Selection: sleep uses when.sleep, a portal teleport uses when.biome.<destination biome>,
+      # and a respawn tries when.enemy.<attacker>, when.death.<damage type>,
+      # when.death.<hit type>,
+      # then when.biome.<death biome>; custom EWD biomes try their base biome list before general;
+      # if these lists are missing or empty, when.general is used; if that is
       # empty too, the plain images in this folder are shown.
       #
       # Biomes: Meadows, BlackForest, Swamp, Mountain, Plains, Mistlands, AshLands, DeepNorth, Ocean
+      # EWD custom biomes use the biome: identifier from expand_biomes.yaml, not the display name.
+      # Unknown biome names warn after EWD data loads, or when the config loads if EWD is absent.
       # Causes (how the last hit happened): Undefined, EnemyHit, PlayerHit, Fall, Drowning, Burning, Freezing,
       #   Poisoned, Water, Smoke, EdgeOfWorld, Impact, Cart, Tree, Self, Structural, Turret, Boat, Stalagtite,
       #   Catapult, CinderFire, AshlandsOcean, AshlandsLava, Incinerator, DrawBridge
       # Damage types (checked first for EnemyHit, PlayerHit, Turret, Catapult, Undefined): Blunt, Slash, Pierce,
       #   Chop, Pickaxe, Fire, Frost, Lightning, Poison, Spirit
-      # A kill by a creature tries situations.enemy.<prefab name> first (enemy: { Troll: [...] }).
+      # A kill by a creature tries when.enemy.<prefab name> first (enemy: { Troll: [...] }).
       # Prefab names are free-form, including modded creatures.
       #
       # Order: entries are picked at random; "order: sequential" (top level or on a list) uses config order.
@@ -39,7 +45,9 @@ public static class ExampleConfigText {
       #   opacity: 0..1
       #   fade: { sides: [left, bottom], color: "#000000", size: 15%, curve: smooth | linear }
       #        (gradient from the color into the image; size is % of the image size or px)
-      #   animate: true | false   (slow zoom, defaults to defaults.zoom.enabled)
+      # Layer animation: zoom-in is idle-only. Use animation: { enter: fly-in-left, idle: breathe,
+      #   exit: fly-out-left, speed: 1.5 } for phases. defaults.animation supplies missing phases.
+      # With no animation setting, the default entry image zooms from 1 to 1.05 over 15 seconds.
       # Screen effects cover the whole loading screen. Set them in defaults or override individual values
       # on a layout. Omit a block to leave that effect off unless defaults enables it.
       #   vignette: { color: "#000000", size: 25%, strength: 0.5 }
@@ -47,12 +55,21 @@ public static class ExampleConfigText {
       #   mask: { color: "#000000", opacity: 0.25 }  (a full-screen color tint; opacity is 0..1)
       #
       # Layers: "color" (solid fill), "image" (one file, a list of files, "entry", or "separator"),
+      # "spinner" (hammer, ring, dots, or a relative image path),
+      # "progress" (bar, ring, or percent),
       # "image: entry" (the chosen entry's image), "image: separator" (the game's ornament line,
-      # takes placement and a "color" tint, replaces the built-in separator) and "text: caption" (the entry text or a tip).
+      # takes placement and a "color" tint), "text: caption" (the entry text or a tip),
+      # and "text: prompt" (the localized key prompt while the screen waits for input).
       # Exact extensionless "entry" and "separator" are keywords; files named entry.png or separator.png work normally.
+      # A spinner spins by default; animation: pulse or another preset replaces that motion.
+      # Place a spinner like an image. Without place.fit it uses the sprite's native size.
+      # Progress uses real scene, nearby-object, or night-skip completion; connecting shows localized stage text.
+      # Set color, size, and place on a progress layer. At 100%, area progress softly pulses until the game proceeds.
       # A text layer takes place (position, opacity, fit: { width }) and: size, color, align (left | center | right),
-      # background (a color box behind the text). Without a text layer the usual tip line is used.
-      # A sleep layout can set showSleepUi: false to hide the game's sleep text and spinner and use its own layers.
+      # background (a color box behind the text). color and background also accept auto;
+      # auto picks light or dark from the image behind the text box (auto background uses 60% opacity).
+      # A layout shows only its layers. Add caption, prompt, separator, spinner, or progress layers when needed.
+      # Screens without a layout keep the game's tip, separator, progress indicator, and sleep UI.
 
       # defaults:
       #   place: { fit: contain, position: { anchor: center } }
@@ -60,11 +77,11 @@ public static class ExampleConfigText {
       #   tint: "#FFFFFF"
       #   vignette: { color: "#000000", size: 25%, strength: 0.5 }
       #   mask: { color: "#000000", opacity: 0.25 }
-      #   zoom: { enabled: true, amount: 1.05, seconds: 15 }
+      #   animation: { enter: fade-in, idle: breathe, exit: fly-out-left }
       #   tip: { x: 0, bottom: 90, size: 24, color: "#FFFFFF" }
       #   continuePrompt: { x: 0, bottom: 30, size: 20, color: "#FFFFFF" }
-      #   separator: { show: true, x: 0, bottom: 150, onLayouts: true }
-      #   spinner: { center: true, x: 0, bottom: 200 }
+      #   separator: { show: true, x: 0, bottom: 150 }
+      #   spinner: { center: true, x: 0, bottom: 200 }  # game start screens without a layout
 
       # layouts:
       #   backdrop-art:
@@ -75,13 +92,13 @@ public static class ExampleConfigText {
       #         place: { fit: stretch }
       #       - id: art
       #         image: entry
+      #         animation: { enter: fly-in-left, idle: breathe, exit: fly-out-left, speed: 1.5 }
       #         place:
       #           fit: { width: 45%, height: 80% }
       #           position: { anchor: left, x: 5% }
       #           fade: { sides: [left, right], color: "#000000", size: 10% }
       #
       #   logo-over-backdrops:
-      #     showSleepUi: false
       #     vignette: { strength: 0.7 }
       #     layers:
       #       - id: backdrop
@@ -89,12 +106,25 @@ public static class ExampleConfigText {
       #         place: { fit: cover, fade: { sides: [bottom], color: "#000000", size: 25% } }
       #       - image: common/logo.png
       #         place: { fit: { width: 30% }, position: { anchor: top, y: 8% } }
+      #       - progress: ring
+      #         size: 96
+      #         place: { position: { anchor: bottom, y: -20% } }
+      #       - spinner: hammer
+      #         place: { fit: { width: 48px }, position: { anchor: bottom, y: -20% } }
+      #       - progress: bar
+      #         color: "#FFFFFF"
+      #         size: 16
+      #         place: { fit: { width: 40% }, position: { anchor: bottom, y: -12% } }
       #       - text: caption
       #         size: 28
-      #         background: "#00000099"
+      #         color: auto
+      #         background: auto
       #         place: { fit: { width: 50% }, position: { anchor: bottom, y: -6% } }
+      #       - text: prompt
+      #         size: 20
+      #         place: { fit: { width: 50% }, position: { anchor: bottom, y: -2% } }
 
-      # situations:
+      # when:
       #   general:
       #     layout: logo-over-backdrops
       #     sound: music/forest.ogg
@@ -108,7 +138,7 @@ public static class ExampleConfigText {
       #     entries:
       #       - image: sleep/night.jpg
       #         text: Rest until morning.
-      #   teleport:
+      #   biome:
       #     Mistlands:
       #       - image: mistlands/fog.jpg
       #         text: Light your wisp.

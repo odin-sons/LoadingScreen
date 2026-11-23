@@ -19,48 +19,92 @@ static class HudPatch {
   [HarmonyPatch(nameof(Hud.Awake))]
   static void AwakePostfix(Hud __instance) {
     _holdState.Reset();
-    LoadingManager.SetupHud(__instance);
+    if (IsModEnabled.Value) LoadingManager.SetupHud(__instance);
   }
 
   static bool _loadingScreenState;
   static bool _wasSleeping;
+  static bool _sleepExitHolding;
   static float _lastImageTime;
   static float _lastTipTime;
   static Situation _currentSituation;
   static readonly LoadingHoldState _holdState = new();
+  static float _nextThreatScanAt;
+
+  internal static bool IsHolding => _holdState.Holding;
 
   [HarmonyPrefix]
   [HarmonyPatch(nameof(Hud.UpdateBlackScreen))]
   static bool UpdateBlackScreenPrefix(Hud __instance, Player player) {
-    bool stillSleeping = ShowLoadingScreenWhileSleeping.Value && Player.m_localPlayer && Player.m_localPlayer.IsSleeping();
-    if (_wasSleeping && !stillSleeping) {
-      __instance.m_loadingProgress.SetActive(false);
+    if (!IsModEnabled.Value) {
+      _holdState.Reset();
+      _loadingScreenState = false;
+      _wasSleeping = false;
+      _sleepExitHolding = false;
+      return true;
     }
 
+    if (!LoadingManager.HudHost) LoadingManager.SetupHud(__instance);
+    bool stillSleeping = ShowLoadingScreenWhileSleeping.Value && Player.m_localPlayer && Player.m_localPlayer.IsSleeping();
     _loadingScreenState = __instance.m_loadingProgress.activeInHierarchy;
     bool ready = player && !player.IsDead() && !player.IsTeleporting() && !player.IsSleeping()
         && Game.instance && !Game.instance.IsShuttingDown();
-    bool allowed = HoldLoadingScreen.Value && !Application.isBatchMode && !CinematicsManager.IsPlaying()
-        && !stillSleeping;
+    bool allowed = !Application.isBatchMode && !CinematicsManager.IsPlaying() && !stillSleeping;
+    bool voiceActive = WaitForVoice.Value && LoadingAudio.IsVoicePlayingOrLoading(LoadingManager.HudHost);
+    bool exitActive = ready && allowed && WaitForExitAnimation.Value && LoadingManager.HudHost
+        && LoadingManager.HudHost.BeginExit(Time.realtimeSinceStartup);
     bool dismissed = Input.anyKeyDown || ZInput.GetMouseButtonDown(0) || ZInput.GetMouseButtonDown(1)
         || ZInput.GetMouseButtonDown(2);
-    bool holding = _holdState.Update(
-        _loadingScreenState, ready, allowed, dismissed, Time.realtimeSinceStartup, MaximumHoldSeconds.Value);
-    LoadingManager.ShowContinuePrompt(__instance, holding);
+    float now = Time.realtimeSinceStartup;
+    LoadingHoldDecision hold = _holdState.Update(
+        _loadingScreenState, ready, allowed, HoldLoadingScreen.Value, voiceActive, dismissed,
+        now, MaximumHoldSeconds.Value, exitActive);
+    bool invulnerable = InvulnerableWhileHeld.Value;
+    bool pvp = hold.Holding && !invulnerable && player.IsPVPEnabled();
+    bool monster = hold.Holding && !invulnerable && !pvp && now >= _nextThreatScanAt
+        && HasHostileMonsterNoticed(player);
+    LoadingHoldSafetyAction safety = LoadingHoldSafety.Decide(hold.Holding, invulnerable, pvp, monster);
+    if (safety is LoadingHoldSafetyAction.CloseForPvp or LoadingHoldSafetyAction.CloseForMonster) {
+      _holdState.Reset();
+      hold = default;
+      Log.Render.Info(LogContext.Message("Closed the held loading screen.",
+          ("reason", safety == LoadingHoldSafetyAction.CloseForPvp ? "pvp" : "monster")));
+    }
+    LoadingManager.ShowContinuePrompt(__instance, hold.ShowContinuePrompt);
+    _sleepExitHolding = _wasSleeping && !stillSleeping && hold.Holding;
 
-    if (holding) {
+    if (hold.Holding) {
       __instance.m_loadingScreen.gameObject.SetActive(true);
       __instance.m_loadingScreen.alpha = 1f;
       __instance.m_loadingProgress.SetActive(true);
     }
 
-    return !holding;
+    if (_wasSleeping && !stillSleeping && !hold.Holding) {
+      __instance.m_loadingProgress.SetActive(false);
+    }
+
+    return !hold.Holding;
+  }
+
+  static bool HasHostileMonsterNoticed(Player player) {
+    _nextThreatScanAt = Time.realtimeSinceStartup + 0.5f;
+    foreach (BaseAI ai in BaseAI.GetAllInstances()) {
+      if (ai is not MonsterAI monster || !monster) continue;
+      if ((monster.transform.position - player.transform.position).sqrMagnitude > 2500f) continue;
+      Character creature = monster.GetComponent<Character>();
+      if (!creature || creature.IsDead() || creature.IsTamed() || !monster.IsEnemy(player)) continue;
+      if (monster.GetTargetCreature() == player || monster.CanSenseTarget(player)) return true;
+    }
+
+    return false;
   }
 
   [HarmonyPostfix]
   [HarmonyPatch(nameof(Hud.UpdateBlackScreen))]
   static void UpdateBlackScreenPostfix(Hud __instance) {
+    if (!IsModEnabled.Value || _sleepExitHolding) return;
     bool sleeping = ShowLoadingScreenWhileSleeping.Value && Player.m_localPlayer && Player.m_localPlayer.IsSleeping();
+    if (sleeping && !_wasSleeping) ProgressReader.ResetSleep();
     bool newScreen = !_loadingScreenState || sleeping != _wasSleeping;
     _wasSleeping = sleeping;
 
@@ -164,6 +208,7 @@ static class HudPatch {
   }
 
   static bool ShowTeleportAnimationDelegate(bool showTeleportAnimation, Hud hud) {
+    if (!IsModEnabled.Value) return showTeleportAnimation;
     if (!showTeleportAnimation) {
       return false;
     }
@@ -177,6 +222,7 @@ static class HudPatch {
   }
 
   static bool ShowLoadingProgressDelegate(bool _, Player player) {
+    if (!IsModEnabled.Value) return false;
     if (CinematicsManager.IsPlaying()) {
       return false;
     }
@@ -219,6 +265,7 @@ static class HudPatch {
   }
 
   static string LoadingTipSetTextDelegate(string text) {
+    if (!IsModEnabled.Value) return text;
     if (LoadingManager.CurrentCaption != null) {
       return LoadingManager.CurrentCaption;
     }

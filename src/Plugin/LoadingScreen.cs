@@ -1,8 +1,8 @@
 namespace LoadingScreen;
 
 using System;
-using System.Globalization;
 using System.IO;
+using System.Linq;
 using System.Reflection;
 
 using BepInEx;
@@ -16,44 +16,68 @@ using static PluginConfig;
 
 [BepInPlugin(PluginGuid, PluginName, PluginVersion)]
 [BepInDependency(ConditionalConfigSyncAPI.ConfigSync.PluginGuid, BepInDependency.DependencyFlags.SoftDependency)]
+[BepInDependency("expand_world_data", BepInDependency.DependencyFlags.SoftDependency)]
+[BepInIncompatibility("redseiko.valheim.intermission")]
+[BepInIncompatibility("cjayride.CustomLoadingScreens")]
+[BepInIncompatibility("aedenthorn.CustomLoadingScreens")]
+[BepInIncompatibility("agonit.valheimcustomloadingscreens")]
+[BepInIncompatibility("balrond.astafaraios.immersiveloading")]
+[BepInIncompatibility("runeheim.online.loadingscreen")]
+[BepInIncompatibility("local.serverloadingscreen")]
 public sealed class LoadingScreen : BaseUnityPlugin {
   public const string PluginGuid = "Odin_Sons.LoadingScreen";
   public const string PluginName = "LoadingScreen";
-  public const string PluginVersion = "0.6.0";
-
-  static ManualLogSource _logger;
+  public const string PluginVersion = "0.7.0";
 
   void Awake() {
-    _logger = Logger;
-    BindConfig(Config, new ConfigSynchronization(Logger));
+    Log.Attach(Logger);
+    BindConfig(Config, new ConfigSynchronization());
     LoadingAudio.Initialize(gameObject);
+    WorldSceneLoad.Host = this;
 
-    if (IsModEnabled.Value) {
-      try {
-        string imageFolder = ImageFolderPath.Resolve(ImageFolder.Value, Paths.BepInExRootPath);
-        CustomAssets.Initialize(imageFolder);
-        ScreenConfigLoader.Load(imageFolder);
-      } catch (Exception exception) {
-        LogError($"Could not load the loading screen config: {exception}");
-      }
+    try {
+      string imageFolder = ImageFolderPath.Resolve(ImageFolder.Value, Paths.BepInExRootPath);
+      CustomAssets.Initialize(imageFolder);
+      ScreenConfigLoader.Load(imageFolder);
+    } catch (Exception exception) {
+      Log.Plugin.Fatal(LogContext.Message("Loading screen configuration failed to initialize.",
+          ("folder", LogContext.File(ImageFolder.Value, Paths.BepInExRootPath)), ("error", exception.Message)));
+      Log.Plugin.Fatal(exception);
+    }
 
+    IsModEnabled.SettingChanged += (_, _) => {
+      if (IsModEnabled.Value) LoadingManager.Enable();
+      ServerImages.OnSettingsChanged();
+      if (!IsModEnabled.Value) LoadingManager.Disable();
+    };
+    ShareScreensWithPlayers.SettingChanged += (_, _) => ServerImages.OnSettingsChanged();
+    PluginConfig.LogLevel.SettingChanged += (_, _) => WarnIfDebugIsFiltered();
+    WarnIfDebugIsFiltered();
+    ReadableText.SettingChanged += (_, _) => LoadingManager.RefreshAppearance();
+    MinimumTextSize.SettingChanged += (_, _) => LoadingManager.RefreshAppearance();
+
+    try {
       Harmony.CreateAndPatchAll(Assembly.GetExecutingAssembly(), harmonyInstanceId: PluginGuid);
+    } catch (Exception exception) {
+      Log.Plugin.Fatal(LogContext.Message("Harmony patching failed; the loading screen is disabled.",
+          ("operation", "patch"), ("harmony", PluginGuid), ("error", exception.Message)));
+      Log.Plugin.Fatal(exception);
     }
   }
 
   void Update() {
+    if (!IsModEnabled.Value) return;
     ServerImages.Tick();
+    ConfigProblemReport.Tick();
+    ScreenConfigLoader.TickBiomeWarnings();
   }
 
-  public static void LogInfo(object obj) {
-    _logger.LogInfo($"[{DateTime.Now.ToString(DateTimeFormatInfo.InvariantInfo)}] {obj}");
-  }
-
-  public static void LogWarning(object obj) {
-    _logger.LogWarning($"[{DateTime.Now.ToString(DateTimeFormatInfo.InvariantInfo)}] {obj}");
-  }
-
-  public static void LogError(object obj) {
-    _logger.LogError($"[{DateTime.Now.ToString(DateTimeFormatInfo.InvariantInfo)}] {obj}");
+  static void WarnIfDebugIsFiltered() {
+    if (PluginConfig.LogLevel.Value != ModLogLevel.Debug) return;
+    DiskLogListener disk = BepInEx.Logging.Logger.Listeners.OfType<DiskLogListener>().FirstOrDefault();
+    if (disk == null || (disk.DisplayedLogLevel & BepInEx.Logging.LogLevel.Debug) != 0) return;
+    Log.Plugin.WarningOnce("log-level-debug-filtered", LogContext.Message(
+        "Debug messages are hidden by BepInEx; add Debug to LogLevels under [Logging.Disk] in BepInEx/config/BepInEx.cfg.",
+        ("setting", "Log level"), ("bepinex", disk.DisplayedLogLevel)));
   }
 }

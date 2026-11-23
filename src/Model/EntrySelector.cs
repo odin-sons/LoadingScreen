@@ -15,11 +15,13 @@ public readonly struct Situation {
   public SituationKind Kind { get; }
   public IReadOnlyList<string> Keys { get; }
   public string AttackerPrefab { get; }
+  public int? BiomeValue { get; }
 
-  Situation(SituationKind kind, IReadOnlyList<string> keys, string attackerPrefab = null) {
+  Situation(SituationKind kind, IReadOnlyList<string> keys, string attackerPrefab = null, int? biomeValue = null) {
     Kind = kind;
     Keys = keys ?? [];
     AttackerPrefab = attackerPrefab;
+    BiomeValue = biomeValue;
   }
 
   public static Situation General => new(SituationKind.General, []);
@@ -28,10 +30,12 @@ public readonly struct Situation {
 
   public static Situation Teleport(string biome) => new(SituationKind.Teleport, biome == null ? [] : [biome]);
 
+  public static Situation Teleport(int biome) => new(SituationKind.Teleport, [], biomeValue: biome);
+
   public static Situation Death(params string[] causes) => new(SituationKind.Death, causes);
 
-  public static Situation Death(IReadOnlyList<string> causes, string attackerPrefab) =>
-      new(SituationKind.Death, causes, attackerPrefab);
+  public static Situation Death(IReadOnlyList<string> causes, string attackerPrefab, int? biomeValue = null) =>
+      new(SituationKind.Death, causes, attackerPrefab, biomeValue);
 
   public override string ToString() {
     if (Kind == SituationKind.Death && AttackerPrefab != null) {
@@ -52,28 +56,42 @@ public sealed class EntrySelector {
   readonly ScreenConfig _config;
   readonly Func<Entry, bool> _isUsable;
   readonly Random _random;
+  readonly IBiomeResolver _biomes;
+  readonly Action<string> _debug;
   readonly Dictionary<EntryList, Entry> _lastPicked = [];
 
-  public EntrySelector(ScreenConfig config, Func<Entry, bool> isUsable = null, Random random = null) {
+  public EntrySelector(ScreenConfig config, Func<Entry, bool> isUsable = null, Random random = null,
+      IBiomeResolver biomes = null, Action<string> debug = null) {
     _config = config ?? new ScreenConfig();
     _isUsable = isUsable ?? (_ => true);
     _random = random ?? new Random();
+    _biomes = biomes;
+    _debug = debug;
   }
 
   public Selection Select(Situation situation) {
-    foreach (EntryList list in Candidates(situation)) {
+    foreach ((EntryList list, string reason) in Candidates(situation)) {
       Selection selection = SelectFromList(list);
       if (selection != null) {
+        _debug?.Invoke(LogContext.Message("Selected loading screen entry.", ("screen", situation.Kind),
+            ("list", list.Name), ("image", selection.Entry.Image), ("layout", selection.LayoutName),
+            ("reason", reason), ("order", list.Order ?? _config.Order)));
         return selection;
       }
+      _debug?.Invoke(LogContext.Message("Skipped loading screen list with no usable entries.",
+          ("screen", situation.Kind), ("list", list.Name), ("situation", situation)));
     }
 
     return null;
   }
 
   public Selection SelectNext(Selection current, Situation situation) {
-    if (current != null && Candidates(situation).Any(list => ReferenceEquals(list, current.List))) {
-      return SelectFromList(current.List);
+    if (current != null && Candidates(situation).Any(candidate => ReferenceEquals(candidate.List, current.List))) {
+      Selection next = SelectFromList(current.List);
+      if (next != null) _debug?.Invoke(LogContext.Message("Selected next loading screen entry.",
+          ("screen", situation.Kind), ("list", current.List.Name), ("image", next.Entry.Image),
+          ("layout", next.LayoutName)));
+      return next;
     }
 
     return Select(situation);
@@ -92,31 +110,52 @@ public sealed class EntrySelector {
     _lastPicked.Clear();
   }
 
-  IEnumerable<EntryList> Candidates(Situation situation) {
+  IEnumerable<(EntryList List, string Reason)> Candidates(Situation situation) {
     if (situation.Kind == SituationKind.Sleep) {
-      yield return _config.Sleep;
+      yield return (_config.Sleep, "sleep situation");
     }
 
     if (situation.Kind == SituationKind.Death && situation.AttackerPrefab != null
         && _config.Enemy.TryGetValue(situation.AttackerPrefab, out EntryList enemy)) {
-      yield return enemy;
+      yield return (enemy, $"attacker {situation.AttackerPrefab}");
+    } else if (situation.Kind == SituationKind.Death && situation.AttackerPrefab != null) {
+      _debug?.Invoke(LogContext.Message("No enemy loading screen list matched.",
+          ("screen", "death"), ("prefab", situation.AttackerPrefab)));
     }
 
-    Dictionary<string, EntryList> specific = situation.Kind switch {
-      SituationKind.Teleport => _config.Teleport,
-      SituationKind.Death => _config.Death,
-      _ => null,
-    };
-
-    if (specific != null) {
+    if (situation.Kind == SituationKind.Death) {
       foreach (string key in situation.Keys) {
-        if (key != null && specific.TryGetValue(key, out EntryList list)) {
-          yield return list;
-        }
+        if (key == null) continue;
+        if (_config.Death.TryGetValue(key, out EntryList list)) yield return (list, $"death cause {key}");
+        else _debug?.Invoke(LogContext.Message("No death loading screen list matched.",
+            ("screen", "death"), ("cause", key)));
       }
     }
 
-    yield return _config.General;
+    if ((situation.Kind is SituationKind.Teleport or SituationKind.Death)
+        && situation.BiomeValue.HasValue && _biomes != null) {
+      int biome = situation.BiomeValue.Value;
+      foreach (EntryList list in MatchingBiomeLists(biome)) yield return (list, $"biome {biome}");
+      int baseBiome = _biomes.GetBaseBiome(biome);
+      if (baseBiome != biome) {
+        foreach (EntryList list in MatchingBiomeLists(baseBiome)) yield return (list, $"base biome {baseBiome}");
+      }
+    } else if (situation.Kind == SituationKind.Teleport) {
+      foreach (string key in situation.Keys) {
+        if (key == null) continue;
+        if (_config.Biome.TryGetValue(key, out EntryList list)) yield return (list, $"destination biome {key}");
+        else _debug?.Invoke(LogContext.Message("No biome loading screen list matched.",
+            ("screen", "portal"), ("biome", key)));
+      }
+    }
+
+    yield return (_config.General, $"general fallback for {situation}");
+  }
+
+  IEnumerable<EntryList> MatchingBiomeLists(int biome) {
+    foreach (KeyValuePair<string, EntryList> pair in _config.Biome) {
+      if (_biomes.TryResolve(pair.Key, out int value) && value == biome) yield return pair.Value;
+    }
   }
 
   Entry Pick(EntryList list) {

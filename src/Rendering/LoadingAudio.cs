@@ -51,6 +51,11 @@ public sealed class LoadingAudio : MonoBehaviour {
     if (_instance && _instance._host == host) _instance.EndScreen();
   }
 
+  public static bool IsVoicePlayingOrLoading(LayerHost host) {
+    return _instance && host && _instance._host == host && PlayLoadingSounds.Value && GameVolumeReady
+        && (_instance._voiceLoad != null || _instance._voice.isPlaying);
+  }
+
   public static void StopAllSounds() {
     if (!_instance) return;
     _instance.ApplyGameMute(0f);
@@ -147,12 +152,12 @@ public sealed class LoadingAudio : MonoBehaviour {
       _fade = hostShowing ? _handover.Opacity(ScreenOpacity()) : _fade;
     }
 
-    if (_music) _music.volume = MusicVolume();
-    if (_voice) _voice.volume = VoiceVolume();
     ApplyGameMute(_visible ? _fade : 0f);
   }
 
   void LateUpdate() {
+    ApplySourceVolume(_music, MusicVolume());
+    ApplySourceVolume(_voice, VoiceVolume());
     if (_appliedMute <= 0f || !MusicMan.instance || !Mutes(GameSounds.Music)) return;
     AudioSource music = MusicMan.instance.m_musicSource;
     if (!music || (music == _mutedMusicSource && Mathf.Approximately(music.volume, _mutedMusicVolume))) return;
@@ -160,6 +165,12 @@ public sealed class LoadingAudio : MonoBehaviour {
     _mutedMusicSource = music;
     _mutedMusicVolume = music.volume * (1f - _appliedMute);
     music.volume = _mutedMusicVolume;
+  }
+
+  static void ApplySourceVolume(AudioSource source, float volume) {
+    if (!source) return;
+    source.volume = volume;
+    if (source.outputAudioMixerGroup) source.outputAudioMixerGroup = null;
   }
 
   static bool Mutes(GameSounds sounds) => (MuteGameSounds.Value & sounds) != 0;
@@ -218,27 +229,36 @@ public sealed class LoadingAudio : MonoBehaviour {
 
     StopMusic();
     _musicPath = path;
-    if (path != null) _musicLoad = StartCoroutine(LoadClip(path, _music, true));
+    if (CanLoadClip(path, relativePath, "music")) _musicLoad = StartCoroutine(LoadClip(path, relativePath, _music, true));
   }
 
   void StartVoice(string relativePath) {
     StopVoice();
     string path = ScreenConfigLoader.ResolveImagePath(relativePath);
-    if (path != null) _voiceLoad = StartCoroutine(LoadClip(path, _voice, false));
+    if (CanLoadClip(path, relativePath, "voice")) _voiceLoad = StartCoroutine(LoadClip(path, relativePath, _voice, false));
   }
 
-  IEnumerator LoadClip(string path, AudioSource source, bool music) {
-    if (!File.Exists(path) || new FileInfo(path).Length > AudioFile.MaxBytes) {
-      LoadingScreen.LogWarning($"Loading screen audio unavailable or over {AudioFile.MaxBytes / 1024 / 1024} MiB: {path}");
-      yield break;
+  static bool CanLoadClip(string path, string relativePath, string kind) {
+    if (path == null) return false;
+    long size = File.Exists(path) ? new FileInfo(path).Length : -1;
+    if (size < 0 || size > AudioFile.MaxBytes) {
+      Log.Audio.WarningOnce($"audio:{kind}:{relativePath}:{size}", LogContext.Message(
+          "Could not load loading screen audio.", ("kind", kind), ("file", relativePath),
+          ("bytes", size), ("maxBytes", AudioFile.MaxBytes)));
+      return false;
     }
+    return true;
+  }
 
+  IEnumerator LoadClip(string path, string relativePath, AudioSource source, bool music) {
     AudioType type = path.EndsWith(".ogg", StringComparison.OrdinalIgnoreCase) ? AudioType.OGGVORBIS : AudioType.WAV;
     using UnityWebRequest request = UnityWebRequestMultimedia.GetAudioClip(new Uri(path).AbsoluteUri, type);
     yield return request.SendWebRequest();
 
     if (request.result != UnityWebRequest.Result.Success) {
-      LoadingScreen.LogWarning($"Could not load audio {path}: {request.error}");
+      Log.Audio.WarningOnce($"audio-load:{relativePath}:{request.error}", LogContext.Message(
+          "Could not load loading screen audio.", ("kind", music ? "music" : "voice"),
+          ("file", relativePath), ("error", request.error)));
       if (music) _musicLoad = null;
       else _voiceLoad = null;
       yield break;
@@ -257,15 +277,22 @@ public sealed class LoadingAudio : MonoBehaviour {
 
     AudioClip clip = DownloadHandlerAudioClip.GetContent(request);
     if (!clip) {
-      LoadingScreen.LogWarning($"Could not decode audio {path}.");
+      Log.Audio.WarningOnce($"audio-decode:{relativePath}", LogContext.Message(
+          "Could not decode loading screen audio.", ("kind", music ? "music" : "voice"),
+          ("file", relativePath)));
       if (music) _musicLoad = null;
       else _voiceLoad = null;
       yield break;
     }
     _fade = _handover.Opacity(ScreenOpacity());
     source.volume = music ? MusicVolume() : VoiceVolume();
+    Log.Audio.Debug(LogContext.Message("Playing loading screen audio.",
+        ("kind", music ? "music" : "voice"), ("file", relativePath),
+        ("volume", source.volume),
+        ("configuredPercent", music ? MusicVolumePercent.Value : VoiceVolumePercent.Value)));
     source.clip = clip;
     source.Play();
+    ApplySourceVolume(source, music ? MusicVolume() : VoiceVolume());
     if (music) {
       _musicClip = clip;
       _musicLoad = null;

@@ -9,7 +9,7 @@ static class PlayerPatch {
   [HarmonyPostfix]
   [HarmonyPatch(nameof(Player.TeleportTo))]
   static void TeleportToPostfix(Player __instance, Vector3 pos, bool distantTeleport, bool __result) {
-    if (__result && distantTeleport && __instance == Player.m_localPlayer) {
+    if (PluginConfig.IsModEnabled.Value && __result && distantTeleport && __instance == Player.m_localPlayer) {
       SituationTracker.OnTeleport(pos);
     }
   }
@@ -17,8 +17,8 @@ static class PlayerPatch {
   [HarmonyPrefix]
   [HarmonyPatch(nameof(Player.OnDeath))]
   static void OnDeathPrefix(Player __instance) {
-    if (__instance == Player.m_localPlayer && __instance.m_nview && __instance.m_nview.IsOwner()) {
-      SituationTracker.OnDeath(__instance.m_lastHit);
+    if (PluginConfig.IsModEnabled.Value && __instance == Player.m_localPlayer && __instance.m_nview && __instance.m_nview.IsOwner()) {
+      SituationTracker.OnDeath(__instance.m_lastHit, __instance.transform.position);
     }
   }
 }

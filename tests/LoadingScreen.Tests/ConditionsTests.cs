@@ -19,8 +19,8 @@ public class ConditionsTests {
   }
 
   const string MistTip = """
-      situations:
-        teleport:
+      when:
+        biome:
           Mistlands:
             - text: Craft a Wisplight to push back the mist.
               when:
@@ -34,7 +34,7 @@ public class ConditionsTests {
   [Fact]
   public void ParsesConditionsAndTextOnlyEntries() {
     ConfigLoadResult result = Parse(MistTip);
-    List<Entry> entries = result.Config.Teleport["Mistlands"].Entries;
+    List<Entry> entries = result.Config.Biome["Mistlands"].Entries;
 
     Assert.Empty(result.Warnings);
     Assert.Equal(2, entries.Count);
@@ -60,19 +60,26 @@ public class ConditionsTests {
 
   [Theory]
   [InlineData("when: { knowsEverything: Demister }", "unknown condition")]
-  [InlineData("when: { knownBiome: Moon }", "unknown biome")]
   [InlineData("when: { knownItem: '' }", "needs a name")]
   [InlineData("when: [ knownItem ]", "expected a mapping")]
   public void RejectsEntriesWithInvalidConditions(string when, string warning) {
-    ConfigLoadResult result = Parse($"situations: {{ general: [ {{ text: Tip, {when} }} ] }}");
+    ConfigLoadResult result = Parse($"when: {{ general: [ {{ text: Tip, {when} }} ] }}");
 
     Assert.Empty(result.Config.General.Entries);
     Assert.Contains(result.Warnings, message => message.Contains(warning));
   }
 
   [Fact]
+  public void AcceptsCustomKnownBiomeName() {
+    ConfigLoadResult result = Parse("when: { general: [ { text: Tip, when: { knownBiome: Moon } } ] }");
+
+    Assert.Empty(result.Warnings);
+    Assert.Equal("Moon", result.Config.General.Entries.Single().Conditions.Single().Name);
+  }
+
+  [Fact]
   public void EntryNeedsImageOrText() {
-    ConfigLoadResult result = Parse("situations: { general: [ { layout: x } ] }");
+    ConfigLoadResult result = Parse("when: { general: [ { layout: x } ] }");
 
     Assert.Empty(result.Config.General.Entries);
     Assert.Contains(result.Warnings, message => message.Contains("needs an 'image' or a 'text'"));
@@ -125,10 +132,10 @@ public class ConditionsTests {
   }
 }
 
-public class ReadmeConditionExamplesTests {
-  static string FindReadme() {
+public class ConfigurationConditionExamplesTests {
+  static string FindConfiguration() {
     for (System.IO.DirectoryInfo dir = new(System.AppContext.BaseDirectory); dir != null; dir = dir.Parent) {
-      string path = System.IO.Path.Combine(dir.FullName, "README.md");
+      string path = System.IO.Path.Combine(dir.FullName, "docs", "configuration.md");
 
       if (System.IO.File.Exists(path) && System.IO.File.Exists(System.IO.Path.Combine(dir.FullName, "manifest.json"))) {
         return path;
@@ -140,11 +147,11 @@ public class ReadmeConditionExamplesTests {
 
   [Fact]
   public void ConditionExamplesParseWithoutWarnings() {
-    string readme = System.IO.File.ReadAllText(FindReadme());
+    string documentation = System.IO.File.ReadAllText(FindConfiguration());
     List<string> blocks = System.Text.RegularExpressions.Regex
-        .Matches(readme, "```yaml\r?\n(.*?)```", System.Text.RegularExpressions.RegexOptions.Singleline)
+        .Matches(documentation, "```yaml\r?\n(.*?)```", System.Text.RegularExpressions.RegexOptions.Singleline)
         .Select(match => match.Groups[1].Value)
-        .Where(block => block.Contains("when:"))
+        .Where(block => System.Text.RegularExpressions.Regex.IsMatch(block, @"(?m)^ {4,}.*\bwhen:"))
         .ToList();
 
     Assert.True(blocks.Count >= 3);

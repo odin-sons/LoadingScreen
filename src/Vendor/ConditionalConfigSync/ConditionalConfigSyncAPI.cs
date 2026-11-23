@@ -69,6 +69,7 @@ namespace ConditionalConfigSyncAPI
         private readonly RequirementMode _requirementMode;
         private readonly bool _allowClientConfigUpdatesWhenUnlocked;
         private readonly ManualLogSource _logger;
+        private readonly Action<string> _warningLogger;
 
         private Type _bridgeType;
         private PropertyInfo _apiVersionProperty;
@@ -93,7 +94,8 @@ namespace ConditionalConfigSyncAPI
             bool modRequired = false,
             RequirementMode requirementMode = RequirementMode.Fixed,
             bool allowClientConfigUpdatesWhenUnlocked = false,
-            ManualLogSource logger = null)
+            ManualLogSource logger = null,
+            Action<string> warningLogger = null)
         {
             if (string.IsNullOrWhiteSpace(name))
                 throw new ArgumentException("A stable mod GUID is required.", nameof(name));
@@ -106,6 +108,7 @@ namespace ConditionalConfigSyncAPI
             _requirementMode = requirementMode;
             _allowClientConfigUpdatesWhenUnlocked = allowClientConfigUpdatesWhenUnlocked;
             _logger = logger;
+            _warningLogger = warningLogger;
         }
 
         /// <summary>
@@ -476,7 +479,9 @@ namespace ConditionalConfigSyncAPI
 
         private void LogWarning(string message)
         {
-            if (_logger != null)
+            if (_warningLogger != null)
+                _warningLogger(message);
+            else if (_logger != null)
                 _logger.LogWarning(message);
         }
 
