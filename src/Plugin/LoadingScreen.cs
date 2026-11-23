@@ -46,6 +46,7 @@ public sealed class LoadingScreen : BaseUnityPlugin {
     }
 
     IsModEnabled.SettingChanged += (_, _) => {
+      if (!_patched) return;
       if (IsModEnabled.Value) LoadingManager.Enable();
       ServerImages.OnSettingsChanged();
       if (!IsModEnabled.Value) LoadingManager.Disable();
@@ -56,17 +57,22 @@ public sealed class LoadingScreen : BaseUnityPlugin {
     ReadableText.SettingChanged += (_, _) => LoadingManager.RefreshAppearance();
     MinimumTextSize.SettingChanged += (_, _) => LoadingManager.RefreshAppearance();
 
+    Harmony harmony = new(PluginGuid);
     try {
-      Harmony.CreateAndPatchAll(Assembly.GetExecutingAssembly(), harmonyInstanceId: PluginGuid);
+      harmony.PatchAll(Assembly.GetExecutingAssembly());
+      _patched = true;
     } catch (Exception exception) {
+      harmony.UnpatchSelf();
       Log.Plugin.Fatal(LogContext.Message("Harmony patching failed; the loading screen is disabled.",
           ("operation", "patch"), ("harmony", PluginGuid), ("error", exception.Message)));
       Log.Plugin.Fatal(exception);
     }
   }
 
+  bool _patched;
+
   void Update() {
-    if (!IsModEnabled.Value) return;
+    if (!_patched || !IsModEnabled.Value) return;
     ServerImages.Tick();
     ConfigProblemReport.Tick();
     ScreenConfigLoader.TickBiomeWarnings();
