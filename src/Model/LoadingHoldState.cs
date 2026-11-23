@@ -5,7 +5,6 @@ public readonly record struct LoadingHoldDecision(bool Holding, bool ShowContinu
 public sealed class LoadingHoldState {
   bool _armed;
   bool _holding;
-  bool _keyDismissed;
   float _startedAt;
 
   public bool Holding => _holding;
@@ -20,20 +19,17 @@ public sealed class LoadingHoldState {
 
     if (!ready) {
       _holding = false;
-      _keyDismissed = false;
       _armed = loadingVisible;
       return default;
     }
 
     if (_holding) {
-      if (dismissed) _keyDismissed = true;
-      if (now - _startedAt >= maximumSeconds) {
+      if (dismissed || now - _startedAt >= maximumSeconds) {
         Reset();
         return default;
       }
 
-      bool waitingForKey = holdUntilKey && !_keyDismissed;
-      if (waitingForKey || voiceActive || exitActive) return new(true, waitingForKey);
+      if (holdUntilKey || voiceActive || exitActive) return new(true, holdUntilKey);
 
       Reset();
       return default;
@@ -53,6 +49,5 @@ public sealed class LoadingHoldState {
   public void Reset() {
     _armed = false;
     _holding = false;
-    _keyDismissed = false;
   }
 }

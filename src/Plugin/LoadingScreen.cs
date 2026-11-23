@@ -62,10 +62,14 @@ public sealed class LoadingScreen : BaseUnityPlugin {
       harmony.PatchAll(Assembly.GetExecutingAssembly());
       _patched = true;
     } catch (Exception exception) {
-      harmony.UnpatchSelf();
       Log.Plugin.Fatal(LogContext.Message("Harmony patching failed; the loading screen is disabled.",
           ("operation", "patch"), ("harmony", PluginGuid), ("error", exception.Message)));
       Log.Plugin.Fatal(exception);
+      try {
+        harmony.UnpatchSelf();
+      } catch (Exception unpatch) {
+        Log.Plugin.Fatal(unpatch);
+      }
     }
   }
 

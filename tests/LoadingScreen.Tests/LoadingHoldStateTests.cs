@@ -56,16 +56,19 @@ public class LoadingHoldStateTests {
   }
 
   [Fact]
-  public void VoiceWaitIgnoresInputAndEndsWhenPlaybackFinishes() {
+  public void VoiceWaitEndsOnKeyOrWhenPlaybackFinishes() {
     LoadingHoldState state = new();
 
     Assert.False(state.Update(true, false, true, false, true, false, 0f, 30).Holding);
     LoadingHoldDecision holding = state.Update(true, true, true, false, true, false, 1f, 30);
     Assert.True(holding.Holding);
     Assert.False(holding.ShowContinuePrompt);
-    Assert.True(state.Update(true, true, true, false, true, true, 2f, 30).Holding);
+    Assert.True(state.Update(true, true, true, false, true, false, 2f, 30).Holding);
     Assert.False(state.Update(true, true, true, false, false, false, 3f, 30).Holding);
-    Assert.False(state.Update(true, true, true, false, true, false, 4f, 30).Holding);
+
+    Assert.False(state.Update(true, false, true, false, true, false, 4f, 30).Holding);
+    Assert.True(state.Update(true, true, true, false, true, false, 5f, 30).Holding);
+    Assert.False(state.Update(true, true, true, false, true, true, 6f, 30).Holding);
   }
 
   [Fact]
@@ -82,15 +85,12 @@ public class LoadingHoldStateTests {
   }
 
   [Fact]
-  public void KeyAndVoiceHoldsFinishIndependently() {
+  public void KeyEndsAKeyHoldEvenWhileVoiceIsPlaying() {
     LoadingHoldState state = new();
 
     Assert.False(state.Update(true, false, true, true, true, false, 0f, 30).Holding);
     Assert.True(state.Update(true, true, true, true, true, false, 1f, 30).ShowContinuePrompt);
-    LoadingHoldDecision afterKey = state.Update(true, true, true, true, true, true, 2f, 30);
-    Assert.True(afterKey.Holding);
-    Assert.False(afterKey.ShowContinuePrompt);
-    Assert.False(state.Update(true, true, true, true, false, false, 3f, 30).Holding);
+    Assert.False(state.Update(true, true, true, true, true, true, 2f, 30).Holding);
 
     Assert.False(state.Update(true, false, true, true, true, false, 4f, 30).Holding);
     Assert.True(state.Update(true, true, true, true, true, false, 5f, 30).Holding);

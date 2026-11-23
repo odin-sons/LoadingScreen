@@ -86,9 +86,15 @@ static class HudPatch {
     return !hold.Holding;
   }
 
-  static bool GamepadMoved() =>
-      ZInput.GetJoyLeftStick().sqrMagnitude > 0.25f || ZInput.GetJoyRightStick().sqrMagnitude > 0.25f
-      || ZInput.GetJoyLTrigger() > 0.5f || ZInput.GetJoyRTrigger() > 0.5f;
+  static bool _gamepadWasMoved;
+
+  static bool GamepadMoved() {
+    bool moved = ZInput.GetJoyLeftStick().sqrMagnitude > 0.25f || ZInput.GetJoyRightStick().sqrMagnitude > 0.25f
+        || ZInput.GetJoyLTrigger() > 0.5f || ZInput.GetJoyRTrigger() > 0.5f;
+    bool pressed = moved && !_gamepadWasMoved;
+    _gamepadWasMoved = moved;
+    return pressed;
+  }
 
   static bool HasHostileMonsterNoticed(Player player) {
     _nextThreatScanAt = Time.realtimeSinceStartup + 0.5f;
