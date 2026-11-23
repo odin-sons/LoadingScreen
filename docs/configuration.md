@@ -1,5 +1,7 @@
 # Configuration
 
+The [online editor](https://odin-sons.github.io/LoadingScreen/) helps create and preview `loadingscreen.yaml`; the mod's own validation remains authoritative.
+
 By default, these files live in `BepInEx/config/LoadingScreen/`:
 
 | File | Purpose |

@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#101b2b">
+  <title>LoadingScreen · Configuration editor</title>
+  <link rel="stylesheet" href="./style.css">
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand"><span class="brand-mark" aria-hidden="true">◈</span><div><strong>LoadingScreen</strong><span>CONFIGURATION STUDIO</span></div></div>
+    <nav aria-label="Reference links"><a href="https://github.com/odin-sons/LoadingScreen/blob/main/docs/configuration.md" target="_blank" rel="noopener">Configuration guide ↗</a></nav>
+  </header>
+  <main>
+    <section class="intro">
+      <div><p class="eyebrow">BUILD YOUR LOADING SCREEN</p><h1>Design the moment between worlds.</h1><p>Compose layouts and situational entries, inspect the YAML, and download a file ready for your config folder. Images stay in your browser.</p></div>
+      <div class="intro-actions"><label class="button secondary" for="file-input">Load YAML</label><input id="file-input" type="file" accept=".yaml,.yml,text/yaml"><button id="download" class="button primary" type="button">Download YAML ↓</button></div>
+    </section>
+    <div class="workspace">
+      <section class="panel editor-panel" aria-labelledby="form-title">
+        <div class="panel-head"><div><p class="eyebrow">01 / COMPOSE</p><h2 id="form-title">Editor</h2></div><span id="edit-status" class="status">Ready</span></div>
+        <nav class="tabs" aria-label="Editor sections">
+          <button class="tab active" type="button" data-tab="defaults">Defaults</button>
+          <button class="tab" type="button" data-tab="layouts">Layouts</button>
+          <button class="tab" type="button" data-tab="when">When</button>
+        </nav>
+        <div id="form" class="form-content"></div>
+      </section>
+      <section class="panel result-panel" aria-labelledby="yaml-title">
+        <div class="panel-head"><div><p class="eyebrow">02 / SOURCE</p><h2 id="yaml-title">loadingscreen.yaml</h2></div><button id="apply-yaml" class="text-button" type="button">Apply YAML → form</button></div>
+        <label class="sr-only" for="yaml">Editable YAML configuration</label>
+        <textarea id="yaml" spellcheck="false" autocapitalize="off" autocomplete="off" aria-describedby="yaml-hint"></textarea>
+        <p id="yaml-hint" class="hint">Paste or edit YAML, then apply it to the form. Form changes regenerate this source.</p>
+        <div class="problems"><h3>Validation <span id="problem-count">0</span></h3><ul id="problem-list" aria-live="polite"></ul></div>
+      </section>
+    </div>
+    <section class="panel preview-panel" aria-labelledby="preview-title">
+      <div class="panel-head"><div><p class="eyebrow">03 / VISUALIZE</p><h2 id="preview-title">Live preview</h2></div><div class="preview-controls"><label for="preview-layout">Layout</label><select id="preview-layout"></select><label for="ratio">Aspect ratio</label><select id="ratio"><option value="16/9">16:9</option><option value="21/9">21:9</option><option value="16/10">16:10</option></select></div></div>
+      <div class="preview-body"><div class="screen-wrap"><div id="screen" role="img" aria-label="Preview of the selected loading screen"></div></div><aside><h3>Local image previews</h3><p>Choose image files referenced by your YAML. Their names are matched locally; no files are uploaded.</p><label class="button secondary" for="images">Choose images</label><input id="images" type="file" accept="image/*" multiple><ul id="image-list"></ul><p class="hint">The preview is an approximation. The game controls animation timing, progress and final rendering.</p></aside></div>
+    </section>
+  </main>
+  <footer>LoadingScreen editor · Local files stay local · <a href="https://github.com/odin-sons/LoadingScreen">Source on GitHub</a></footer>
+  <script type="module" src="./app.mjs"></script>
+</body>
+</html>
