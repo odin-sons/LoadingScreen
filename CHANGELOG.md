@@ -1,6 +1,6 @@
 ## Changelog
 
-### Unreleased
+### 0.8.0 (2026-11-23)
 
 Adds translated gameplay tips that make loading screens useful immediately after installation.
 
