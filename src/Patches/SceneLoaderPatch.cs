@@ -135,16 +135,16 @@ static class SceneLoaderPatch {
     _spinnerSize = _indicator.m_spinner.rectTransform.rect.size;
     _spinnerCenter = CenterIn(indicatorRect, _indicator.m_spinner.rectTransform);
     Image ring = _indicator.m_progressIndicator;
-    if (ring) {
-      _ringCenter = CenterIn(indicatorRect, ring.rectTransform);
-      _ringDiameter = Mathf.Max(ring.rectTransform.rect.width, ring.rectTransform.rect.height);
-      _ringColor = ring.color;
-      _ringSprite = ring.sprite;
-    } else {
-      _ringCenter = _spinnerCenter;
-      _ringSprite = null;
-      _ringDiameter = Mathf.Max(_spinnerSize.x, _spinnerSize.y) * 1.5f;
-    }
+    _ringCenter = ring ? CenterIn(indicatorRect, ring.rectTransform) : _spinnerCenter;
+    _ringDiameter = ring ? Mathf.Max(ring.rectTransform.rect.width, ring.rectTransform.rect.height) : 0f;
+    if (_ringDiameter < 1f) _ringDiameter = Mathf.Max(_spinnerSize.x, _spinnerSize.y) * 1.5f;
+    _ringColor = ring ? ring.color : new(1f, 0.6f, 0.1f);
+    _ringColor.a = 1f;
+    _ringSprite = ring ? ring.sprite : null;
+    Log.Render.Info(LogContext.Message("Captured the game start indicator.",
+        ("ringFound", (bool)ring), ("ringSprite", _ringSprite ? _ringSprite.name : "none"),
+        ("ringDiameter", _ringDiameter), ("ringCenter", _ringCenter), ("ringColor", _ringColor),
+        ("ringType", ring ? ring.type : Image.Type.Simple), ("spinnerCenter", _spinnerCenter)));
 
     if (SceneLoaderUseLoadingImages.Value && HasImages()) {
       sceneLoader._showLogos = false;
