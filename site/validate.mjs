@@ -86,7 +86,8 @@ function parseLength(value) {
 }
 
 const normalizePath = (path) => path.trim().replace(/\\/g, '/');
-const rooted = (path) => /^[\\/]/.test(path) || /^[a-z]:/i.test(path);
+const safeRelative = (normalized) =>
+  !normalized.startsWith('/') && !normalized.split('/').some((segment) => segment === '..' || segment.includes(':'));
 
 function extension(path) {
   const dot = path.lastIndexOf('.');
@@ -116,7 +117,7 @@ export function validate(parsed, options) {
   function checkImage(node, path, where) {
     if (blank(path)) { warn(node, where + ': empty image path, ignored'); return false; }
     const normalized = normalizePath(path);
-    if (rooted(path) || normalized.startsWith('/') || normalized.split('/').includes('..')) {
+    if (!safeRelative(normalized)) {
       warn(node, where + ": image path '" + path + "' must be relative to the config folder, ignored");
       return false;
     }
@@ -132,7 +133,7 @@ export function validate(parsed, options) {
     const path = scalar(node);
     if (blank(path)) { warn(node, where + ": '" + label + "' needs an audio path, ignored"); return; }
     const normalized = normalizePath(path);
-    if (rooted(path) || normalized.startsWith('/') || normalized.split('/').some((segment) => segment === '..' || segment.includes(':')))
+    if (!safeRelative(normalized))
       warn(node, where + ": audio path '" + path + "' must be relative to the config folder, ignored");
     else if (!AUDIO_EXTENSIONS.some((known) => same(known, extension(normalized))))
       warn(node, where + ": unsupported audio type '" + path + "', use .ogg or .wav");

@@ -341,6 +341,24 @@ public class ConfigParserTests {
     Assert.Equal(4, config.EntryCount);
   }
 
+  [Theory]
+  [InlineData("C:/x.png")]
+  [InlineData(@"C:\x.png")]
+  [InlineData("c:x.png")]
+  [InlineData("/x.png")]
+  [InlineData(@"\host\x.png")]
+  [InlineData(@"\\host\share\x.png")]
+  [InlineData("general/a:b.png")]
+  public void RejectsAbsoluteImageAndAudioPathsOnEveryOs(string path) {
+    string image = "'" + path + "'";
+    string sound = image.Replace(".png", ".ogg");
+    ConfigLoadResult result = Parse(
+        $"layouts: {{ story: {{ sound: {sound}, layers: [ {{ image: entry }} ] }} }}\nwhen: {{ general: [ {image} ] }}\n");
+
+    Assert.Empty(result.Config.General.Entries);
+    Assert.Equal(2, result.Warnings.Count(warning => warning.Contains("must be relative")));
+  }
+
   [Fact]
   public void SkipsMissingUnsafeAndUnsupportedImages() {
     const string yaml = """
