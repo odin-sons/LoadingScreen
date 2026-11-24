@@ -10,6 +10,7 @@ using global::LoadingScreen.Model;
 using HarmonyLib;
 
 using UnityEngine;
+using UnityEngine.Rendering;
 
 public static class CustomAssets {
   public static List<string> LoadingTips { get; } = [];
@@ -21,7 +22,7 @@ public static class CustomAssets {
   public static string CurrentLanguageCode =>
       LanguageText.Code(PluginConfig.TextLanguage?.Value, Localization.instance?.GetSelectedLanguage());
 
-  const int MaxCachedImages = 16;
+  public const long MaxCachedBytes = 256L * 1024 * 1024;
 
   static readonly Dictionary<string, Sprite> _loadingImageCache = [];
   const int SampleSize = 64;
@@ -29,6 +30,7 @@ public static class CustomAssets {
   static readonly LinkedList<string> _loadingImageUsage = new();
   static readonly Dictionary<Object, HashSet<Sprite>> _pinnedSprites = [];
 
+  // Reflection: ImageConversionModule targets netstandard 2.1, which net48 cannot reference directly.
   static readonly MethodInfo _loadImageMethod =
       AccessTools.Method(
           typeof(ImageConversion),
@@ -84,12 +86,16 @@ public static class CustomAssets {
     return loadingImageFiles;
   }
 
-  public static Sprite ReadLoadingImage(string imageFile) {
+  public static long PixelCount(Sprite sprite) =>
+      sprite && sprite.texture ? (long) sprite.texture.width * sprite.texture.height : 0;
+
+  public static Sprite ReadLoadingImage(string imageFile, long maxPixels = long.MaxValue) {
     if (string.IsNullOrEmpty(imageFile)) {
       return null;
     }
 
     if (_loadingImageCache.TryGetValue(imageFile, out Sprite sprite) && sprite) {
+      if (PixelCount(sprite) > maxPixels) return null;
       TouchCachedImage(imageFile);
       return sprite;
     }
@@ -112,54 +118,75 @@ public static class CustomAssets {
       return null;
     }
 
+    if ((long) headerWidth * headerHeight > maxPixels) {
+      Log.Config.WarningOnce($"screen-budget:{imageFile}", LogContext.Message(
+          "Skipped loading screen image because the screen already uses its image memory budget.",
+          ("file", LogContext.File(imageFile, ScreenConfigLoader.PluginDir)),
+          ("width", headerWidth), ("height", headerHeight), ("remainingPixels", maxPixels)));
+      return null;
+    }
+
     Texture2D texture = new(1, 1, TextureFormat.RGBA32, mipChain: false) {
       name = $"loadingscreen.texture-{Path.GetFileName(imageFile)}"
     };
 
     System.Diagnostics.Stopwatch stopwatch = System.Diagnostics.Stopwatch.StartNew();
-    _loadImageMethod.Invoke(obj: null, [texture, data, false]);
-    Color32[] pixels = texture.GetPixels32();
-    ColorValue[] samples = new ColorValue[SampleSize * SampleSize];
-    long[] red = new long[samples.Length], green = new long[samples.Length],
-        blue = new long[samples.Length], alpha = new long[samples.Length];
-    int[] counts = new int[samples.Length];
-    for (int y = 0; y < texture.height; y++) {
-      int row = System.Math.Min(SampleSize - 1, y * SampleSize / texture.height) * SampleSize;
-      for (int x = 0; x < texture.width; x++) {
-        int index = row + System.Math.Min(SampleSize - 1, x * SampleSize / texture.width);
-        Color32 pixel = pixels[y * texture.width + x];
-        red[index] += pixel.r;
-        green[index] += pixel.g;
-        blue[index] += pixel.b;
-        alpha[index] += pixel.a;
-        counts[index]++;
-      }
+    if (_loadImageMethod.Invoke(obj: null, [texture, data, true]) is not true) {
+      Object.Destroy(texture);
+      Log.Config.WarningOnce($"undecodable-image:{imageFile}", LogContext.Message(
+          "Could not decode loading screen image.", ("file", LogContext.File(imageFile, ScreenConfigLoader.PluginDir))));
+      return null;
     }
-    for (int i = 0; i < samples.Length; i++) {
-      if (counts[i] == 0) {
-        int sourceX = System.Math.Min(texture.width - 1, (i % SampleSize) * texture.width / SampleSize);
-        int sourceY = System.Math.Min(texture.height - 1, (i / SampleSize) * texture.height / SampleSize);
-        Color32 pixel = pixels[sourceY * texture.width + sourceX];
-        samples[i] = new(pixel.r, pixel.g, pixel.b, pixel.a);
-        continue;
-      }
-      samples[i] = new((byte) (red[i] / counts[i]), (byte) (green[i] / counts[i]),
-          (byte) (blue[i] / counts[i]), (byte) (alpha[i] / counts[i]));
-    }
-    texture.Apply(updateMipmaps: false, makeNoLongerReadable: true);
+    ColorValue[] samples = SampleColors(texture);
     Log.Config.Debug(LogContext.Message("Decoded loading screen image.",
         ("file", LogContext.File(imageFile, ScreenConfigLoader.PluginDir)),
         ("width", texture.width), ("height", texture.height), ("elapsedMs", stopwatch.ElapsedMilliseconds)));
 
     sprite = Sprite.Create(texture, new(0, 0, texture.width, texture.height), Vector2.zero, 1);
     sprite.name = $"loadingscreen.sprite-{Path.GetFileName(imageFile)}";
-    _imageSamples[sprite] = samples;
+    if (samples != null) _imageSamples[sprite] = samples;
 
     _loadingImageCache[imageFile] = sprite;
     TouchCachedImage(imageFile);
-    EvictCachedImages();
+    EvictCachedImages(sprite);
 
     return sprite;
+  }
+
+  static ColorValue[] SampleColors(Texture2D texture) {
+    if (SystemInfo.graphicsDeviceType == GraphicsDeviceType.Null) return null;
+
+    RenderTexture previous = RenderTexture.active;
+    RenderTexture current = null;
+    Texture2D readback = null;
+    try {
+      Texture source = texture;
+      int width = texture.width, height = texture.height;
+      do {
+        width = width > SampleSize * 2 ? width / 2 : SampleSize;
+        height = height > SampleSize * 2 ? height / 2 : SampleSize;
+        RenderTexture next = RenderTexture.GetTemporary(width, height, 0, RenderTextureFormat.ARGB32,
+            RenderTextureReadWrite.sRGB);
+        RenderTexture last = current;
+        current = next;
+        if (last) RenderTexture.ReleaseTemporary(last);
+        next.filterMode = FilterMode.Bilinear;
+        Graphics.Blit(source, next);
+        source = next;
+      } while (width != SampleSize || height != SampleSize);
+
+      RenderTexture.active = current;
+      readback = new(SampleSize, SampleSize, TextureFormat.RGBA32, mipChain: false);
+      readback.ReadPixels(new Rect(0, 0, SampleSize, SampleSize), 0, 0, recalculateMipMaps: false);
+      return readback.GetPixels32().Select(pixel => new ColorValue(pixel.r, pixel.g, pixel.b, pixel.a)).ToArray();
+    } catch (System.Exception exception) {
+      Log.Config.Debug(LogContext.Message("Could not sample loading screen image colours.", ("error", exception.Message)));
+      return null;
+    } finally {
+      RenderTexture.active = previous;
+      if (current) RenderTexture.ReleaseTemporary(current);
+      if (readback) Object.Destroy(readback);
+    }
   }
 
   static void TouchCachedImage(string imageFile) {
@@ -209,13 +236,13 @@ public static class CustomAssets {
     return _imageSamples.TryGetValue(sprite, out samples);
   }
 
-  static void EvictCachedImages() {
+  static void EvictCachedImages(Sprite keep) {
     LinkedListNode<string> node = _loadingImageUsage.First;
 
-    while (_loadingImageUsage.Count > MaxCachedImages && node != null) {
+    while (CachedBytes() > MaxCachedBytes && node != null) {
       LinkedListNode<string> next = node.Next;
 
-      if (!_loadingImageCache.TryGetValue(node.Value, out Sprite sprite) || !IsPinned(sprite)) {
+      if (!_loadingImageCache.TryGetValue(node.Value, out Sprite sprite) || (sprite != keep && !IsPinned(sprite))) {
         _loadingImageUsage.Remove(node);
         _loadingImageCache.Remove(node.Value);
         DestroyIfOrphaned(sprite);
@@ -224,6 +251,8 @@ public static class CustomAssets {
       node = next;
     }
   }
+
+  static long CachedBytes() => _loadingImageCache.Values.Sum(PixelCount) * 4;
 
   public static void ClearImageCache() {
     List<Sprite> sprites = [.. _loadingImageCache.Values];

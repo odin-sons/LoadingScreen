@@ -2,6 +2,7 @@ namespace LoadingScreen.Model;
 
 public static class ExampleConfigText {
   public const string Text = """
+      # yaml-language-server: $schema=https://odin-sons.github.io/LoadingScreen/data/config.schema.json
       # LoadingScreen situational config. Everything is commented out, so the mod behaves like Intermission
       # (random images from this folder and tips.txt) until you uncomment and edit the parts you need.
       # Optional tips.<code>.txt (for example tips.ru.txt) is used before tips.txt for that language.

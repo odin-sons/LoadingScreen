@@ -1,7 +1,7 @@
-4	defaults.background: invalid color, use #RRGGBB or #RRGGBBAA; built-in value used
-5	defaults.vignette: expected a mapping; effect ignored
-6	defaults.mask: expected a mapping; effect ignored
-7	defaults.tip: expected a mapping; built-in values used
-8	separator.show: must be true or false; built-in value used
-26	'general' order: use 'random' or 'sequential', got ''
-32	general.entries[1]: empty image path, ignored
+4	invalid-color	defaults.background: invalid color, use #RRGGBB or #RRGGBBAA; built-in value used
+5	invalid-shape	defaults.vignette: expected a mapping; effect ignored
+6	invalid-shape	defaults.mask: expected a mapping; effect ignored
+7	invalid-shape	defaults.tip: expected a mapping; built-in values used
+8	invalid-boolean	separator.show: must be true or false; built-in value used
+26	invalid-option	'general' order: use 'random' or 'sequential', got ''
+32	invalid-path	general.entries[1]: empty image path, ignored

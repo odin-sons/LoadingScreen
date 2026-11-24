@@ -1,7 +1,9 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { parseSource, writeSource, renameKey, canonicalizeKeys } from '../../site/yaml-model.mjs';
+import { readFileSync } from 'node:fs';
+import { parseSource, writeSource, bindModel, renameKey, canonicalizeKeys } from '../../site/yaml-model.mjs';
 
+const schema = JSON.parse(readFileSync(new URL('../../site/data/config.schema.json', import.meta.url), 'utf8'));
 const source = `# header
 defaults:
   background: '#000000' # black
@@ -53,7 +55,7 @@ test('aliases, deep nesting and non-mapping roots are refused', () => {
 
 test('known keys get their documented spelling', () => {
   const { config } = parseSource('Defaults: { ContinuePrompt: { Size: 3 } }\nwhen: { General: [{ Image: a.png, When: { HASITEM: Wood } }] }\n');
-  const renamed = canonicalizeKeys(config, ['hasItem']);
+  const renamed = canonicalizeKeys(config, schema);
   assert.equal(renamed.length, 7);
   assert.deepEqual(config, { defaults: { continuePrompt: { size: '3' } }, when: { general: [{ image: 'a.png', when: { hasItem: 'Wood' } }] } });
 });
@@ -65,4 +67,38 @@ test('duplicate keys are refused without slowing down large maps', () => {
   const started = Date.now();
   assert.equal(parseSource(source).error, undefined);
   assert.ok(Date.now() - started < 3000);
+});
+
+test('moving list items keeps their comments and key order', () => {
+  const text = `layouts:
+  story:
+    layers:
+      # backdrop
+      - image: entry
+        place: { fit: cover }
+      # caption
+      - size: 28
+        text: caption
+`;
+  let { doc, config } = parseSource(text);
+  const layers = config.layouts.story.layers;
+  [layers[0], layers[1]] = [layers[1], layers[0]];
+  let output = writeSource(doc, config);
+  assert.equal(output, `layouts:
+  story:
+    layers:
+      # caption
+      - size: 28
+        text: caption
+      # backdrop
+      - image: entry
+        place: { fit: cover }
+`);
+
+  doc = parseSource(output).doc;
+  bindModel(doc, config);
+  [layers[0], layers[1]] = [layers[1], layers[0]];
+  layers.push({ color: '#000000' });
+  output = writeSource(doc, config);
+  assert.equal(output, text + '      - color: "#000000"\n');
 });

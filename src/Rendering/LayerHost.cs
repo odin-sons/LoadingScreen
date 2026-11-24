@@ -54,8 +54,13 @@ public sealed class LayerHost : MonoBehaviour {
   }
 
   const float TextBackgroundPadding = 12f;
+  const long MaxScreenPixels = 2 * 4096L * 4096L;
+  long _remainingPixels = MaxScreenPixels;
 
   static readonly Dictionary<Layer, string> _lastPoolPick = [];
+  string _progressLabel = string.Empty;
+  string _progressStageKey;
+  int _progressPercent = -1;
 
   readonly List<PlacedText> _texts = [];
   TMP_Text _hiddenTemplate;
@@ -77,6 +82,8 @@ public sealed class LayerHost : MonoBehaviour {
   float _exitDuration;
   float _exitStartedAt = -1f;
   bool _skipEnter;
+
+  internal SlideshowController Slideshow { get; } = new();
 
   public bool IsShowing { get; private set; }
   public bool IsShowingLayout { get; private set; }
@@ -161,6 +168,7 @@ public sealed class LayerHost : MonoBehaviour {
     _progressSituation = situation;
 
     bool drewEntryImage = false;
+    _remainingPixels = MaxScreenPixels;
 
     foreach (Layer layer in layout.Layers) {
       if (layer.Kind == LayerKind.Color) {
@@ -169,7 +177,7 @@ public sealed class LayerHost : MonoBehaviour {
       }
 
       if (layer.Kind == LayerKind.Text) {
-        TMP_Text template = textTemplate ? textTemplate : gameStart ? SceneLoaderPatch.ProgressTextTemplate : null;
+        TMP_Text template = textTemplate ? textTemplate : gameStart ? SceneLoaderScreen.ProgressTextTemplate : null;
         if (template) {
           string value = layer.TextSource == TextSource.Prompt ? UiText.Get("continuePrompt") : caption ?? string.Empty;
           AddTextLayer(layer, Placement.Merge(layer.Placement, layout.Placement), value, template);
@@ -184,7 +192,7 @@ public sealed class LayerHost : MonoBehaviour {
       }
 
       if (layer.Kind == LayerKind.Progress) {
-        AddProgressLayer(layer, layout, textTemplate ? textTemplate : SceneLoaderPatch.ProgressTextTemplate);
+        AddProgressLayer(layer, layout, textTemplate ? textTemplate : SceneLoaderScreen.ProgressTextTemplate);
         continue;
       }
 
@@ -200,11 +208,14 @@ public sealed class LayerHost : MonoBehaviour {
           ? selection.Entry.Image ?? LoadingManager.Session.ImageFor(layer, CustomAssets.NextLoadingImagePath)
           : LoadingManager.Session.ImageFor(layer, () => PickFromPool(layer));
       Sprite sprite = CustomAssets.ReadLoadingImage(
-          layer.FromEntry && selection.Entry.Image == null ? path : ScreenConfigLoader.ResolveImagePath(path));
+          layer.FromEntry && selection.Entry.Image == null ? path : ScreenConfigLoader.ResolveImagePath(path),
+          _remainingPixels);
 
       if (!sprite) {
         continue;
       }
+
+      _remainingPixels -= CustomAssets.PixelCount(sprite);
 
       Placement placement =
           layer.FromEntry
@@ -341,6 +352,8 @@ public sealed class LayerHost : MonoBehaviour {
     }
   }
 
+  public static void ResetPoolPicks() => _lastPoolPick.Clear();
+
   static string PickFromPool(Layer layer) {
     if (layer.Images.Count == 0) {
       return null;
@@ -360,18 +373,20 @@ public sealed class LayerHost : MonoBehaviour {
 
   void AddSpinnerLayer(Layer layer, Layout layout) {
     Sprite sprite = layer.SpinnerStyle switch {
-      SpinnerStyle.Hammer => SceneLoaderPatch.SpinnerSprite,
+      SpinnerStyle.Hammer => SceneLoaderScreen.SpinnerSprite,
       SpinnerStyle.Ring => SpinnerSprites.Ring,
       SpinnerStyle.Dots => SpinnerSprites.Dots,
-      _ => CustomAssets.ReadLoadingImage(ScreenConfigLoader.ResolveImagePath(layer.Images.FirstOrDefault())),
+      _ => CustomAssets.ReadLoadingImage(ScreenConfigLoader.ResolveImagePath(layer.Images.FirstOrDefault()),
+          _remainingPixels),
     };
     if (!sprite) return;
+    if (layer.SpinnerStyle == SpinnerStyle.Image) _remainingPixels -= CustomAssets.PixelCount(sprite);
 
     Placement placement = Placement.Merge(
         layer.Placement, layout.Placement, new() { Fit = new() { Mode = FitMode.None } },
         ScreenConfigLoader.Current.Defaults);
-    Vector2? imageSize = layer.SpinnerStyle == SpinnerStyle.Hammer && SceneLoaderPatch.SpinnerSize.x > 0f
-        && SceneLoaderPatch.SpinnerSize.y > 0f ? SceneLoaderPatch.SpinnerSize : null;
+    Vector2? imageSize = layer.SpinnerStyle == SpinnerStyle.Hammer && SceneLoaderScreen.SpinnerSize.x > 0f
+        && SceneLoaderScreen.SpinnerSize.y > 0f ? SceneLoaderScreen.SpinnerSize : null;
     AddImageLayer(layer, sprite, placement, imageSize: imageSize);
     HasSpinner = true;
   }
@@ -439,8 +454,13 @@ public sealed class LayerHost : MonoBehaviour {
     ProgressValue value = ProgressReader.Read(_progressStage, _progressSituation);
     bool stage = value.StageKey != null;
     bool numeric = value.Fraction.HasValue;
-    string label = stage ? UiText.Get(value.StageKey)
-        : numeric ? $"{Mathf.RoundToInt(value.Fraction.Value * 100f)}%" : string.Empty;
+    int percent = numeric && !stage ? Mathf.RoundToInt(value.Fraction.Value * 100f) : -1;
+    if (value.StageKey != _progressStageKey || percent != _progressPercent) {
+      _progressStageKey = value.StageKey;
+      _progressPercent = percent;
+      _progressLabel = stage ? UiText.Get(value.StageKey) : numeric ? $"{percent}%" : string.Empty;
+    }
+    string label = _progressLabel;
     float pulse = value.Pulse ? 0.85f + 0.15f * Mathf.Sin(now * 2f) : 1f;
     foreach (ProgressVisual visual in _progress) {
       visual.Rect.gameObject.SetActive(stage || numeric);

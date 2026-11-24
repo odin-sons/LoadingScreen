@@ -6,7 +6,7 @@ using HarmonyLib;
 static class CharacterPatch {
   static bool CanTakeDamage(Character character) =>
       character != Player.m_localPlayer || !PluginConfig.IsModEnabled.Value
-      || !PluginConfig.InvulnerableWhileHeld.Value || !HudPatch.IsHolding;
+      || !PluginConfig.InvulnerableWhileHeld.Value || !HudScreen.IsHolding;
 
   [HarmonyPrefix]
   [HarmonyPatch("RPC_Damage")]

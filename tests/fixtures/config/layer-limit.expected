@@ -1,0 +1,2 @@
+36	too-many-layers	layout 'crowded': only the first 32 layers are used, the rest are ignored
+0	no-entry-layer	layout 'crowded' has no 'image: entry' layer, so entry images are not shown with it

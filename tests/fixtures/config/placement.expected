@@ -1,17 +1,17 @@
-4	layout 'p': 'place': width must not be negative
-4	layout 'p': 'place': invalid height 'abc', use a number with % or px
-4	layout 'p': 'place': 'fit' needs 'width' and/or 'height'
-5	layout 'p': 'place': 'position' must be an anchor name or a mapping
-7	layout 'p': 'place': 'fade': invalid side 'nowhere'
-7	layout 'p': 'place': 'fade': invalid side 'Left, Right'
-7	layout 'p': 'place': 'fade': invalid color '#12345', use #RRGGBB or #RRGGBBAA
-7	layout 'p': 'place': 'fade': size must not be negative
-7	layout 'p': 'place': 'fade': invalid curve 'wavy', use linear or smooth
-12	layout 'p' layer '0': 'place': 'position': unknown key 'z'
-13	layout 'p' layer '0': 'place': 'opacity' must be a number from 0 to 1
-14	layout 'p' layer '0': 'place': 'fade' needs 'sides' (left, right, top, bottom or all), ignored
-16	layout 'p' layer '1': 'place': invalid fit 'Box', use cover, contain, stretch, none or { width, height }
-16	layout 'p' layer '1': 'place': 'fade' must be a mapping
-18	layout 'p' layer '2': 'place': 'fit' needs 'width' and/or 'height'
-18	layout 'p' layer '2': 'place': 'fade' must be a mapping
-20	layout 'p' layer '3': 'place': expected a mapping
+4	invalid-number	layout 'p': 'place': width must not be negative
+4	invalid-number	layout 'p': 'place': invalid height 'abc', use a number with % or px
+4	missing-value	layout 'p': 'place': 'fit' needs 'width' and/or 'height'
+5	invalid-shape	layout 'p': 'place': 'position' must be an anchor name or a mapping
+7	invalid-option	layout 'p': 'place': 'fade': invalid side 'nowhere'
+7	invalid-option	layout 'p': 'place': 'fade': invalid side 'Left, Right'
+7	invalid-color	layout 'p': 'place': 'fade': invalid color '#12345', use #RRGGBB or #RRGGBBAA
+7	invalid-number	layout 'p': 'place': 'fade': size must not be negative
+7	invalid-option	layout 'p': 'place': 'fade': invalid curve 'wavy', use linear or smooth
+12	unknown-key	layout 'p' layer '0': 'place': 'position': unknown key 'z'
+13	invalid-number	layout 'p' layer '0': 'place': 'opacity' must be a number from 0 to 1
+14	missing-value	layout 'p' layer '0': 'place': 'fade' needs 'sides' (left, right, top, bottom or all), ignored
+16	invalid-option	layout 'p' layer '1': 'place': invalid fit 'Box', use cover, contain, stretch, none or { width, height }
+16	invalid-shape	layout 'p' layer '1': 'place': 'fade' must be a mapping
+18	missing-value	layout 'p' layer '2': 'place': 'fit' needs 'width' and/or 'height'
+18	invalid-shape	layout 'p' layer '2': 'place': 'fade' must be a mapping
+20	invalid-shape	layout 'p' layer '3': 'place': expected a mapping

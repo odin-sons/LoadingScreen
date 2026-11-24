@@ -8,16 +8,21 @@ static class ProgressReader {
   static readonly List<ZDO> _nearObjects = [];
   static double _sleepStart = double.NaN;
   static double _sleepMorning;
+  const float AreaReadInterval = 0.25f;
+  static float _areaReadAt = float.NegativeInfinity;
+  static SituationKind _areaKind;
+  static object _areaKeys;
+  static ProgressValue _area;
 
   public static void ResetSleep() => _sleepStart = double.NaN;
 
   public static ProgressValue Read(LoadingStage stage, Situation situation) {
     if (situation.Kind != SituationKind.Sleep) _sleepStart = double.NaN;
-    if (stage == LoadingStage.Scene) return SceneLoaderPatch.CurrentProgress;
+    if (stage == LoadingStage.Scene) return SceneLoaderScreen.CurrentProgress;
     if (stage == LoadingStage.Menu) return Connection();
 
     if (situation.Kind == SituationKind.Sleep) return Sleep();
-    if (situation.Kind is SituationKind.Teleport or SituationKind.Death) return Area(situation);
+    if (situation.Kind is SituationKind.Teleport or SituationKind.Death) return ThrottledArea(situation);
     return Connection();
   }
 
@@ -30,6 +35,17 @@ static class ProgressReader {
       return ProgressMath.Connection(ProgressStage.ReceivingWorld);
     }
     return new(null);
+  }
+
+  static ProgressValue ThrottledArea(Situation situation) {
+    float now = Time.realtimeSinceStartup;
+    if (situation.Kind == _areaKind && ReferenceEquals(situation.Keys, _areaKeys) && now - _areaReadAt < AreaReadInterval)
+      return _area;
+    _area = Area(situation);
+    _areaKind = situation.Kind;
+    _areaKeys = situation.Keys;
+    _areaReadAt = now;
+    return _area;
   }
 
   static ProgressValue Area(Situation situation) {

@@ -227,6 +227,7 @@ public static class ScreenConfigLoader {
   static void Activate(ScreenConfig config, Func<string, string> resolver) {
     LoadingAudio.StopAllSounds();
     LoadingManager.Session.Reset();
+    LayerHost.ResetPoolPicks();
     _resolver = resolver;
     Current = config;
     _biomeWarningsChecked = false;
@@ -238,6 +239,6 @@ public static class ScreenConfigLoader {
     TickBiomeWarnings();
     LoadingManager.RefreshAppearance();
     ImageScaleUtils.RefreshAppearance();
-    SceneLoaderPatch.RefreshAppearance();
+    SceneLoaderScreen.RefreshAppearance();
   }
 }

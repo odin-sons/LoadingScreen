@@ -7,7 +7,6 @@ using System.IO;
 using System.Linq;
 
 using YamlDotNet.Core;
-using YamlDotNet.Core.Events;
 using YamlDotNet.RepresentationModel;
 
 public sealed class AnimationCatalogLoadResult {
@@ -28,25 +27,12 @@ public static class AnimationPresetParser {
     }
     YamlStream stream = new();
     try {
-      Parser events = new(new StringReader(yaml));
-      int depth = 0;
-      while (events.MoveNext()) {
-        switch (events.Current) {
-          case AnchorAlias:
-            result.Warnings.Add(LogContext.Message("Animation presets rejected.", ("file", "animations.yaml"),
-                ("reason", "YAML aliases are not supported")));
-            result.IsValid = false;
-            return result;
-          case MappingStart or SequenceStart:
-            if (++depth <= 32) break;
-            result.Warnings.Add(LogContext.Message("Animation presets rejected.", ("file", "animations.yaml"),
-                ("reason", "nesting exceeds 32 levels")));
-            result.IsValid = false;
-            return result;
-          case MappingEnd or SequenceEnd:
-            depth--;
-            break;
-        }
+      string structureProblem = YamlGuard.Check(yaml);
+      if (structureProblem != null) {
+        result.Warnings.Add(LogContext.Message("Animation presets rejected.", ("file", "animations.yaml"),
+            ("reason", structureProblem)));
+        result.IsValid = false;
+        return result;
       }
       stream.Load(new StringReader(yaml));
     } catch (YamlException exception) {

@@ -1,1 +1,1 @@
-0	YAML is nested deeper than 32 levels, config ignored
+0	invalid-yaml	YAML is nested deeper than 32 levels, config ignored

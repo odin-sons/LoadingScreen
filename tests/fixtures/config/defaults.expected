@@ -1,22 +1,22 @@
-12	defaults.place: invalid fit '4', use cover, contain, stretch, none or { width, height }
-12	defaults.place: invalid x '10 percent', use a number with % or px
-2	defaults.background: invalid color, use #RRGGBB or #RRGGBBAA; built-in value used
-9	defaults.vignette: 'size' must be from 0% to 100%
-9	defaults.vignette: 'strength' must be a number from 0 to 1
-10	defaults.mask: unknown key 'colour'
-10	defaults.mask: 'opacity' must be a number from 0 to 1
-11	defaults.animation: unknown key 'loop'
-11	defaults.animation: 'enter' must be a preset name
-11	defaults.animation: 'idle' must be a preset name
-11	defaults.animation: 'origin': invalid anchor 'middle', use center, left, right, top, bottom or e.g. top-left
-11	defaults.animation: speed must be positive
-5	tip.x: invalid number; built-in value used
-5	tip.size: must be an integer from 0 to 64; built-in value used
-5	tip.color: invalid color, use #RRGGBB or #RRGGBBAA; built-in value used
-5	defaults.tip: unknown key 'font'
-6	continuePrompt.SIZE: must be an integer from 0 to 64; built-in value used
-6	continuePrompt.Color: invalid color, use #RRGGBB or #RRGGBBAA; built-in value used
-7	separator.show: must be true or false; built-in value used
-8	defaults.spinner: expected a mapping; built-in values used
-13	order: use 'random' or 'sequential', got 'shuffled'
-14	unknown top-level key 'extra'
+12	invalid-option	defaults.place: invalid fit '4', use cover, contain, stretch, none or { width, height }
+12	invalid-number	defaults.place: invalid x '10 percent', use a number with % or px
+2	invalid-color	defaults.background: invalid color, use #RRGGBB or #RRGGBBAA; built-in value used
+9	invalid-number	defaults.vignette: 'size' must be from 0% to 100%
+9	invalid-number	defaults.vignette: 'strength' must be a number from 0 to 1
+10	unknown-key	defaults.mask: unknown key 'colour'
+10	invalid-number	defaults.mask: 'opacity' must be a number from 0 to 1
+11	unknown-key	defaults.animation: unknown key 'loop'
+11	missing-value	defaults.animation: 'enter' must be a preset name
+11	missing-value	defaults.animation: 'idle' must be a preset name
+11	invalid-option	defaults.animation: 'origin': invalid anchor 'middle', use center, left, right, top, bottom or e.g. top-left
+11	invalid-number	defaults.animation: speed must be positive
+5	invalid-number	tip.x: invalid number; built-in value used
+5	invalid-number	tip.size: must be an integer from 0 to 64; built-in value used
+5	invalid-color	tip.color: invalid color, use #RRGGBB or #RRGGBBAA; built-in value used
+5	unknown-key	defaults.tip: unknown key 'font'
+6	invalid-number	continuePrompt.SIZE: must be an integer from 0 to 64; built-in value used
+6	invalid-color	continuePrompt.Color: invalid color, use #RRGGBB or #RRGGBBAA; built-in value used
+7	invalid-boolean	separator.show: must be true or false; built-in value used
+8	invalid-shape	defaults.spinner: expected a mapping; built-in values used
+13	invalid-option	order: use 'random' or 'sequential', got 'shuffled'
+14	unknown-key	unknown top-level key 'extra'

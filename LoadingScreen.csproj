@@ -157,6 +157,11 @@
   </Target>
 
   <Target Name="MakeThunderstorePackage" AfterTargets="GetAssemblyVersionForPackage">
+    <PropertyGroup>
+      <ManifestVersion>$([System.Text.RegularExpressions.Regex]::Match($([System.IO.File]::ReadAllText('$(MSBuildProjectDirectory)/manifest.json')), '"version_number"\s*:\s*"([^"]*)"').Groups[1].Value)</ManifestVersion>
+    </PropertyGroup>
+    <Error Condition="'$(ManifestVersion)' != '$(Major).$(Minor).$(Patch)'"
+           Text="manifest.json version_number '$(ManifestVersion)' does not match the assembly version $(Major).$(Minor).$(Patch)." />
     <ItemGroup>
       <PackageFiles Include="@(None)" Condition="'%(None.ThunderstorePackage)' == 'true'" />
     </ItemGroup>

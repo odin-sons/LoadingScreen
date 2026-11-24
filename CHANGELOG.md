@@ -1,5 +1,33 @@
 ## Changelog
 
+### 0.10.0 (2026-11-24)
+
+Safer server file sharing, lower memory use for images, and one set of config rules for the mod and the editor.
+
+#### Features
+
+  * **Shared file bandwidth.** The server caps the total traffic for shared images and audio with the new
+    `Shared file bandwidth KiB per second` setting and shares it fairly between players. A busy server tells clients
+    to retry later instead of staying silent, so downloads slow down rather than fail, and a missing or refused file
+    stops at once instead of after three timeouts.
+  * **Config schema.** A JSON Schema generated from the mod's config types is published with the editor, and the
+    example config points to it, so editors with YAML support complete keys and flag mistakes. The online editor
+    takes its option lists from the same schema.
+
+#### Fixes
+
+  * **Image memory.** Images are no longer copied pixel by pixel when they load, the image cache is limited by size
+    instead of by count, a screen shares a memory budget between its images, and a layout uses at most 32 layers.
+    An image that cannot be decoded is skipped with a log message.
+  * **Paths.** Absolute image and audio paths such as `C:/x.png` are rejected the same way on every OS and in the
+    editor.
+  * **Translations.** A broken or oversized `translations.yaml` no longer crashes the game at startup; the built-in
+    text is used instead.
+  * **Logs.** Text sent by a server is escaped and shortened in log lines, so it cannot forge log entries.
+  * **Performance.** The progress layer no longer formats text and scans the area every frame, and stale UI
+    references are dropped after scene reloads.
+  * **Editor.** Moving a layer or entry up or down keeps its comments with it.
+
 ### 0.9.2 (2026-11-23)
 
 Fixes in the online editor from the architecture and security review.

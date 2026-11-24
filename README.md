@@ -18,6 +18,12 @@ layouts, captions, progress, and audio locally.
 - **Intermission compatibility.** Existing plain images and tips remain a fallback; reload files in game with
   `loadingscreen reload`.
 
+Server owners can set `Shared file bandwidth KiB per second` in `BepInEx/config/Odin_Sons.LoadingScreen.cfg`
+to limit the combined image and audio download rate across all connected players. The default is 4096 KiB/s;
+the setting applies on the server and is not synchronized to clients. Active downloads share this budget, and
+busy downloads retry automatically. Compressed manifests have a separate aggregate limit of about 4 MiB/s;
+clients retry promptly when that limit is busy.
+
 ## Installation
 
 Requires `denikson-BepInExPack_Valheim` and `ValheimModding-YamlDotNet`. Put `LoadingScreen.dll` into
