@@ -28,6 +28,7 @@ public static class PluginConfig {
   public static ConfigEntry<bool> CaptionUseTipWhenNoText { get; private set; }
 
   public static ConfigEntry<bool> ShareScreensWithPlayers { get; private set; }
+  public static ConfigEntry<int> SharedFileBandwidthKiBPerSecond { get; private set; }
   public static ConfigEntry<bool> LockSyncedSettings { get; private set; }
   public static ConfigEntry<bool> PlayLoadingSounds { get; private set; }
   public static ConfigEntry<int> MusicVolumePercent { get; private set; }
@@ -95,6 +96,14 @@ public static class PluginConfig {
             "Share screens with players",
             true,
             "Send the server's loadingscreen.yaml and its images to players with this mod; players use them while connected. [Synced with Server]");
+
+    SharedFileBandwidthKiBPerSecond =
+        config.BindInOrder(
+            General,
+            "Shared file bandwidth KiB per second",
+            4096,
+            "Maximum combined transfer rate for shared images and audio across all players, in KiB per second. Applies on the server only. [Not Synced with Server]",
+            new AcceptableValueRange<int>(256, 65536));
 
     ShowLoadingScreenOnTeleport =
         config.BindInOrder(
