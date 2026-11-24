@@ -43,13 +43,20 @@ function checkStructure(root, lineOf) {
   return null;
 }
 
+const origins = new WeakMap();
+
 export function toModel(node) {
   if (isMap(node)) {
     const object = {};
     for (const pair of node.items) define(object, keyText(pair.key), toModel(pair.value));
+    origins.set(object, node);
     return object;
   }
-  if (isSeq(node)) return node.items.map(toModel);
+  if (isSeq(node)) {
+    const items = node.items.map(toModel);
+    origins.set(items, node);
+    return items;
+  }
   if (isNullNode(node)) return null;
   return isScalar(node) ? String(node.value ?? '') : String(node);
 }
@@ -149,8 +156,21 @@ function patchNode(doc, node, value) {
   if (value === null || value === undefined) return isNullNode(node) && node ? node : doc.createNode(null);
   if (Array.isArray(value)) {
     if (!isSeq(node)) return doc.createNode(plain(value));
-    value.forEach((item, index) => { node.items[index] = patchNode(doc, node.items[index], item); });
-    node.items.length = value.length;
+    const previous = node.items;
+    const claimed = new Set(value.map((item) => item !== null && typeof item === 'object' && origins.get(item))
+      .filter((origin) => origin && previous.includes(origin)));
+    node.items = value.map((item, index) => {
+      const origin = item !== null && typeof item === 'object' ? origins.get(item) : undefined;
+      const source = claimed.has(origin) ? origin : claimed.has(previous[index]) ? undefined : previous[index];
+      const patched = patchNode(doc, source, item);
+      if (item !== null && typeof item === 'object') origins.set(item, patched);
+      return patched;
+    });
+    const first = previous[0];
+    if (node.commentBefore && first && node.items[0] !== first && node.items.includes(first)) {
+      first.commentBefore = [node.commentBefore, first.commentBefore].filter(Boolean).join('\n');
+      node.commentBefore = undefined;
+    }
     return node;
   }
   if (typeof value === 'object') {
@@ -178,6 +198,25 @@ function patchNode(doc, node, value) {
   if (isScalar(node) && !isNullNode(node) && String(node.value) === text) return node;
   if (isScalar(node) && !isNullNode(node)) { node.value = text; return node; }
   return doc.createNode(text);
+}
+
+export function bindModel(doc, config) {
+  const walk = (node, value) => {
+    if (value === null || typeof value !== 'object') return;
+    if (Array.isArray(value)) {
+      if (!isSeq(node)) return;
+      origins.set(value, node);
+      value.forEach((item, index) => walk(node.items[index], item));
+      return;
+    }
+    if (!isMap(node)) return;
+    origins.set(value, node);
+    for (const pair of node.items) {
+      const name = keyText(pair.key);
+      if (Object.hasOwn(value, name)) walk(pair.value, value[name]);
+    }
+  };
+  walk(doc?.contents, config);
 }
 
 export function writeSource(doc, config) {

@@ -1,4 +1,4 @@
-import { parseSource, canonicalizeKeys, define, renameKey, writeSource, MAX_SOURCE_LENGTH } from './yaml-model.mjs';
+import { parseSource, bindModel, canonicalizeKeys, define, renameKey, writeSource, MAX_SOURCE_LENGTH } from './yaml-model.mjs';
 import { validate } from './validate.mjs';
 import { drawPreview } from './preview.mjs';
 
@@ -491,6 +491,7 @@ function sync() {
   yamlBox.value = writeSource(sourceDoc, config);
   const parsed = parseSource(yamlBox.value);
   sourceDoc = parsed.doc ?? null;
+  bindModel(sourceDoc, config);
   sourceDirty = false;
   $('#edit-status').textContent = 'Synced';
   $('#source-note').hidden = true;
