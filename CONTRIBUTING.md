@@ -18,7 +18,8 @@ MSBuild properties:
 
 Game assemblies are publicized at build time by `BepInEx.AssemblyPublicizer.MSBuild`, so no pre-generated
 `publicized_assemblies` folder is needed. The build also writes a Thunderstore package `LoadingScreen_v<version>.zip`
-to `bin/Release`.
+to `bin/Release`. It fails if `lib/ServerSync/ServerSync.dll` does not match the SHA-256 in
+`ServerSync.dll.sha256` (the upstream v1.20 release asset), or if `manifest.json` and `PluginVersion` disagree.
 
 Unit tests for the Unity-free code (config parser, selection, placement math) need only the .NET SDK:
 
@@ -37,6 +38,9 @@ node --test tests/site/
 ```
 
 `SiteConformanceTests` also checks the name lists in `site/data/options.json` against the parser.
+
+GitHub Actions (`.github/workflows/ci.yml`) runs both test suites and the binary and version checks on every push and
+pull request. The Pages deploy runs only after they pass.
 
 ## Source layout
 
