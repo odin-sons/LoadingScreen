@@ -78,6 +78,8 @@ public sealed class LayerHost : MonoBehaviour {
   float _exitStartedAt = -1f;
   bool _skipEnter;
 
+  internal SlideshowController Slideshow { get; } = new();
+
   public bool IsShowing { get; private set; }
   public bool IsShowingLayout { get; private set; }
   public bool ShowSleepUi { get; private set; } = true;
@@ -169,7 +171,7 @@ public sealed class LayerHost : MonoBehaviour {
       }
 
       if (layer.Kind == LayerKind.Text) {
-        TMP_Text template = textTemplate ? textTemplate : gameStart ? SceneLoaderPatch.ProgressTextTemplate : null;
+        TMP_Text template = textTemplate ? textTemplate : gameStart ? SceneLoaderScreen.ProgressTextTemplate : null;
         if (template) {
           string value = layer.TextSource == TextSource.Prompt ? UiText.Get("continuePrompt") : caption ?? string.Empty;
           AddTextLayer(layer, Placement.Merge(layer.Placement, layout.Placement), value, template);
@@ -184,7 +186,7 @@ public sealed class LayerHost : MonoBehaviour {
       }
 
       if (layer.Kind == LayerKind.Progress) {
-        AddProgressLayer(layer, layout, textTemplate ? textTemplate : SceneLoaderPatch.ProgressTextTemplate);
+        AddProgressLayer(layer, layout, textTemplate ? textTemplate : SceneLoaderScreen.ProgressTextTemplate);
         continue;
       }
 
@@ -360,7 +362,7 @@ public sealed class LayerHost : MonoBehaviour {
 
   void AddSpinnerLayer(Layer layer, Layout layout) {
     Sprite sprite = layer.SpinnerStyle switch {
-      SpinnerStyle.Hammer => SceneLoaderPatch.SpinnerSprite,
+      SpinnerStyle.Hammer => SceneLoaderScreen.SpinnerSprite,
       SpinnerStyle.Ring => SpinnerSprites.Ring,
       SpinnerStyle.Dots => SpinnerSprites.Dots,
       _ => CustomAssets.ReadLoadingImage(ScreenConfigLoader.ResolveImagePath(layer.Images.FirstOrDefault())),
@@ -370,8 +372,8 @@ public sealed class LayerHost : MonoBehaviour {
     Placement placement = Placement.Merge(
         layer.Placement, layout.Placement, new() { Fit = new() { Mode = FitMode.None } },
         ScreenConfigLoader.Current.Defaults);
-    Vector2? imageSize = layer.SpinnerStyle == SpinnerStyle.Hammer && SceneLoaderPatch.SpinnerSize.x > 0f
-        && SceneLoaderPatch.SpinnerSize.y > 0f ? SceneLoaderPatch.SpinnerSize : null;
+    Vector2? imageSize = layer.SpinnerStyle == SpinnerStyle.Hammer && SceneLoaderScreen.SpinnerSize.x > 0f
+        && SceneLoaderScreen.SpinnerSize.y > 0f ? SceneLoaderScreen.SpinnerSize : null;
     AddImageLayer(layer, sprite, placement, imageSize: imageSize);
     HasSpinner = true;
   }

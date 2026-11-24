@@ -64,7 +64,7 @@ public static class LoadingManager {
     LoadingAudio.StopAllSounds();
     if (HudHost) HudHost.Hide();
     if (FejdStartupHost) FejdStartupHost.Hide();
-    SceneLoaderPatch.Disable();
+    SceneLoaderScreen.Disable();
     foreach (Image image in _vanillaLooks.Keys.ToList()) {
       if (image) RestoreVanillaLook(image);
     }
@@ -132,7 +132,7 @@ public static class LoadingManager {
     foreach (Image image in _backgroundImages.ToList()) {
       if (image) SetupLoadingBackground(image);
     }
-    SceneLoaderPatch.Enable();
+    SceneLoaderScreen.Enable();
   }
 
   public static void HideOriginalMenuText() {
