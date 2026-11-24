@@ -373,6 +373,8 @@ public static class LoadingManager {
     foreach (TMP_Text destroyed in _textLooks.Keys.Where(key => !key).ToList()) _textLooks.Remove(destroyed);
     foreach (Transform destroyed in _panelLooks.Keys.Where(key => !key).ToList()) _panelLooks.Remove(destroyed);
     foreach (GameObject destroyed in _hiddenObjects.Keys.Where(key => !key).ToList()) _hiddenObjects.Remove(destroyed);
+    foreach (TMP_Text destroyed in _tipBoxes.Keys.Where(key => !key).ToList()) _tipBoxes.Remove(destroyed);
+    foreach (TMP_Text destroyed in _tipImages.Keys.Where(key => !key).ToList()) _tipImages.Remove(destroyed);
     if (!_createdLoadingBackground) _createdLoadingBackground = null;
   }
 

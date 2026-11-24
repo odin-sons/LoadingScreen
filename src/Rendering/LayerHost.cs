@@ -56,6 +56,9 @@ public sealed class LayerHost : MonoBehaviour {
   const float TextBackgroundPadding = 12f;
 
   static readonly Dictionary<Layer, string> _lastPoolPick = [];
+  string _progressLabel = string.Empty;
+  string _progressStageKey;
+  int _progressPercent = -1;
 
   readonly List<PlacedText> _texts = [];
   TMP_Text _hiddenTemplate;
@@ -341,6 +344,8 @@ public sealed class LayerHost : MonoBehaviour {
     }
   }
 
+  public static void ResetPoolPicks() => _lastPoolPick.Clear();
+
   static string PickFromPool(Layer layer) {
     if (layer.Images.Count == 0) {
       return null;
@@ -439,8 +444,13 @@ public sealed class LayerHost : MonoBehaviour {
     ProgressValue value = ProgressReader.Read(_progressStage, _progressSituation);
     bool stage = value.StageKey != null;
     bool numeric = value.Fraction.HasValue;
-    string label = stage ? UiText.Get(value.StageKey)
-        : numeric ? $"{Mathf.RoundToInt(value.Fraction.Value * 100f)}%" : string.Empty;
+    int percent = numeric && !stage ? Mathf.RoundToInt(value.Fraction.Value * 100f) : -1;
+    if (value.StageKey != _progressStageKey || percent != _progressPercent) {
+      _progressStageKey = value.StageKey;
+      _progressPercent = percent;
+      _progressLabel = stage ? UiText.Get(value.StageKey) : numeric ? $"{percent}%" : string.Empty;
+    }
+    string label = _progressLabel;
     float pulse = value.Pulse ? 0.85f + 0.15f * Mathf.Sin(now * 2f) : 1f;
     foreach (ProgressVisual visual in _progress) {
       visual.Rect.gameObject.SetActive(stage || numeric);
