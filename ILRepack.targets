@@ -1,8 +1,20 @@
 <Project>
-  <Target Name="MergeServerSync" AfterTargets="Build">
+  <Target Name="VerifyServerSync">
+    <PropertyGroup>
+      <ServerSyncPath>$(MSBuildProjectDirectory)/lib/ServerSync/ServerSync.dll</ServerSyncPath>
+      <ServerSyncExpectedHash>$([System.IO.File]::ReadAllText('$(ServerSyncPath).sha256').Split(' ')[0].Trim())</ServerSyncExpectedHash>
+    </PropertyGroup>
+    <GetFileHash Files="$(ServerSyncPath)" Algorithm="SHA256">
+      <Output TaskParameter="Hash" PropertyName="ServerSyncActualHash" />
+    </GetFileHash>
+    <Error Condition="'$(ServerSyncActualHash.ToLowerInvariant())' != '$(ServerSyncExpectedHash.ToLowerInvariant())'"
+           Text="lib/ServerSync/ServerSync.dll does not match ServerSync.dll.sha256 (got $(ServerSyncActualHash))." />
+  </Target>
+
+  <Target Name="MergeServerSync" AfterTargets="Build" DependsOnTargets="VerifyServerSync">
     <ItemGroup>
       <ServerSyncAssemblies Include="$(TargetPath)" />
-      <ServerSyncAssemblies Include="$(MSBuildProjectDirectory)/lib/ServerSync/ServerSync.dll" />
+      <ServerSyncAssemblies Include="$(ServerSyncPath)" />
     </ItemGroup>
     <ILRepack
       Internalize="true"
