@@ -659,14 +659,6 @@ Behavior switches in `Odin_Sons.LoadingScreen.cfg`; each has a description in th
 | `4 - Game start screen` | Use loading images, Show progress |
 | `5 - Sound` | Play loading screen sounds, Music volume percent, Voice volume percent, Mute game sounds on loading screens |
 | `6 - Accessibility` | Readable text, Minimum text size |
-| `7 - Experimental` | Load world in background |
-
-`[7 - Experimental] Load world in background` is a personal setting, off by default. When enabled, starting or
-joining a world loads the world scene in the background instead of freezing the game, so the loading screen keeps
-animating; menu buttons and keys are ignored until the world opens. If the background load cannot start, the game's
-normal load runs and a warning is logged. With `Log level` at `Info`, each world load logs
-`Loaded the world scene.` on `LoadingScreen` with `mode` (`sync` or `async`), `totalSeconds`, and for background
-loads `readSeconds` (until the scene data is read) and `activationSeconds` (until the world objects are created).
 
 ## Config synchronization
 
@@ -684,7 +676,7 @@ admin can choose ownership in `ConditionalConfigSync.SyncPolicy.cfg`:
 It limits image and audio chunk traffic across all clients; compressed manifests have a separate aggregate
 limit of about 4 MiB/s and a retry hint when that limit is busy.
 The remaining settings are client controlled: `Image folder`, `Text language`, `Log level`, both game start settings,
-sound settings, and `Load world in background`. Each cfg description ends with its sync status. The server's
+and sound settings. Each cfg description ends with its sync status. The server's
 `loadingscreen.yaml` and `animations.yaml` carry appearance defaults and presets through
 the existing screen transfer; they are not cfg settings.
 

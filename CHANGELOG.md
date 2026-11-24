@@ -8,6 +8,10 @@
     are gone: `defaults.continuePrompt`, `text: prompt` layers and the `continuePrompt` translation key. The loading
     screen closes as soon as loading ends unless `Wait for the voice to finish` or `Wait for the exit animation to
     finish` is on. Old configs still load; the removed YAML options are reported as `removed-option` and ignored.
+  * **Background world load.** The experimental `[7 - Experimental] Load world in background` setting and the
+    `Loaded the world scene.` timing log are gone: the background load only moved scene reading off the main thread,
+    so the game froze just as long. Starting or joining a world always uses the game's normal load. An old cfg entry
+    is ignored.
 
 ### 0.10.0 (2026-11-24)
 
