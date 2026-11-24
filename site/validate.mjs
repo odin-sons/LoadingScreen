@@ -10,6 +10,7 @@ const ENTRY_KEYS = ['image', 'sound', 'voice', 'text', 'layout', 'place', 'when'
 const IMAGE_EXTENSIONS = ['.png', '.jpg', '.jpeg'];
 const AUDIO_EXTENSIONS = ['.ogg', '.wav'];
 const SIZED_SECTIONS = ['tip', 'continuePrompt'];
+const MAX_LAYERS = 32;
 const INT_RANGE = [-2147483648, 2147483647];
 export const MAX_PROBLEMS = 200;
 
@@ -389,7 +390,9 @@ export function validate(parsed, options) {
         warn(showSleepUi, where + ": 'showSleepUi' must be true or false");
     }
     if (!isSeq(layersNode)) { warn(node, "layout '" + layoutName + "' needs a 'layers' list, ignored"); return null; }
-    const layers = layersNode.items.map((item, index) => layer(item, layoutName, index)).filter(Boolean);
+    const layers = layersNode.items.slice(0, MAX_LAYERS).map((item, index) => layer(item, layoutName, index)).filter(Boolean);
+    if (layersNode.items.length > MAX_LAYERS)
+      warn(layersNode.items[MAX_LAYERS], "layout '" + layoutName + "': only the first " + MAX_LAYERS + ' layers are used, the rest are ignored');
     if (!layers.length) { warn(node, "layout '" + layoutName + "' has no valid layers, ignored"); return null; }
     return { name: layoutName, showsEntry: layers.some((item) => item.fromEntry) };
   }
