@@ -13,7 +13,7 @@ using YamlDotNet.RepresentationModel;
 public sealed class ConfigLoadResult {
   public ScreenConfig Config { get; } = new();
   public List<string> Warnings { get; } = [];
-  public List<(long Line, string Detail)> Problems { get; } = [];
+  public List<(long Line, string Code, string Detail)> Problems { get; } = [];
   public bool IsValid { get; set; } = true;
   public bool HasDeclaredEntries { get; set; }
 }
@@ -56,14 +56,14 @@ public sealed class ConfigParser {
       string structureProblem = YamlGuard.Check(yaml);
 
       if (structureProblem != null) {
-        Warn(0, $"{structureProblem}, config ignored");
+        Warn(ProblemCodes.InvalidYaml, 0, $"{structureProblem}, config ignored");
         _result.IsValid = false;
         return _result;
       }
 
       stream.Load(new StringReader(yaml));
     } catch (YamlException exception) {
-      Warn(exception.Start.Line, $"invalid YAML, config ignored: {exception.Message}");
+      Warn(ProblemCodes.InvalidYaml, exception.Start.Line, $"invalid YAML, config ignored: {exception.Message}");
       _result.IsValid = false;
       return _result;
     }
@@ -73,7 +73,7 @@ public sealed class ConfigParser {
     }
 
     if (stream.Documents[0].RootNode is not YamlMappingNode root) {
-      Warn(stream.Documents[0].RootNode, "the top level must be a mapping, config ignored");
+      Warn(ProblemCodes.InvalidRoot, stream.Documents[0].RootNode, "the top level must be a mapping, config ignored");
       _result.IsValid = false;
       return _result;
     }
@@ -100,7 +100,7 @@ public sealed class ConfigParser {
           break;
 
         default:
-          Warn(pair.Key, $"unknown top-level key '{Name(pair.Key)}'");
+          Warn(ProblemCodes.UnknownKey, pair.Key, $"unknown top-level key '{Name(pair.Key)}'");
           break;
       }
     }
@@ -115,7 +115,7 @@ public sealed class ConfigParser {
     }
 
     if (node is not YamlMappingNode mapping) {
-      Warn(node, "'layouts' must be a mapping of layout names");
+      Warn(ProblemCodes.InvalidShape, node, "'layouts' must be a mapping of layout names");
       return;
     }
 
@@ -123,7 +123,7 @@ public sealed class ConfigParser {
       string name = Name(pair.Key);
 
       if (_result.Config.Layouts.ContainsKey(name)) {
-        Warn(pair.Key, $"duplicate layout '{name}', ignored");
+        Warn(ProblemCodes.DuplicateName, pair.Key, $"duplicate layout '{name}', ignored");
         continue;
       }
 
@@ -151,13 +151,13 @@ public sealed class ConfigParser {
         if (bool.TryParse(Scalar(showSleepUi), out bool show)) {
           layout.ShowSleepUi = show;
         } else {
-          Warn(showSleepUi, $"layout '{name}': 'showSleepUi' must be true or false");
+          Warn(ProblemCodes.InvalidBoolean, showSleepUi, $"layout '{name}': 'showSleepUi' must be true or false");
         }
       }
     }
 
     if (layersNode is not YamlSequenceNode layers) {
-      Warn(node, $"layout '{name}' needs a 'layers' list, ignored");
+      Warn(ProblemCodes.MissingValue, node, $"layout '{name}' needs a 'layers' list, ignored");
       return null;
     }
 
@@ -170,11 +170,11 @@ public sealed class ConfigParser {
     }
 
     if (layers.Children.Count > MaxLayers) {
-      Warn(layers.Children[MaxLayers], $"layout '{name}': only the first {MaxLayers} layers are used, the rest are ignored");
+      Warn(ProblemCodes.TooManyLayers, layers.Children[MaxLayers], $"layout '{name}': only the first {MaxLayers} layers are used, the rest are ignored");
     }
 
     if (layout.Layers.Count == 0) {
-      Warn(node, $"layout '{name}' has no valid layers, ignored");
+      Warn(ProblemCodes.InvalidLayer, node, $"layout '{name}' has no valid layers, ignored");
       return null;
     }
 
@@ -186,7 +186,7 @@ public sealed class ConfigParser {
     string where = $"layout '{layoutName}' layer '{id ?? index.ToString(CultureInfo.InvariantCulture)}'";
 
     if (node is not YamlMappingNode mapping) {
-      Warn(node, $"{where}: a layer must be a mapping, ignored");
+      Warn(ProblemCodes.InvalidShape, node, $"{where}: a layer must be a mapping, ignored");
       return null;
     }
 
@@ -206,14 +206,14 @@ public sealed class ConfigParser {
 
     if ((image != null ? 1 : 0) + (text != null ? 1 : 0) + (spinner != null ? 1 : 0)
         + (progress != null ? 1 : 0) > 1) {
-      Warn(node, $"{where}: use only one of 'image', 'text', 'spinner' and 'progress' in a layer, ignored");
+      Warn(ProblemCodes.InvalidLayer, node, $"{where}: use only one of 'image', 'text', 'spinner' and 'progress' in a layer, ignored");
       return null;
     }
 
     if (progress != null) {
       if (!Enum.TryParse(Scalar(progress), ignoreCase: true, out ProgressStyle style)
           || !Enum.IsDefined(typeof(ProgressStyle), style)) {
-        Warn(progress, $"{where}: 'progress' needs bar, ring or percent; layer ignored");
+        Warn(ProblemCodes.InvalidOption, progress, $"{where}: 'progress' needs bar, ring or percent; layer ignored");
         return null;
       }
       layer.Kind = LayerKind.Progress;
@@ -225,7 +225,7 @@ public sealed class ConfigParser {
             && !float.IsInfinity(sizeValue) && !float.IsNaN(sizeValue) && sizeValue > 0f) {
           layer.ProgressSize = sizeValue;
         } else {
-          Warn(progressSize, $"{where}: 'size' must be positive");
+          Warn(ProblemCodes.InvalidNumber, progressSize, $"{where}: 'size' must be positive");
         }
       }
       return layer;
@@ -233,11 +233,11 @@ public sealed class ConfigParser {
 
     if (spinner != null) {
       if (color != null) {
-        Warn(node, $"{where}: use only one of 'color' and 'spinner' in a layer, ignored");
+        Warn(ProblemCodes.InvalidLayer, node, $"{where}: use only one of 'color' and 'spinner' in a layer, ignored");
         return null;
       }
       if (spinner is not YamlScalarNode || string.IsNullOrWhiteSpace(Scalar(spinner))) {
-        Warn(spinner, $"{where}: 'spinner' needs hammer, ring, dots or an image path; layer ignored");
+        Warn(ProblemCodes.InvalidOption, spinner, $"{where}: 'spinner' needs hammer, ring, dots or an image path; layer ignored");
         return null;
       }
       layer.Kind = LayerKind.Spinner;
@@ -261,18 +261,18 @@ public sealed class ConfigParser {
 
     foreach (string key in new[] { "size", "align", "background" }) {
       if (Child(mapping, key) != null) {
-        Warn(Child(mapping, key), $"{where}: '{key}' applies only to text layers");
+        Warn(ProblemCodes.InvalidLayer, Child(mapping, key), $"{where}: '{key}' applies only to text layers");
       }
     }
 
     if (image == null) {
       if (color == null) {
-        Warn(node, $"{where}: a layer needs 'image', 'text' or 'color', ignored");
+        Warn(ProblemCodes.MissingValue, node, $"{where}: a layer needs 'image', 'text' or 'color', ignored");
         return null;
       }
 
       if (!ColorValue.TryParse(Scalar(color), out ColorValue value)) {
-        Warn(color, $"{where}: invalid color '{Scalar(color)}', use #RRGGBB or #RRGGBBAA; layer ignored");
+        Warn(ProblemCodes.InvalidColor, color, $"{where}: invalid color '{Scalar(color)}', use #RRGGBB or #RRGGBBAA; layer ignored");
         return null;
       }
 
@@ -286,7 +286,7 @@ public sealed class ConfigParser {
     if (image is YamlScalarNode && string.Equals(Scalar(image), "separator", StringComparison.OrdinalIgnoreCase)) {
       if (color != null) {
         if (!ColorValue.TryParse(Scalar(color), out ColorValue tint)) {
-          Warn(color, $"{where}: invalid color '{Scalar(color)}', use #RRGGBB or #RRGGBBAA; tint ignored");
+          Warn(ProblemCodes.InvalidColor, color, $"{where}: invalid color '{Scalar(color)}', use #RRGGBB or #RRGGBBAA; tint ignored");
         } else {
           layer.Color = tint;
           layer.HasTint = true;
@@ -298,7 +298,7 @@ public sealed class ConfigParser {
     }
 
     if (color != null) {
-      Warn(color, $"{where}: 'color' is ignored on an image layer");
+      Warn(ProblemCodes.InvalidLayer, color, $"{where}: 'color' is ignored on an image layer");
     }
 
     if (image is YamlScalarNode && string.Equals(Scalar(image), "entry", StringComparison.OrdinalIgnoreCase)) {
@@ -317,7 +317,7 @@ public sealed class ConfigParser {
     }
 
     if (layer.Images.Count == 0) {
-      Warn(node, $"{where}: a layer has no usable images, ignored");
+      Warn(ProblemCodes.MissingValue, node, $"{where}: a layer has no usable images, ignored");
       return null;
     }
 
@@ -328,7 +328,7 @@ public sealed class ConfigParser {
     string sourceName = Scalar(text);
     if (!string.Equals(sourceName, "caption", StringComparison.OrdinalIgnoreCase)
         && !string.Equals(sourceName, "prompt", StringComparison.OrdinalIgnoreCase)) {
-      Warn(text, $"{where}: 'text' needs caption or prompt, layer ignored");
+      Warn(ProblemCodes.InvalidOption, text, $"{where}: 'text' needs caption or prompt, layer ignored");
       return null;
     }
 
@@ -344,7 +344,7 @@ public sealed class ConfigParser {
           && value > 0f) {
         layer.Text.FontSize = value;
       } else {
-        Warn(size, $"{where}: 'size' must be a positive font size");
+        Warn(ProblemCodes.InvalidNumber, size, $"{where}: 'size' must be a positive font size");
       }
     }
 
@@ -362,13 +362,13 @@ public sealed class ConfigParser {
           && Enum.IsDefined(typeof(TextAlign), value)) {
         layer.Text.Align = value;
       } else {
-        Warn(align, $"{where}: invalid align '{Scalar(align)}', use left, center or right");
+        Warn(ProblemCodes.InvalidOption, align, $"{where}: invalid align '{Scalar(align)}', use left, center or right");
       }
     }
 
     if (layer.Placement.Fit != null && layer.Placement.Fit.Mode != FitMode.Box) {
       YamlMappingNode place = Child(mapping, "place") as YamlMappingNode;
-      Warn(place == null ? null : Child(place, "fit"),
+      Warn(ProblemCodes.InvalidLayer, place == null ? null : Child(place, "fit"),
           $"{where}: a text layer supports only 'fit: {{ width }}' (the text width)");
       layer.Placement.Fit = null;
     }
@@ -385,7 +385,7 @@ public sealed class ConfigParser {
       return value;
     }
 
-    Warn(node, $"{where}: invalid {key} '{Scalar(node)}', use #RRGGBB or #RRGGBBAA");
+    Warn(ProblemCodes.InvalidColor, node, $"{where}: invalid {key} '{Scalar(node)}', use #RRGGBB or #RRGGBBAA");
     return null;
   }
 
@@ -395,7 +395,7 @@ public sealed class ConfigParser {
     }
 
     if (node is not YamlMappingNode mapping) {
-      Warn(node, "'when' must be a mapping");
+      Warn(ProblemCodes.InvalidShape, node, "'when' must be a mapping");
       return;
     }
 
@@ -422,7 +422,7 @@ public sealed class ConfigParser {
           break;
 
         default:
-          Warn(pair.Key, $"unknown situation '{Name(pair.Key)}', use 'general', 'sleep', 'biome', 'death' or 'enemy'");
+          Warn(ProblemCodes.UnknownName, pair.Key, $"unknown situation '{Name(pair.Key)}', use 'general', 'sleep', 'biome', 'death' or 'enemy'");
           break;
       }
     }
@@ -435,7 +435,7 @@ public sealed class ConfigParser {
     }
 
     if (node is not YamlMappingNode mapping) {
-      Warn(node, $"'{situation}' must be a mapping of names to entries");
+      Warn(ProblemCodes.InvalidShape, node, $"'{situation}' must be a mapping of names to entries");
       return;
     }
 
@@ -450,7 +450,7 @@ public sealed class ConfigParser {
             candidate => string.Equals(candidate, name, StringComparison.OrdinalIgnoreCase));
 
         if (known == null) {
-          Warn(pair.Key, $"unknown {situation} name '{name}', known: {string.Join(", ", knownNames)}");
+          Warn(ProblemCodes.UnknownName, pair.Key, $"unknown {situation} name '{name}', known: {string.Join(", ", knownNames)}");
           continue;
         }
 
@@ -458,7 +458,7 @@ public sealed class ConfigParser {
       }
 
       if (target.ContainsKey(name)) {
-        Warn(pair.Key, $"duplicate {situation} name '{name}', ignored");
+        Warn(ProblemCodes.DuplicateName, pair.Key, $"duplicate {situation} name '{name}', ignored");
         continue;
       }
 
@@ -479,7 +479,7 @@ public sealed class ConfigParser {
       return true;
     }
 
-    Warn(node, $"{where}: use 'random' or 'sequential', got '{value}'");
+    Warn(ProblemCodes.InvalidOption, node, $"{where}: use 'random' or 'sequential', got '{value}'");
     order = default;
     return false;
   }
@@ -522,7 +522,7 @@ public sealed class ConfigParser {
     }
 
     if (node is not YamlMappingNode mapping) {
-      Warn(node, $"{listName}: an entry must be an image path or a mapping, ignored");
+      Warn(ProblemCodes.InvalidShape, node, $"{listName}: an entry must be an image path or a mapping, ignored");
       return null;
     }
 
@@ -537,19 +537,19 @@ public sealed class ConfigParser {
     if (textNode is YamlMappingNode textMapping) {
       foreach (KeyValuePair<YamlNode, YamlNode> pair in textMapping.Children) {
         if (!LanguageText.TryCode(Name(pair.Key), out string code)) {
-          Warn(pair.Key, $"{listName}: unknown text language '{Name(pair.Key)}'");
+          Warn(ProblemCodes.UnknownName, pair.Key, $"{listName}: unknown text language '{Name(pair.Key)}'");
         } else if (string.IsNullOrWhiteSpace(Scalar(pair.Value))) {
-          Warn(pair.Value, $"{listName}: text for '{code}' must be a non-empty string");
+          Warn(ProblemCodes.EmptyText, pair.Value, $"{listName}: text for '{code}' must be a non-empty string");
         } else {
           translations[code] = Scalar(pair.Value);
         }
       }
     } else if (!IsNull(textNode) && textNode is not YamlScalarNode) {
-      Warn(textNode, $"{listName}: 'text' must be a string or a language mapping");
+      Warn(ProblemCodes.InvalidShape, textNode, $"{listName}: 'text' must be a string or a language mapping");
     }
 
     if (IsNull(imageNode) && string.IsNullOrEmpty(text) && translations.Count == 0) {
-      Warn(node, $"{listName}: an entry needs an 'image' or a 'text', ignored");
+      Warn(ProblemCodes.InvalidEntry, node, $"{listName}: an entry needs an 'image' or a 'text', ignored");
       return null;
     }
 
@@ -582,13 +582,13 @@ public sealed class ConfigParser {
 
   bool ParseConditions(YamlNode node, List<Condition> conditions, string where) {
     if (node is not YamlMappingNode mapping) {
-      Warn(node, $"{where}: expected a mapping, entry ignored");
+      Warn(ProblemCodes.InvalidShape, node, $"{where}: expected a mapping, entry ignored");
       return false;
     }
 
     foreach (KeyValuePair<YamlNode, YamlNode> pair in mapping.Children) {
       if (!Conditions.TryParseKey(Name(pair.Key), out ConditionKind kind, out bool negated)) {
-        Warn(pair.Key, $"{where}: unknown condition '{Name(pair.Key)}', entry ignored");
+        Warn(ProblemCodes.UnknownName, pair.Key, $"{where}: unknown condition '{Name(pair.Key)}', entry ignored");
         return false;
       }
 
@@ -598,7 +598,7 @@ public sealed class ConfigParser {
         string name = Scalar(item)?.Trim();
 
         if (string.IsNullOrEmpty(name)) {
-          Warn(item, $"{where}: '{Name(pair.Key)}' needs a name, entry ignored");
+          Warn(ProblemCodes.MissingValue, item, $"{where}: '{Name(pair.Key)}' needs a name, entry ignored");
           return false;
         }
 
@@ -622,7 +622,7 @@ public sealed class ConfigParser {
       return defaults;
     }
     if (node is not YamlMappingNode mapping) {
-      Warn(node, "defaults: expected a mapping");
+      Warn(ProblemCodes.InvalidShape, node, "defaults: expected a mapping");
       return defaults;
     }
 
@@ -652,7 +652,7 @@ public sealed class ConfigParser {
     }
 
     if (node is not YamlMappingNode mapping) {
-      Warn(node, $"defaults.{section}: expected a mapping; built-in values used");
+      Warn(ProblemCodes.InvalidShape, node, $"defaults.{section}: expected a mapping; built-in values used");
       return;
     }
 
@@ -664,7 +664,7 @@ public sealed class ConfigParser {
           candidate => string.Equals(candidate.Name, key, StringComparison.OrdinalIgnoreCase));
 
       if (property == null) {
-        Warn(pair.Key, $"defaults.{section}: unknown key '{key}'");
+        Warn(ProblemCodes.UnknownKey, pair.Key, $"defaults.{section}: unknown key '{key}'");
         continue;
       }
 
@@ -699,7 +699,7 @@ public sealed class ConfigParser {
   VignetteSettings ParseVignette(YamlNode node, string where) {
     if (node == null) return null;
     if (node is not YamlMappingNode mapping) {
-      Warn(node, $"{where}: expected a mapping; effect ignored");
+      Warn(ProblemCodes.InvalidShape, node, $"{where}: expected a mapping; effect ignored");
       return null;
     }
 
@@ -712,7 +712,7 @@ public sealed class ConfigParser {
           && Length.TryParse(text, out Length length) && length.Value >= 0f && length.Value <= 100f) {
         result.Size = length.Value;
       } else {
-        Warn(sizeNode, $"{where}: 'size' must be from 0% to 100%");
+        Warn(ProblemCodes.InvalidNumber, sizeNode, $"{where}: 'size' must be from 0% to 100%");
       }
     }
 
@@ -723,7 +723,7 @@ public sealed class ConfigParser {
   MaskSettings ParseMask(YamlNode node, string where) {
     if (node == null) return null;
     if (node is not YamlMappingNode mapping) {
-      Warn(node, $"{where}: expected a mapping; effect ignored");
+      Warn(ProblemCodes.InvalidShape, node, $"{where}: expected a mapping; effect ignored");
       return null;
     }
 
@@ -741,7 +741,7 @@ public sealed class ConfigParser {
       return value;
     }
 
-    Warn(node, $"{where}: '{key}' must be a number from 0 to 1");
+    Warn(ProblemCodes.InvalidNumber, node, $"{where}: '{key}' must be a number from 0 to 1");
     return null;
   }
 
@@ -754,7 +754,7 @@ public sealed class ConfigParser {
       return value;
     }
 
-    Warn(node, $"{key}: invalid color, use #RRGGBB or #RRGGBBAA; built-in value used");
+    Warn(ProblemCodes.InvalidColor, node, $"{key}: invalid color, use #RRGGBB or #RRGGBBAA; built-in value used");
     return fallback;
   }
 
@@ -767,7 +767,7 @@ public sealed class ConfigParser {
       return value;
     }
 
-    Warn(node, $"{key}: must be true or false; built-in value used");
+    Warn(ProblemCodes.InvalidBoolean, node, $"{key}: must be true or false; built-in value used");
     return fallback;
   }
 
@@ -781,7 +781,7 @@ public sealed class ConfigParser {
       return value;
     }
 
-    Warn(node, $"{key}: invalid number; built-in value used");
+    Warn(ProblemCodes.InvalidNumber, node, $"{key}: invalid number; built-in value used");
     return fallback;
   }
 
@@ -795,7 +795,7 @@ public sealed class ConfigParser {
       return value;
     }
 
-    Warn(node, $"{key}: must be an integer from {min} to {max}; built-in value used");
+    Warn(ProblemCodes.InvalidNumber, node, $"{key}: must be an integer from {min} to {max}; built-in value used");
     return fallback;
   }
 
@@ -808,7 +808,7 @@ public sealed class ConfigParser {
     }
 
     if (node is not YamlMappingNode mapping) {
-      Warn(node, $"{where}: expected a mapping");
+      Warn(ProblemCodes.InvalidShape, node, $"{where}: expected a mapping");
       return placement;
     }
 
@@ -831,7 +831,7 @@ public sealed class ConfigParser {
   AnimationSpec LegacyZoom(YamlNode node) {
     if (IsNull(node)) return null;
     if (node is not YamlMappingNode mapping) {
-      Warn(node, "defaults.zoom: expected a mapping");
+      Warn(ProblemCodes.InvalidShape, node, "defaults.zoom: expected a mapping");
       return null;
     }
     WarnUnknownKeys(mapping, ["enabled", "amount", "seconds"], "defaults.zoom");
@@ -843,7 +843,7 @@ public sealed class ConfigParser {
         && !float.IsNaN(seconds) && !float.IsInfinity(seconds) && seconds > 0f) {
       return new() { Speed = 15f / seconds };
     }
-    Warn(secondsNode, "defaults.zoom: 'seconds' must be positive");
+    Warn(ProblemCodes.InvalidNumber, secondsNode, "defaults.zoom: 'seconds' must be positive");
     return null;
   }
 
@@ -852,11 +852,11 @@ public sealed class ConfigParser {
     if (node is YamlScalarNode) {
       string name = Scalar(node)?.Trim();
       if (!string.IsNullOrEmpty(name)) return new() { Idle = name };
-      Warn(node, $"{where}: preset name cannot be empty");
+      Warn(ProblemCodes.MissingValue, node, $"{where}: preset name cannot be empty");
       return null;
     }
     if (node is not YamlMappingNode map) {
-      Warn(node, $"{where}: expected a preset name or phase mapping");
+      Warn(ProblemCodes.InvalidShape, node, $"{where}: expected a preset name or phase mapping");
       return null;
     }
     WarnUnknownKeys(map, ["enter", "idle", "exit", "speed", "origin"], where);
@@ -870,7 +870,7 @@ public sealed class ConfigParser {
     if (!IsNull(speedNode)) {
       if (float.TryParse(Scalar(speedNode), NumberStyles.Float, CultureInfo.InvariantCulture, out float speed)
           && !float.IsNaN(speed) && !float.IsInfinity(speed) && speed > 0f) spec.Speed = speed;
-      else Warn(speedNode, $"{where}: speed must be positive");
+      else Warn(ProblemCodes.InvalidNumber, speedNode, $"{where}: speed must be positive");
     }
     return spec;
 
@@ -879,7 +879,7 @@ public sealed class ConfigParser {
       if (IsNull(phase)) return null;
       string name = Scalar(phase)?.Trim();
       if (!string.IsNullOrEmpty(name)) return name;
-      Warn(phase, $"{where}: '{key}' must be a preset name");
+      Warn(ProblemCodes.MissingValue, phase, $"{where}: '{key}' must be a preset name");
       return null;
     }
   }
@@ -899,7 +899,7 @@ public sealed class ConfigParser {
       };
 
       if (box.Width == null && box.Height == null) {
-        Warn(node, $"{where}: 'fit' needs 'width' and/or 'height'");
+        Warn(ProblemCodes.MissingValue, node, $"{where}: 'fit' needs 'width' and/or 'height'");
         return null;
       }
 
@@ -915,7 +915,7 @@ public sealed class ConfigParser {
       return new() { Mode = mode };
     }
 
-    Warn(node, $"{where}: invalid fit '{text}', use cover, contain, stretch, none or {{ width, height }}");
+    Warn(ProblemCodes.InvalidOption, node, $"{where}: invalid fit '{text}', use cover, contain, stretch, none or {{ width, height }}");
     return null;
   }
 
@@ -930,7 +930,7 @@ public sealed class ConfigParser {
     }
 
     if (node is not YamlMappingNode mapping) {
-      Warn(node, $"{where}: 'position' must be an anchor name or a mapping");
+      Warn(ProblemCodes.InvalidShape, node, $"{where}: 'position' must be an anchor name or a mapping");
       return;
     }
 
@@ -954,7 +954,7 @@ public sealed class ConfigParser {
       return anchor;
     }
 
-    Warn(node, $"{where}: invalid anchor '{text}', use center, left, right, top, bottom or e.g. top-left");
+    Warn(ProblemCodes.InvalidOption, node, $"{where}: invalid anchor '{text}', use center, left, right, top, bottom or e.g. top-left");
     return null;
   }
 
@@ -966,7 +966,7 @@ public sealed class ConfigParser {
     if (!float.TryParse(Scalar(node), NumberStyles.Float, CultureInfo.InvariantCulture, out float value)
         || value < 0f
         || value > 1f) {
-      Warn(node, $"{where}: 'opacity' must be a number from 0 to 1");
+      Warn(ProblemCodes.InvalidNumber, node, $"{where}: 'opacity' must be a number from 0 to 1");
       return null;
     }
 
@@ -979,7 +979,7 @@ public sealed class ConfigParser {
     }
 
     if (node is not YamlMappingNode mapping) {
-      Warn(node, $"{where}: 'fade' must be a mapping");
+      Warn(ProblemCodes.InvalidShape, node, $"{where}: 'fade' must be a mapping");
       return null;
     }
 
@@ -989,7 +989,7 @@ public sealed class ConfigParser {
     Fade fade = new() { Sides = ParseSides(Child(mapping, "sides"), fadeWhere) };
 
     if (fade.Sides == Sides.None) {
-      Warn(node, $"{fadeWhere} needs 'sides' (left, right, top, bottom or all), ignored");
+      Warn(ProblemCodes.MissingValue, node, $"{fadeWhere} needs 'sides' (left, right, top, bottom or all), ignored");
       return null;
     }
 
@@ -999,7 +999,7 @@ public sealed class ConfigParser {
       if (ColorValue.TryParse(Scalar(color), out ColorValue value)) {
         fade.Color = value;
       } else {
-        Warn(color, $"{fadeWhere}: invalid color '{Scalar(color)}', use #RRGGBB or #RRGGBBAA");
+        Warn(ProblemCodes.InvalidColor, color, $"{fadeWhere}: invalid color '{Scalar(color)}', use #RRGGBB or #RRGGBBAA");
       }
     }
 
@@ -1012,7 +1012,7 @@ public sealed class ConfigParser {
           && Enum.IsDefined(typeof(FadeCurve), value)) {
         fade.Curve = value;
       } else {
-        Warn(curve, $"{fadeWhere}: invalid curve '{Scalar(curve)}', use linear or smooth");
+        Warn(ProblemCodes.InvalidOption, curve, $"{fadeWhere}: invalid curve '{Scalar(curve)}', use linear or smooth");
       }
     }
 
@@ -1032,7 +1032,7 @@ public sealed class ConfigParser {
           && Enum.IsDefined(typeof(Sides), side)) {
         sides |= side;
       } else {
-        Warn(item, $"{where}: invalid side '{text}'");
+        Warn(ProblemCodes.InvalidOption, item, $"{where}: invalid side '{text}'");
       }
     }
 
@@ -1047,12 +1047,12 @@ public sealed class ConfigParser {
     string text = Scalar(node);
 
     if (!Length.TryParse(text, out Length length)) {
-      Warn(node, $"{where}: invalid {key} '{text}', use a number with % or px");
+      Warn(ProblemCodes.InvalidNumber, node, $"{where}: invalid {key} '{text}', use a number with % or px");
       return null;
     }
 
     if (!allowNegative && length.Value < 0f) {
-      Warn(node, $"{where}: {key} must not be negative");
+      Warn(ProblemCodes.InvalidNumber, node, $"{where}: {key} must not be negative");
       return null;
     }
 
@@ -1068,13 +1068,13 @@ public sealed class ConfigParser {
       return value;
     }
 
-    Warn(node, $"{where}: '{key}' must be true or false");
+    Warn(ProblemCodes.InvalidBoolean, node, $"{where}: '{key}' must be true or false");
     return null;
   }
 
   bool CheckImage(YamlNode node, string path, string where) {
     if (string.IsNullOrWhiteSpace(path)) {
-      Warn(node, $"{where}: empty image path, ignored");
+      Warn(ProblemCodes.InvalidPath, node, $"{where}: empty image path, ignored");
       return false;
     }
 
@@ -1083,24 +1083,24 @@ public sealed class ConfigParser {
 
     try {
       if (!IsSafeRelativePath(normalized)) {
-        Warn(node, $"{where}: image path '{path}' must be relative to the config folder, ignored");
+        Warn(ProblemCodes.InvalidPath, node, $"{where}: image path '{path}' must be relative to the config folder, ignored");
         return false;
       }
 
       extension = Path.GetExtension(normalized);
     } catch (ArgumentException) {
-      Warn(node, $"{where}: image path '{path}' contains invalid characters, ignored");
+      Warn(ProblemCodes.InvalidPath, node, $"{where}: image path '{path}' contains invalid characters, ignored");
       return false;
     }
 
     if (!KnownNames.ImageExtensions.Any(
         known => string.Equals(known, extension, StringComparison.OrdinalIgnoreCase))) {
-      Warn(node, $"{where}: unsupported image type '{path}', use {string.Join(", ", KnownNames.ImageExtensions)}");
+      Warn(ProblemCodes.UnsupportedFileType, node, $"{where}: unsupported image type '{path}', use {string.Join(", ", KnownNames.ImageExtensions)}");
       return false;
     }
 
     if (!_assetExists(normalized)) {
-      Warn(node, $"{where}: image '{path}' not found, ignored");
+      Warn(ProblemCodes.InvalidPath, node, $"{where}: image '{path}' not found, ignored");
       return false;
     }
 
@@ -1112,7 +1112,7 @@ public sealed class ConfigParser {
 
     string path = Scalar(node);
     if (string.IsNullOrWhiteSpace(path)) {
-      Warn(node, $"{where}: '{key}' needs an audio path, ignored");
+      Warn(ProblemCodes.MissingValue, node, $"{where}: '{key}' needs an audio path, ignored");
       return null;
     }
 
@@ -1120,22 +1120,22 @@ public sealed class ConfigParser {
     string extension;
     try {
       if (!IsSafeRelativePath(normalized)) {
-        Warn(node, $"{where}: audio path '{path}' must be relative to the config folder, ignored");
+        Warn(ProblemCodes.InvalidPath, node, $"{where}: audio path '{path}' must be relative to the config folder, ignored");
         return null;
       }
       extension = Path.GetExtension(normalized);
     } catch (ArgumentException) {
-      Warn(node, $"{where}: invalid audio path '{path}', ignored");
+      Warn(ProblemCodes.InvalidPath, node, $"{where}: invalid audio path '{path}', ignored");
       return null;
     }
 
     if (!KnownNames.AudioExtensions.Any(known => string.Equals(known, extension, StringComparison.OrdinalIgnoreCase))) {
-      Warn(node, $"{where}: unsupported audio type '{path}', use .ogg or .wav");
+      Warn(ProblemCodes.UnsupportedFileType, node, $"{where}: unsupported audio type '{path}', use .ogg or .wav");
       return null;
     }
 
     if (!_assetExists(normalized)) {
-      Warn(node, $"{where}: audio '{path}' not found, ignored");
+      Warn(ProblemCodes.InvalidPath, node, $"{where}: audio '{path}' not found, ignored");
       return null;
     }
 
@@ -1155,7 +1155,7 @@ public sealed class ConfigParser {
 
     foreach (Layout layout in config.Layouts.Values) {
       if (!layout.ShowsEntryImage) {
-        Warn(0, $"layout '{layout.Name}' has no 'image: entry' layer, so entry images are not shown with it");
+        Warn(ProblemCodes.NoEntryLayer, 0, $"layout '{layout.Name}' has no 'image: entry' layer, so entry images are not shown with it");
       }
     }
   }
@@ -1165,7 +1165,7 @@ public sealed class ConfigParser {
       return name;
     }
 
-    Warn(0, $"{where}: unknown layout '{name}', the default layout is used");
+    Warn(ProblemCodes.UnknownLayout, 0, $"{where}: unknown layout '{name}', the default layout is used");
     return null;
   }
 
@@ -1178,14 +1178,14 @@ public sealed class ConfigParser {
       return sequence.Children;
     }
 
-    Warn(node, $"{where} must be a list");
+    Warn(ProblemCodes.InvalidShape, node, $"{where} must be a list");
     return [];
   }
 
   void WarnUnknownKeys(YamlMappingNode mapping, IReadOnlyCollection<string> allowed, string where) {
     foreach (YamlNode key in mapping.Children.Keys) {
       if (!allowed.Contains(Key(key))) {
-        Warn(key, $"{where}: unknown key '{Name(key)}'");
+        Warn(ProblemCodes.UnknownKey, key, $"{where}: unknown key '{Name(key)}'");
       }
     }
   }
@@ -1233,12 +1233,12 @@ public sealed class ConfigParser {
         && !normalized.Split('/').Any(segment => segment == ".." || segment.IndexOf(':') >= 0);
   }
 
-  void Warn(YamlNode node, string message) {
-    Warn(node == null ? 0 : (int) node.Start.Line, message, Scalar(node));
+  void Warn(string code, YamlNode node, string message) {
+    Warn(code, node == null ? 0 : (int) node.Start.Line, message, Scalar(node));
   }
 
-  void Warn(long line, string message, string value = null) {
-    _result.Problems.Add((line, message));
+  void Warn(string code, long line, string message, string value = null) {
+    _result.Problems.Add((line, code, message));
     _result.Warnings.Add(LogContext.Message("Configuration warning.",
         ("file", "loadingscreen.yaml"), ("line", line), ("detail", message), ("value", value)));
   }

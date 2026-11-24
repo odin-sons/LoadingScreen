@@ -27,17 +27,25 @@ Unit tests for the Unity-free code (config parser, selection, placement math) ne
 dotnet test tests/LoadingScreen.Tests
 ```
 
-The config editor in `site/` is plain ES modules with no build step. Its validator mirrors `ConfigParser`;
-both run over the YAML files in `tests/fixtures/config`, and each `.expected` file lists the parser's
-problems (`line<TAB>message`). After a parser change, regenerate the lists with the C# parser and check
-that the site still agrees:
+The config editor in `site/` is plain ES modules with no build step. `SchemaFieldAttribute` on the
+model types describes YAML keys, values, and ranges. `ConfigSchemaGenerator` in the test project writes
+`site/data/config.schema.json`; the schema staleness test fails when the checked-in file differs.
+The site reads key sets, choices, language codes, and parser problem-code rules from this schema.
+
+The hand-written site validator mirrors `ConfigParser`. Both run over the YAML files in
+`tests/fixtures/config`. Each `.expected` file lists parser problems as
+`line<TAB>code<TAB>message`. Stable codes and their matching rules live in
+`src/Model/ProblemCodes.cs`. Add a shared fixture for each new code and keep user-facing messages
+in sync. To regenerate the schema and expected lists, then check both runtimes:
 
 ```sh
-LOADINGSCREEN_UPDATE_FIXTURES=1 dotnet test tests/LoadingScreen.Tests --filter SiteConformance
+LOADINGSCREEN_UPDATE_FIXTURES=1 dotnet test tests/LoadingScreen.Tests
+dotnet test tests/LoadingScreen.Tests
 node --test "tests/site/*.test.mjs"
 ```
 
-`SiteConformanceTests` also checks the name lists in `site/data/options.json` against the parser.
+`SiteConformanceTests` checks schema names, parser enum values, default sections, keys, and fixture
+coverage against the C# parser. Recheck the generated schema whenever an annotated config option changes.
 
 GitHub Actions (`.github/workflows/ci.yml`) runs both test suites and the binary and version checks on every push and
 pull request. The Pages deploy runs only after they pass.

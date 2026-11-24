@@ -1,11 +1,13 @@
 import { parseSource, bindModel, canonicalizeKeys, define, renameKey, writeSource, MAX_SOURCE_LENGTH } from './yaml-model.mjs';
 import { validate } from './validate.mjs';
+import { schemaOptions } from './schema-data.mjs';
 import { drawPreview } from './preview.mjs';
 
 const $ = (selector) => document.querySelector(selector);
 const form = $('#form');
 const yamlBox = $('#yaml');
-const options = await loadOptions();
+const schema = await loadSchema();
+const options = schemaOptions(schema);
 let config = {
   defaults: { background: '#000000', place: { fit: 'contain', position: { anchor: 'center' } } },
   layouts: { 'my-layout': { layers: [
@@ -24,13 +26,13 @@ let sourceDoc = null;
 let focusHint = null;
 let announceTimer = 0;
 
-async function loadOptions() {
+async function loadSchema() {
   try {
-    const response = await fetch('./data/options.json');
+    const response = await fetch('./data/config.schema.json');
     if (!response.ok) throw new Error('HTTP ' + response.status);
     return await response.json();
   } catch (error) {
-    console.error('Editor: data/options.json could not be loaded', error);
+    console.error('Editor: data/config.schema.json could not be loaded', error);
     $('#edit-status').textContent = 'Not loaded';
     form.replaceChildren(el('p', 'section-note', 'The editor data could not be loaded (' + error.message + '). Reload the page; if you opened the file directly, serve the folder over HTTP instead.'));
     yamlBox.disabled = true;
@@ -168,7 +170,7 @@ function placeEditor(parent, owner, title, attach = () => {}) {
   const fit = place.fit;
   const fitMode = isMapping(fit) ? 'box' : choice(fit);
   const fields = grid(box);
-  field(fields, 'Fit', fitMode, (v) => { keep(); if (!v) delete place.fit; else place.fit = v === 'box' ? { width: '50%' } : v; render(); }, { values: ['', 'contain', 'cover', 'stretch', 'none', 'box'] });
+  field(fields, 'Fit', fitMode, (v) => { keep(); if (!v) delete place.fit; else place.fit = v === 'box' ? { width: '50%' } : v; render(); }, { values: ['', ...schema.$defs.FitMode.enum, schema.$defs.Fit['x-formName']] });
   if (fitMode === 'box') {
     field(fields, 'Box width', fit.width, (v) => { keep(); set(fit, 'width', v); }, { placeholder: '50%' });
     field(fields, 'Box height', fit.height, (v) => { keep(); set(fit, 'height', v); }, { placeholder: '250px' });
@@ -185,7 +187,7 @@ function placeEditor(parent, owner, title, attach = () => {}) {
   field(fadeFields, 'Sides', listText(fade.sides, ', '), (v) => { keep(); if (!v) delete place.fade; else { place.fade = fade; fade.sides = v.split(',').map((s) => s.trim()).filter(Boolean); } }, { placeholder: 'bottom, left' });
   field(fadeFields, 'Fade color', fade.color, (v) => { keepFade(); set(fade, 'color', v); }, { placeholder: '#000000' });
   field(fadeFields, 'Fade size', fade.size, (v) => { keepFade(); set(fade, 'size', v); }, { placeholder: '15%' });
-  field(fadeFields, 'Curve', choice(fade.curve), (v) => { keepFade(); set(fade, 'curve', v); }, { values: ['', 'smooth', 'linear'] });
+  field(fadeFields, 'Curve', choice(fade.curve), (v) => { keepFade(); set(fade, 'curve', v); }, { values: ['', ...schema.$defs.FadeCurve.enum] });
 }
 
 function animationEditor(parent, owner, attach = () => {}) {
@@ -218,11 +220,11 @@ function defaultsForm() {
   const attach = () => { config.defaults = defaults; };
   field(fields, 'Background', defaults.background, (v) => { attach(); set(defaults, 'background', v); }, { placeholder: '#000000' });
   field(fields, 'Image tint', defaults.tint, (v) => { attach(); set(defaults, 'tint', v); }, { placeholder: '#FFFFFF' });
-  field(fields, 'Global entry order', choice(config.order), (v) => set(config, 'order', v), { values: ['', 'random', 'sequential'] });
+  field(fields, 'Global entry order', choice(config.order), (v) => set(config, 'order', v), { values: ['', ...schema.$defs.PickOrder.enum] });
   placeEditor(form, defaults, 'Default placement', attach);
   animationEditor(form, defaults, attach);
   effectsEditor(form, defaults, attach);
-  ['tip', 'continuePrompt', 'separator', 'spinner'].forEach((name) => {
+  Object.keys(options.defaultSections).forEach((name) => {
     const section = group(form, name === 'continuePrompt' ? 'Continue prompt' : name[0].toUpperCase() + name.slice(1));
     const object = mappingOr(defaults[name]);
     const keep = () => { attach(); defaults[name] = object; };
@@ -248,7 +250,7 @@ function languageCode(key) {
   return name ? options.languages[name] : key;
 }
 
-const LAYER_KINDS = ['image', 'text', 'spinner', 'progress', 'color'];
+const LAYER_KINDS = options.layerKinds;
 
 function layerKind(layer) {
   return LAYER_KINDS.find((name) => Object.hasOwn(layer, name)) ?? 'image';
@@ -274,15 +276,15 @@ function layerForm(parent, layer, layers, index) {
   field(fields, 'Layer ID', layer.id, (v) => set(layer, 'id', v), { placeholder: 'optional' });
   if (kind === 'image') field(fields, 'Image path or keyword', listText(layer.image, '\n'), (v) => { layer.image = v.includes('\n') ? v.split('\n').map((s) => s.trim()).filter(Boolean) : v; }, { multiline: true, wide: true, placeholder: 'entry, separator, or images/logo.png\nOne path per line for alternatives' });
   if (kind === 'text') {
-    field(fields, 'Text source', choice(layer.text), (v) => { layer.text = v; }, { values: ['caption', 'prompt'] });
+    field(fields, 'Text source', choice(layer.text), (v) => { layer.text = v; }, { values: schema.$defs.TextSource.enum });
     field(fields, 'Font size', layer.size, (v) => set(layer, 'size', v, true), { type: 'number' });
     field(fields, 'Text color', layer.color, (v) => set(layer, 'color', v), { placeholder: '#FFFFFF or auto' });
     field(fields, 'Box background', layer.background, (v) => set(layer, 'background', v), { placeholder: '#00000099 or auto' });
-    field(fields, 'Align', choice(layer.align), (v) => set(layer, 'align', v), { values: ['', 'left', 'center', 'right'] });
+    field(fields, 'Align', choice(layer.align), (v) => set(layer, 'align', v), { values: ['', ...schema.$defs.TextAlign.enum] });
   }
-  if (kind === 'spinner') field(fields, 'Spinner style or image path', layer.spinner, (v) => set(layer, 'spinner', v), { list: ['hammer', 'ring', 'dots'] });
+  if (kind === 'spinner') field(fields, 'Spinner style or image path', layer.spinner, (v) => set(layer, 'spinner', v), { list: schema.$defs.SpinnerStyle.enum });
   if (kind === 'progress') {
-    field(fields, 'Progress style', choice(layer.progress), (v) => set(layer, 'progress', v), { values: ['bar', 'ring', 'percent'] });
+    field(fields, 'Progress style', choice(layer.progress), (v) => set(layer, 'progress', v), { values: schema.$defs.ProgressStyle.enum });
     field(fields, 'Size', layer.size, (v) => set(layer, 'size', v, true), { type: 'number' });
     field(fields, 'Color', layer.color, (v) => set(layer, 'color', v));
   }
@@ -401,7 +403,7 @@ function listForm(parent, bucket, name, named = false) {
   }, { list: bucket === 'biome' ? options.biomes : bucket === 'death' ? options.deathCauses : [], onChange: true });
   if (raw !== null && raw !== undefined && typeof raw !== 'string' && !Array.isArray(raw) && !isMapping(raw)) { sourceOnly(item, 'list'); return; }
   field(fields, 'List layout', list.layout, (v) => { keepList(); set(list, 'layout', v); }, { list: Object.keys(mappingOr(config.layouts)), placeholder: 'Use default' });
-  field(fields, 'Order', choice(list.order), (v) => { keepList(); set(list, 'order', v); }, { values: ['', 'random', 'sequential'] });
+  field(fields, 'Order', choice(list.order), (v) => { keepList(); set(list, 'order', v); }, { values: ['', ...schema.$defs.PickOrder.enum] });
   field(fields, 'Looping sound', list.sound, (v) => { keepList(); set(list, 'sound', v); }, { placeholder: 'music/forest.ogg' });
   const entriesBox = group(item, 'Entries');
   labelled(button(entriesBox, '+ Add entry', () => { keepEntries(); entries.push({ image: 'screens/image.jpg' }); render(); sync(); }), 'Add entry to ' + (named ? bucket + ' ' + name : name));
@@ -495,7 +497,7 @@ function sync() {
   sourceDirty = false;
   $('#edit-status').textContent = 'Synced';
   $('#source-note').hidden = true;
-  showProblems(validate(parsed, options));
+  showProblems(validate(parsed, schema));
   updatePreview();
 }
 
@@ -517,13 +519,13 @@ function applySource() {
   }
   config = result.config;
   sourceDoc = result.doc;
-  const renamed = canonicalizeKeys(config, options.conditions);
+  const renamed = canonicalizeKeys(config, schema);
   $('#source-note').hidden = !renamed.length;
   $('#source-note').textContent = renamed.length ? 'The form uses the documented key spelling (' + renamed.join(', ') + '); the source is updated on the next form edit.' : '';
   sourceDirty = false;
   lockForm(false);
   $('#edit-status').textContent = 'Loaded';
-  showProblems(validate(result, options));
+  showProblems(validate(result, schema));
   render();
   return true;
 }

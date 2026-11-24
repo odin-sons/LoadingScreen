@@ -3,13 +3,18 @@ namespace LoadingScreen.Model;
 using System;
 
 public sealed class VignetteSettings {
+  [SchemaField("color", "Vignette color.")]
   public ColorValue? Color { get; set; }
+  [SchemaField("size", "Outer size in percent.", Form = "percent", Minimum = 0, Maximum = 100)]
   public float? Size { get; set; }
+  [SchemaField("strength", "Vignette strength.", Minimum = 0, Maximum = 1)]
   public float? Strength { get; set; }
 }
 
 public sealed class MaskSettings {
+  [SchemaField("color", "Mask color.")]
   public ColorValue? Color { get; set; }
+  [SchemaField("opacity", "Mask opacity.", Minimum = 0, Maximum = 1)]
   public float? Opacity { get; set; }
 }
 

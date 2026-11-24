@@ -64,7 +64,7 @@ export function toModel(node) {
 function yamlError(error, lineOf) {
   const line = error.linePos?.[0]?.line ?? lineOf(error) ?? 1;
   const message = String(error.message || error).split('\n')[0].replace(/ at line \d+, column \d+:?$/, '');
-  if (/call stack|too much recursion/i.test(message)) return { line, message: 'YAML is nested deeper than ' + MAX_NESTING_DEPTH + ' levels, config ignored' };
+  if (/call stack|too much recursion/i.test(message)) return { line: 0, message: 'YAML is nested deeper than ' + MAX_NESTING_DEPTH + ' levels, config ignored' };
   return { line, message: 'invalid YAML, config ignored: ' + message };
 }
 
@@ -81,7 +81,7 @@ export function parseSource(text) {
   }
   if (doc.errors.length) return { error: yamlError(doc.errors[0], lineOf) };
   const structure = checkStructure(doc.contents, lineOf);
-  if (structure) return { error: { line: structure.line ?? 1, message: (structure.invalid ? 'invalid YAML, config ignored: ' + structure.message : structure.message + ', config ignored') } };
+  if (structure) return { error: { line: structure.invalid ? structure.line ?? 1 : 0, message: (structure.invalid ? 'invalid YAML, config ignored: ' + structure.message : structure.message + ', config ignored') } };
   const root = doc.contents;
   if (!isNullNode(root) && !isMap(root)) return { error: { line: lineOf(root) ?? 1, message: 'the top level must be a mapping, config ignored' } };
   return { doc, lineOf, config: isMap(root) ? toModel(root) : {} };
@@ -93,51 +93,41 @@ export function renameKey(object, from, to) {
   for (const [name, value] of entries) define(object, name, value);
 }
 
-const PLACE = { fit: { width: {}, height: {} }, position: { anchor: {}, x: {}, y: {} }, opacity: {}, fade: { sides: {}, color: {}, size: {}, curve: {} }, animate: {} };
-const ANIMATION = { enter: {}, idle: {}, exit: {}, speed: {}, origin: {} };
-const VIGNETTE = { color: {}, size: {}, strength: {} };
-const MASK = { color: {}, opacity: {} };
-const TEXT_SECTION = { x: {}, bottom: {}, size: {}, color: {} };
-const LAYER = { id: {}, color: {}, image: {}, text: {}, spinner: {}, progress: {}, size: {}, align: {}, background: {}, place: PLACE, animation: ANIMATION };
-const LAYOUT = { layers: { '[]': LAYER }, sound: {}, showSleepUi: {}, vignette: VIGNETTE, mask: MASK, place: PLACE };
-
-function schema(conditions) {
-  const when = Object.fromEntries(conditions.map((condition) => [condition, {}]));
-  const entry = { image: {}, sound: {}, voice: {}, text: {}, layout: {}, place: PLACE, when };
-  const list = { layout: {}, sound: {}, order: {}, entries: { '[]': entry }, '[]': entry };
-  const named = { '*': list };
-  return {
-    defaults: {
-      place: PLACE, background: {}, tint: {}, vignette: VIGNETTE, mask: MASK, animation: ANIMATION,
-      tip: TEXT_SECTION, continuePrompt: TEXT_SECTION, separator: { show: {}, x: {}, bottom: {}, onLayouts: {} },
-      spinner: { center: {}, x: {}, bottom: {} }, zoom: { enabled: {}, amount: {}, seconds: {} }
-    },
-    layouts: { '*': LAYOUT },
-    order: {},
-    when: { general: list, sleep: list, biome: named, death: named, enemy: named }
-  };
+function resolveSchema(root, schema, value) {
+  while (schema?.$ref) schema = root.$defs[schema.$ref.slice('#/$defs/'.length)];
+  if (schema?.oneOf) {
+    const wanted = Array.isArray(value) ? 'array' : value !== null && typeof value === 'object' ? 'object' : 'string';
+    schema = schema.oneOf.map((part) => resolveSchema(root, part, value))
+      .find((part) => part?.type === wanted) ?? schema.oneOf[0];
+  }
+  return schema;
 }
 
-export function canonicalizeKeys(config, conditions) {
+export function canonicalizeKeys(config, schema) {
   const renamed = [];
   const walk = (value, shape) => {
+    shape = resolveSchema(schema, shape, value);
     if (Array.isArray(value)) {
-      if (shape['[]']) value.forEach((item) => walk(item, shape['[]']));
+      value.forEach((item) => walk(item, shape?.items));
       return;
     }
     if (value === null || typeof value !== 'object') return;
+    const properties = shape?.properties ?? {};
     for (const name of Object.keys(value)) {
-      if (shape['*']) { walk(value[name], shape['*']); continue; }
-      const canonical = Object.keys(shape).find((candidate) => candidate !== '[]' && candidate.toLowerCase() === name.trim().toLowerCase());
-      if (!canonical) continue;
+      const canonical = Object.keys(properties).find((candidate) => candidate.toLowerCase() === name.trim().toLowerCase());
+      if (!canonical) {
+        if (shape?.additionalProperties && typeof shape.additionalProperties === 'object')
+          walk(value[name], shape.additionalProperties);
+        continue;
+      }
       if (canonical !== name && !Object.hasOwn(value, canonical)) {
         renameKey(value, name, canonical);
         renamed.push(name + ' → ' + canonical);
       }
-      walk(value[Object.hasOwn(value, canonical) ? canonical : name], shape[canonical]);
+      walk(value[Object.hasOwn(value, canonical) ? canonical : name], properties[canonical]);
     }
   };
-  walk(config, schema(conditions));
+  walk(config, schema);
   return renamed;
 }
 

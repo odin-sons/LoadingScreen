@@ -19,10 +19,15 @@ public enum OffscreenEdge {
 }
 
 public sealed class AnimationSpec {
+  [SchemaField("enter", "Enter animation preset.")]
   public string Enter { get; set; }
+  [SchemaField("idle", "Idle animation preset.")]
   public string Idle { get; set; }
+  [SchemaField("exit", "Exit animation preset.")]
   public string Exit { get; set; }
+  [SchemaField("speed", "Playback speed.", Minimum = 0, ExclusiveMinimum = true)]
   public float? Speed { get; set; }
+  [SchemaField("origin", "Animation origin.", EnumType = typeof(Anchor))]
   public Anchor? Origin { get; set; }
 
   public static AnimationSpec Merge(AnimationSpec specific, AnimationSpec fallback) => new() {

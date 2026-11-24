@@ -1,6 +1,8 @@
 # Configuration
 
 The [online editor](https://odin-sons.github.io/LoadingScreen/) helps create and preview `loadingscreen.yaml`; the mod's own validation remains authoritative.
+The [generated JSON Schema](https://odin-sons.github.io/LoadingScreen/data/config.schema.json) provides
+YAML editor completion for keys and values. The example config includes its `yaml-language-server` directive.
 
 By default, these files live in `BepInEx/config/LoadingScreen/`:
 
