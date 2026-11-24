@@ -1104,8 +1104,7 @@ public sealed class ConfigParser {
     string extension;
 
     try {
-      if (Path.IsPathRooted(path) || normalized.StartsWith("/", StringComparison.Ordinal)
-          || normalized.Split('/').Any(segment => segment == "..")) {
+      if (!IsSafeRelativePath(normalized)) {
         Warn(node, $"{where}: image path '{path}' must be relative to the config folder, ignored");
         return false;
       }
@@ -1142,8 +1141,7 @@ public sealed class ConfigParser {
     string normalized = NormalizePath(path);
     string extension;
     try {
-      if (Path.IsPathRooted(path) || normalized.StartsWith("/", StringComparison.Ordinal)
-          || normalized.Split('/').Any(segment => segment == ".." || segment.IndexOf(':') >= 0)) {
+      if (!IsSafeRelativePath(normalized)) {
         Warn(node, $"{where}: audio path '{path}' must be relative to the config folder, ignored");
         return null;
       }
@@ -1250,6 +1248,11 @@ public sealed class ConfigParser {
 
   static string NormalizePath(string path) {
     return path.Trim().Replace('\\', '/');
+  }
+
+  static bool IsSafeRelativePath(string normalized) {
+    return !normalized.StartsWith("/", StringComparison.Ordinal)
+        && !normalized.Split('/').Any(segment => segment == ".." || segment.IndexOf(':') >= 0);
   }
 
   void Warn(YamlNode node, string message) {
