@@ -1,0 +1,9 @@
+layouts:
+  "unknown key":
+    layers:
+      - image: entry
+        place: { fit: "unknown key" }
+  "invalid color":
+    layers:
+      - image: entry
+        place: { position: { anchor: "must be true or false" } }

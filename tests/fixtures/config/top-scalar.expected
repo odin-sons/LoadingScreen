@@ -1,1 +1,1 @@
-1	the top level must be a mapping, config ignored
+1	invalid-root	the top level must be a mapping, config ignored

@@ -1,22 +1,22 @@
-5	general.entries[0]: unknown text language 'xx'
-5	general.entries[0]: unknown text language 'en-GB'
-5	general.entries[0]: text for 'en' must be a non-empty string
-5	general.entries[0]: text for 'ru' must be a non-empty string
-9	general.entries[3]: audio path '/abs.ogg' must be relative to the config folder, ignored
-10	general.entries[3]: unsupported audio type 'voice/v.mp3', use .ogg or .wav
-11	general.entries[4]: image path '../up.png' must be relative to the config folder, ignored
-12	general.entries[5]: empty image path, ignored
-13	general.entries[6]: empty image path, ignored
-14	general.entries[7]: 'text' must be a string or a language mapping
-14	general.entries[7]: an entry needs an 'image' or a 'text', ignored
-18	general.entries[9]: 'when': 'knownItem' needs a name, entry ignored
-20	general.entries[10]: 'when': unknown condition 'isNight', entry ignored
-22	general.entries[11]: 'when': expected a mapping, entry ignored
-24	general.entries[12]: 'when': unknown condition 'notnotHasItem', entry ignored
-26	general.entries[13]: unknown key 'extra'
-27	general.entries[13]: 'place': 'fit': unknown key 'depth'
-27	general.entries[13]: 'place': 'fit' needs 'width' and/or 'height'
-28	general.entries[14]: image path 'c:relative.png' must be relative to the config folder, ignored
-30	general.entries[15]: audio path 'music/a:b.ogg' must be relative to the config folder, ignored
-32	general.entries[16]: unsupported audio type 'music/track.', use .ogg or .wav
-0	general: unknown layout 'nowhere', the default layout is used
+5	unknown-name	general.entries[0]: unknown text language 'xx'
+5	unknown-name	general.entries[0]: unknown text language 'en-GB'
+5	empty-text	general.entries[0]: text for 'en' must be a non-empty string
+5	empty-text	general.entries[0]: text for 'ru' must be a non-empty string
+9	invalid-path	general.entries[3]: audio path '/abs.ogg' must be relative to the config folder, ignored
+10	unsupported-file-type	general.entries[3]: unsupported audio type 'voice/v.mp3', use .ogg or .wav
+11	invalid-path	general.entries[4]: image path '../up.png' must be relative to the config folder, ignored
+12	invalid-path	general.entries[5]: empty image path, ignored
+13	invalid-path	general.entries[6]: empty image path, ignored
+14	invalid-shape	general.entries[7]: 'text' must be a string or a language mapping
+14	invalid-entry	general.entries[7]: an entry needs an 'image' or a 'text', ignored
+18	missing-value	general.entries[9]: 'when': 'knownItem' needs a name, entry ignored
+20	unknown-name	general.entries[10]: 'when': unknown condition 'isNight', entry ignored
+22	invalid-shape	general.entries[11]: 'when': expected a mapping, entry ignored
+24	unknown-name	general.entries[12]: 'when': unknown condition 'notnotHasItem', entry ignored
+26	unknown-key	general.entries[13]: unknown key 'extra'
+27	unknown-key	general.entries[13]: 'place': 'fit': unknown key 'depth'
+27	missing-value	general.entries[13]: 'place': 'fit' needs 'width' and/or 'height'
+28	invalid-path	general.entries[14]: image path 'c:relative.png' must be relative to the config folder, ignored
+30	invalid-path	general.entries[15]: audio path 'music/a:b.ogg' must be relative to the config folder, ignored
+32	unsupported-file-type	general.entries[16]: unsupported audio type 'music/track.', use .ogg or .wav
+0	unknown-layout	general: unknown layout 'nowhere', the default layout is used

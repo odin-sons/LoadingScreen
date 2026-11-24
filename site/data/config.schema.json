@@ -1,0 +1,1477 @@
+{
+  "type": "object",
+  "properties": {
+    "when": {
+      "$ref": "#/$defs/When",
+      "description": "Situation-based entry lists."
+    },
+    "defaults": {
+      "$ref": "#/$defs/ScreenDefaults",
+      "description": "Default appearance.",
+      "x-parserType": "value",
+      "x-modelProperty": "Defaults"
+    },
+    "layouts": {
+      "type": "object",
+      "additionalProperties": {
+        "$ref": "#/$defs/LayoutValue"
+      },
+      "description": "Named layouts.",
+      "x-modelProperty": "Layouts"
+    },
+    "order": {
+      "$ref": "#/$defs/PickOrder",
+      "description": "Global entry selection order.",
+      "x-parserType": "value",
+      "x-modelProperty": "Order"
+    }
+  },
+  "additionalProperties": false,
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://odin-sons.github.io/LoadingScreen/data/config.schema.json",
+  "title": "LoadingScreen configuration",
+  "description": "loadingscreen.yaml for the LoadingScreen Valheim mod.",
+  "$defs": {
+    "ScreenDefaults": {
+      "type": "object",
+      "properties": {
+        "place": {
+          "$ref": "#/$defs/AnimatedPlacement"
+        },
+        "zoom": {
+          "$ref": "#/$defs/LegacyZoom",
+          "description": "Legacy zoom settings."
+        },
+        "animation": {
+          "oneOf": [
+            {
+              "type": "string",
+              "minLength": 1
+            },
+            {
+              "$ref": "#/$defs/AnimationSpec"
+            }
+          ],
+          "description": "Default animation.",
+          "x-modelProperty": "Animation"
+        },
+        "background": {
+          "type": "string",
+          "pattern": "^#?[0-9A-Fa-f]{6}([0-9A-Fa-f]{2})?$",
+          "description": "Background color.",
+          "x-parserType": "color",
+          "x-modelProperty": "Background"
+        },
+        "continuePrompt": {
+          "$ref": "#/$defs/ContinuePromptDefaults",
+          "description": "Continue prompt appearance.",
+          "x-parserType": "value",
+          "x-modelProperty": "ContinuePrompt"
+        },
+        "mask": {
+          "$ref": "#/$defs/MaskSettings",
+          "description": "Default color mask.",
+          "x-parserType": "value",
+          "x-modelProperty": "Mask"
+        },
+        "separator": {
+          "$ref": "#/$defs/SeparatorDefaults",
+          "description": "Separator appearance.",
+          "x-parserType": "value",
+          "x-modelProperty": "Separator"
+        },
+        "spinner": {
+          "$ref": "#/$defs/SpinnerDefaults",
+          "description": "Spinner appearance.",
+          "x-parserType": "value",
+          "x-modelProperty": "Spinner"
+        },
+        "tint": {
+          "type": "string",
+          "pattern": "^#?[0-9A-Fa-f]{6}([0-9A-Fa-f]{2})?$",
+          "description": "Image tint.",
+          "x-parserType": "color",
+          "x-modelProperty": "Tint"
+        },
+        "tip": {
+          "$ref": "#/$defs/TipDefaults",
+          "description": "Tip appearance.",
+          "x-parserType": "value",
+          "x-modelProperty": "Tip"
+        },
+        "vignette": {
+          "$ref": "#/$defs/VignetteSettings",
+          "description": "Default vignette.",
+          "x-parserType": "value",
+          "x-modelProperty": "Vignette"
+        }
+      },
+      "additionalProperties": false
+    },
+    "Layout": {
+      "type": "object",
+      "properties": {
+        "layers": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/Layer"
+          },
+          "description": "Ordered screen layers.",
+          "x-parserType": "value",
+          "x-modelProperty": "Layers",
+          "maxItems": 32
+        },
+        "mask": {
+          "$ref": "#/$defs/MaskSettings",
+          "description": "Color mask effect.",
+          "x-parserType": "value",
+          "x-modelProperty": "Mask"
+        },
+        "place": {
+          "$ref": "#/$defs/Placement",
+          "description": "Layout placement.",
+          "x-parserType": "value",
+          "x-modelProperty": "Placement"
+        },
+        "showSleepUi": {
+          "type": "boolean",
+          "description": "Show the original sleep UI.",
+          "x-parserType": "bool",
+          "x-modelProperty": "ShowSleepUi"
+        },
+        "sound": {
+          "type": "string",
+          "description": "Relative audio path.",
+          "x-parserType": "value",
+          "x-modelProperty": "Sound"
+        },
+        "vignette": {
+          "$ref": "#/$defs/VignetteSettings",
+          "description": "Vignette effect.",
+          "x-parserType": "value",
+          "x-modelProperty": "Vignette"
+        }
+      },
+      "additionalProperties": false
+    },
+    "Layer": {
+      "type": "object",
+      "properties": {
+        "animation": {
+          "oneOf": [
+            {
+              "type": "string",
+              "minLength": 1
+            },
+            {
+              "$ref": "#/$defs/AnimationSpec"
+            }
+          ],
+          "description": "Animation preset or phase mapping.",
+          "x-modelProperty": "Animation"
+        },
+        "color": {
+          "oneOf": [
+            {
+              "const": "auto"
+            },
+            {
+              "type": "string",
+              "pattern": "^#?[0-9A-Fa-f]{6}([0-9A-Fa-f]{2})?$"
+            }
+          ],
+          "description": "Layer color or image tint.",
+          "x-modelProperty": "Color"
+        },
+        "id": {
+          "type": "string",
+          "description": "Optional layer identifier.",
+          "x-parserType": "value",
+          "x-modelProperty": "Id"
+        },
+        "image": {
+          "oneOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          ],
+          "description": "Image path, entry, separator, or list of paths.",
+          "x-modelProperty": "Images"
+        },
+        "place": {
+          "$ref": "#/$defs/AnimatedPlacement"
+        },
+        "size": {
+          "type": "number",
+          "description": "Progress size or text font size.",
+          "exclusiveMinimum": 0,
+          "x-parserType": "float",
+          "x-modelProperty": "ProgressSize"
+        },
+        "progress": {
+          "$ref": "#/$defs/ProgressStyle",
+          "description": "Progress indicator style.",
+          "x-parserType": "value",
+          "x-modelProperty": "ProgressStyle"
+        },
+        "spinner": {
+          "oneOf": [
+            {
+              "$ref": "#/$defs/SpinnerStyle"
+            },
+            {
+              "type": "string",
+              "pattern": "\\.(png|jpe?g)$"
+            }
+          ],
+          "description": "Built-in spinner style or relative image path.",
+          "x-modelProperty": "SpinnerStyle"
+        },
+        "text": {
+          "$ref": "#/$defs/TextSource",
+          "description": "Caption or prompt text source.",
+          "x-modelProperty": "Text"
+        },
+        "align": {
+          "$ref": "#/$defs/TextAlign",
+          "description": "Horizontal text alignment.",
+          "x-parserType": "value",
+          "x-modelProperty": "Align"
+        },
+        "background": {
+          "oneOf": [
+            {
+              "const": "auto"
+            },
+            {
+              "type": "string",
+              "pattern": "^#?[0-9A-Fa-f]{6}([0-9A-Fa-f]{2})?$"
+            }
+          ],
+          "description": "Text background color or auto.",
+          "x-modelProperty": "Background"
+        }
+      },
+      "additionalProperties": false,
+      "x-layerKinds": [
+        "image",
+        "text",
+        "spinner",
+        "progress",
+        "color"
+      ]
+    },
+    "TextStyle": {
+      "type": "object",
+      "properties": {
+        "align": {
+          "$ref": "#/$defs/TextAlign",
+          "description": "Horizontal text alignment.",
+          "x-parserType": "value",
+          "x-modelProperty": "Align"
+        },
+        "background": {
+          "oneOf": [
+            {
+              "const": "auto"
+            },
+            {
+              "type": "string",
+              "pattern": "^#?[0-9A-Fa-f]{6}([0-9A-Fa-f]{2})?$"
+            }
+          ],
+          "description": "Text background color or auto.",
+          "x-modelProperty": "Background"
+        },
+        "color": {
+          "oneOf": [
+            {
+              "const": "auto"
+            },
+            {
+              "type": "string",
+              "pattern": "^#?[0-9A-Fa-f]{6}([0-9A-Fa-f]{2})?$"
+            }
+          ],
+          "description": "Text color or auto.",
+          "x-modelProperty": "Color"
+        },
+        "size": {
+          "type": "number",
+          "description": "Font size in points.",
+          "exclusiveMinimum": 0,
+          "x-parserType": "float",
+          "x-modelProperty": "FontSize"
+        }
+      },
+      "additionalProperties": false
+    },
+    "Entry": {
+      "type": "object",
+      "properties": {
+        "when": {
+          "$ref": "#/$defs/Conditions",
+          "description": "Conditions that must all hold.",
+          "x-modelProperty": "Conditions"
+        },
+        "image": {
+          "type": "string",
+          "description": "Relative image path.",
+          "x-parserType": "value",
+          "x-modelProperty": "Image"
+        },
+        "layout": {
+          "type": "string",
+          "description": "Layout name.",
+          "x-parserType": "value",
+          "x-modelProperty": "LayoutName"
+        },
+        "place": {
+          "$ref": "#/$defs/Placement",
+          "description": "Entry placement.",
+          "x-parserType": "value",
+          "x-modelProperty": "Place"
+        },
+        "sound": {
+          "type": "string",
+          "description": "Relative audio path.",
+          "x-parserType": "value",
+          "x-modelProperty": "Sound"
+        },
+        "text": {
+          "oneOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "object",
+              "additionalProperties": {
+                "type": "string"
+              }
+            }
+          ],
+          "description": "Text or language-to-text mapping.",
+          "x-modelProperty": "Text"
+        },
+        "voice": {
+          "type": "string",
+          "description": "Relative voice path.",
+          "x-parserType": "value",
+          "x-modelProperty": "Voice"
+        }
+      },
+      "additionalProperties": false
+    },
+    "EntryList": {
+      "type": "object",
+      "properties": {
+        "entries": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/Entry"
+          },
+          "description": "Entries in this list.",
+          "x-parserType": "value",
+          "x-modelProperty": "Entries"
+        },
+        "layout": {
+          "type": "string",
+          "description": "Layout name.",
+          "x-parserType": "value",
+          "x-modelProperty": "LayoutName"
+        },
+        "order": {
+          "$ref": "#/$defs/PickOrder",
+          "description": "Entry selection order.",
+          "x-parserType": "value",
+          "x-modelProperty": "Order"
+        },
+        "sound": {
+          "type": "string",
+          "description": "Relative audio path.",
+          "x-parserType": "value",
+          "x-modelProperty": "Sound"
+        }
+      },
+      "additionalProperties": false
+    },
+    "TipDefaults": {
+      "type": "object",
+      "properties": {
+        "bottom": {
+          "type": "number",
+          "description": "Distance from bottom.",
+          "x-parserType": "float",
+          "x-modelProperty": "Bottom"
+        },
+        "color": {
+          "type": "string",
+          "pattern": "^#?[0-9A-Fa-f]{6}([0-9A-Fa-f]{2})?$",
+          "description": "Text color.",
+          "x-parserType": "color",
+          "x-modelProperty": "Color"
+        },
+        "size": {
+          "type": "integer",
+          "description": "Text size.",
+          "minimum": 0,
+          "maximum": 64,
+          "x-parserType": "int",
+          "x-modelProperty": "Size"
+        },
+        "x": {
+          "type": "number",
+          "description": "Horizontal offset.",
+          "x-parserType": "float",
+          "x-modelProperty": "X"
+        }
+      },
+      "additionalProperties": false
+    },
+    "ContinuePromptDefaults": {
+      "type": "object",
+      "properties": {
+        "bottom": {
+          "type": "number",
+          "description": "Distance from bottom.",
+          "x-parserType": "float",
+          "x-modelProperty": "Bottom"
+        },
+        "color": {
+          "type": "string",
+          "pattern": "^#?[0-9A-Fa-f]{6}([0-9A-Fa-f]{2})?$",
+          "description": "Text color.",
+          "x-parserType": "color",
+          "x-modelProperty": "Color"
+        },
+        "size": {
+          "type": "integer",
+          "description": "Text size.",
+          "minimum": 0,
+          "maximum": 64,
+          "x-parserType": "int",
+          "x-modelProperty": "Size"
+        },
+        "x": {
+          "type": "number",
+          "description": "Horizontal offset.",
+          "x-parserType": "float",
+          "x-modelProperty": "X"
+        }
+      },
+      "additionalProperties": false
+    },
+    "SeparatorDefaults": {
+      "type": "object",
+      "properties": {
+        "bottom": {
+          "type": "number",
+          "description": "Distance from bottom.",
+          "x-parserType": "float",
+          "x-modelProperty": "Bottom"
+        },
+        "onLayouts": {
+          "type": "boolean",
+          "description": "Show on custom layouts.",
+          "x-parserType": "bool",
+          "x-modelProperty": "OnLayouts"
+        },
+        "show": {
+          "type": "boolean",
+          "description": "Show the separator.",
+          "x-parserType": "bool",
+          "x-modelProperty": "Show"
+        },
+        "x": {
+          "type": "number",
+          "description": "Horizontal offset.",
+          "x-parserType": "float",
+          "x-modelProperty": "X"
+        }
+      },
+      "additionalProperties": false
+    },
+    "SpinnerDefaults": {
+      "type": "object",
+      "properties": {
+        "bottom": {
+          "type": "number",
+          "description": "Distance from bottom.",
+          "x-parserType": "float",
+          "x-modelProperty": "Bottom"
+        },
+        "center": {
+          "type": "boolean",
+          "description": "Center the spinner.",
+          "x-parserType": "bool",
+          "x-modelProperty": "Center"
+        },
+        "x": {
+          "type": "number",
+          "description": "Horizontal offset.",
+          "x-parserType": "float",
+          "x-modelProperty": "X"
+        }
+      },
+      "additionalProperties": false
+    },
+    "Fit": {
+      "type": "object",
+      "properties": {
+        "height": {
+          "type": "string",
+          "pattern": "^[\u002B-]?(?:\\d\u002B(?:\\.\\d*)?|\\.\\d\u002B)(?:%|px)?$",
+          "description": "Maximum height.",
+          "x-minimum": 0,
+          "x-modelProperty": "Height"
+        },
+        "width": {
+          "type": "string",
+          "pattern": "^[\u002B-]?(?:\\d\u002B(?:\\.\\d*)?|\\.\\d\u002B)(?:%|px)?$",
+          "description": "Maximum width.",
+          "x-minimum": 0,
+          "x-modelProperty": "Width"
+        }
+      },
+      "additionalProperties": false,
+      "x-formName": "box"
+    },
+    "Fade": {
+      "type": "object",
+      "properties": {
+        "color": {
+          "type": "string",
+          "pattern": "^#?[0-9A-Fa-f]{6}([0-9A-Fa-f]{2})?$",
+          "description": "Fade color.",
+          "x-parserType": "color",
+          "x-modelProperty": "Color"
+        },
+        "curve": {
+          "$ref": "#/$defs/FadeCurve",
+          "description": "Fade curve.",
+          "x-parserType": "value",
+          "x-modelProperty": "Curve"
+        },
+        "sides": {
+          "oneOf": [
+            {
+              "$ref": "#/$defs/SideName"
+            },
+            {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/SideName"
+              }
+            }
+          ],
+          "description": "Sides to fade.",
+          "x-modelProperty": "Sides"
+        },
+        "size": {
+          "type": "string",
+          "pattern": "^[\u002B-]?(?:\\d\u002B(?:\\.\\d*)?|\\.\\d\u002B)(?:%|px)?$",
+          "description": "Fade distance.",
+          "x-minimum": 0,
+          "x-modelProperty": "Size"
+        }
+      },
+      "additionalProperties": false
+    },
+    "AnimationSpec": {
+      "type": "object",
+      "properties": {
+        "enter": {
+          "type": "string",
+          "description": "Enter animation preset.",
+          "x-parserType": "value",
+          "x-modelProperty": "Enter"
+        },
+        "exit": {
+          "type": "string",
+          "description": "Exit animation preset.",
+          "x-parserType": "value",
+          "x-modelProperty": "Exit"
+        },
+        "idle": {
+          "type": "string",
+          "description": "Idle animation preset.",
+          "x-parserType": "value",
+          "x-modelProperty": "Idle"
+        },
+        "origin": {
+          "$ref": "#/$defs/AnchorName",
+          "description": "Animation origin.",
+          "x-parserType": "value",
+          "x-modelProperty": "Origin"
+        },
+        "speed": {
+          "type": "number",
+          "description": "Playback speed.",
+          "exclusiveMinimum": 0,
+          "x-parserType": "float",
+          "x-modelProperty": "Speed"
+        }
+      },
+      "additionalProperties": false
+    },
+    "VignetteSettings": {
+      "type": "object",
+      "properties": {
+        "color": {
+          "type": "string",
+          "pattern": "^#?[0-9A-Fa-f]{6}([0-9A-Fa-f]{2})?$",
+          "description": "Vignette color.",
+          "x-parserType": "color",
+          "x-modelProperty": "Color"
+        },
+        "size": {
+          "type": "string",
+          "pattern": "^(?:100(?:\\.0\u002B)?|(?:\\d|[1-9]\\d)(?:\\.\\d\u002B)?)%$",
+          "description": "Outer size in percent.",
+          "x-minimum": 0,
+          "x-maximum": 100,
+          "x-modelProperty": "Size"
+        },
+        "strength": {
+          "type": "number",
+          "description": "Vignette strength.",
+          "minimum": 0,
+          "maximum": 1,
+          "x-parserType": "float",
+          "x-modelProperty": "Strength"
+        }
+      },
+      "additionalProperties": false
+    },
+    "MaskSettings": {
+      "type": "object",
+      "properties": {
+        "color": {
+          "type": "string",
+          "pattern": "^#?[0-9A-Fa-f]{6}([0-9A-Fa-f]{2})?$",
+          "description": "Mask color.",
+          "x-parserType": "color",
+          "x-modelProperty": "Color"
+        },
+        "opacity": {
+          "type": "number",
+          "description": "Mask opacity.",
+          "minimum": 0,
+          "maximum": 1,
+          "x-parserType": "float",
+          "x-modelProperty": "Opacity"
+        }
+      },
+      "additionalProperties": false
+    },
+    "Placement": {
+      "type": "object",
+      "properties": {
+        "position": {
+          "oneOf": [
+            {
+              "$ref": "#/$defs/AnchorName"
+            },
+            {
+              "$ref": "#/$defs/Position"
+            }
+          ],
+          "description": "Anchor or anchored offsets.",
+          "x-modelProperty": "Anchor"
+        },
+        "fade": {
+          "$ref": "#/$defs/Fade",
+          "description": "Edge fade.",
+          "x-parserType": "value",
+          "x-modelProperty": "Fade"
+        },
+        "fit": {
+          "oneOf": [
+            {
+              "$ref": "#/$defs/FitMode"
+            },
+            {
+              "$ref": "#/$defs/Fit"
+            }
+          ],
+          "description": "Image fit mode or dimensions.",
+          "x-modelProperty": "Fit"
+        },
+        "opacity": {
+          "type": "number",
+          "description": "Opacity from 0 to 1.",
+          "minimum": 0,
+          "maximum": 1,
+          "x-parserType": "float",
+          "x-modelProperty": "Opacity"
+        }
+      },
+      "additionalProperties": false
+    },
+    "AnimatedPlacement": {
+      "type": "object",
+      "properties": {
+        "position": {
+          "oneOf": [
+            {
+              "$ref": "#/$defs/AnchorName"
+            },
+            {
+              "$ref": "#/$defs/Position"
+            }
+          ],
+          "description": "Anchor or anchored offsets.",
+          "x-modelProperty": "Anchor"
+        },
+        "fade": {
+          "$ref": "#/$defs/Fade",
+          "description": "Edge fade.",
+          "x-parserType": "value",
+          "x-modelProperty": "Fade"
+        },
+        "fit": {
+          "oneOf": [
+            {
+              "$ref": "#/$defs/FitMode"
+            },
+            {
+              "$ref": "#/$defs/Fit"
+            }
+          ],
+          "description": "Image fit mode or dimensions.",
+          "x-modelProperty": "Fit"
+        },
+        "opacity": {
+          "type": "number",
+          "description": "Opacity from 0 to 1.",
+          "minimum": 0,
+          "maximum": 1,
+          "x-parserType": "float",
+          "x-modelProperty": "Opacity"
+        },
+        "animate": {
+          "type": "boolean",
+          "description": "Legacy animation toggle.",
+          "x-parserType": "bool"
+        }
+      },
+      "additionalProperties": false
+    },
+    "Position": {
+      "type": "object",
+      "properties": {
+        "anchor": {
+          "$ref": "#/$defs/AnchorName"
+        },
+        "x": {
+          "type": "string",
+          "pattern": "^[\u002B-]?(?:\\d\u002B(?:\\.\\d*)?|\\.\\d\u002B)(?:%|px)?$",
+          "description": "Horizontal position offset.",
+          "x-modelProperty": "X"
+        },
+        "y": {
+          "type": "string",
+          "pattern": "^[\u002B-]?(?:\\d\u002B(?:\\.\\d*)?|\\.\\d\u002B)(?:%|px)?$",
+          "description": "Vertical position offset.",
+          "x-modelProperty": "Y"
+        }
+      },
+      "additionalProperties": false
+    },
+    "FitMode": {
+      "type": "string",
+      "enum": [
+        "cover",
+        "contain",
+        "stretch",
+        "none"
+      ],
+      "title": "Fit mode"
+    },
+    "AnchorName": {
+      "type": "string",
+      "enum": [
+        "center",
+        "left",
+        "right",
+        "top",
+        "bottom",
+        "top-left",
+        "top-right",
+        "bottom-left",
+        "bottom-right"
+      ],
+      "title": "Anchor"
+    },
+    "SideName": {
+      "type": "string",
+      "enum": [
+        "left",
+        "right",
+        "top",
+        "bottom",
+        "all"
+      ],
+      "title": "Fade side"
+    },
+    "SpinnerStyle": {
+      "type": "string",
+      "enum": [
+        "hammer",
+        "ring",
+        "dots"
+      ],
+      "title": "Spinner style"
+    },
+    "TextSource": {
+      "type": "string",
+      "enum": [
+        "caption",
+        "prompt"
+      ],
+      "title": "Text source"
+    },
+    "PickOrder": {
+      "type": "string",
+      "enum": [
+        "random",
+        "sequential"
+      ],
+      "title": "Order"
+    },
+    "ProgressStyle": {
+      "type": "string",
+      "enum": [
+        "bar",
+        "ring",
+        "percent"
+      ],
+      "title": "Progress style"
+    },
+    "TextAlign": {
+      "type": "string",
+      "enum": [
+        "left",
+        "center",
+        "right"
+      ],
+      "title": "Text alignment"
+    },
+    "FadeCurve": {
+      "type": "string",
+      "enum": [
+        "linear",
+        "smooth"
+      ],
+      "title": "Fade curve"
+    },
+    "Biome": {
+      "type": "string",
+      "enum": [
+        "Meadows",
+        "BlackForest",
+        "Swamp",
+        "Mountain",
+        "Plains",
+        "Mistlands",
+        "AshLands",
+        "DeepNorth",
+        "Ocean"
+      ],
+      "title": "Biome"
+    },
+    "DeathCause": {
+      "type": "string",
+      "enum": [
+        "Undefined",
+        "EnemyHit",
+        "PlayerHit",
+        "Fall",
+        "Drowning",
+        "Burning",
+        "Freezing",
+        "Poisoned",
+        "Water",
+        "Smoke",
+        "EdgeOfWorld",
+        "Impact",
+        "Cart",
+        "Tree",
+        "Self",
+        "Structural",
+        "Turret",
+        "Boat",
+        "Stalagtite",
+        "Catapult",
+        "CinderFire",
+        "AshlandsOcean",
+        "AshlandsLava",
+        "Incinerator",
+        "DrawBridge",
+        "Blunt",
+        "Slash",
+        "Pierce",
+        "Chop",
+        "Pickaxe",
+        "Fire",
+        "Frost",
+        "Lightning",
+        "Poison",
+        "Spirit"
+      ],
+      "title": "Death cause"
+    },
+    "AnimationPreset": {
+      "type": "string",
+      "enum": [
+        "breathe",
+        "drift",
+        "fade-in",
+        "fly-in-bottom",
+        "fly-in-left",
+        "fly-in-right",
+        "fly-in-top",
+        "fly-out-bottom",
+        "fly-out-left",
+        "fly-out-right",
+        "fly-out-top",
+        "ken-burns",
+        "none",
+        "pan",
+        "pulse",
+        "spin",
+        "sway",
+        "zoom-in",
+        "zoom-out"
+      ],
+      "title": "Built-in animation"
+    },
+    "GlobalKey": {
+      "type": "string",
+      "enum": [
+        "defeated_eikthyr",
+        "defeated_gdking",
+        "defeated_bonemass",
+        "defeated_dragon",
+        "defeated_goblinking",
+        "defeated_queen",
+        "defeated_fader",
+        "KilledTroll",
+        "killed_surtling",
+        "KilledBat"
+      ],
+      "title": "Global key"
+    },
+    "ImageExtension": {
+      "type": "string",
+      "enum": [
+        ".png",
+        ".jpg",
+        ".jpeg"
+      ],
+      "title": "Image extension"
+    },
+    "AudioExtension": {
+      "type": "string",
+      "enum": [
+        ".ogg",
+        ".wav"
+      ],
+      "title": "Audio extension"
+    },
+    "ConditionName": {
+      "type": "string",
+      "enum": [
+        "knownItem",
+        "hasItem",
+        "knownRecipe",
+        "knownBiome",
+        "globalKey",
+        "playerKey",
+        "notKnownItem",
+        "notHasItem",
+        "notKnownRecipe",
+        "notKnownBiome",
+        "notGlobalKey",
+        "notPlayerKey"
+      ],
+      "title": "Condition"
+    },
+    "Language": {
+      "type": "string",
+      "enum": [
+        "abe",
+        "ar",
+        "bg",
+        "cs",
+        "da",
+        "de",
+        "el",
+        "en",
+        "es",
+        "fi",
+        "fr",
+        "hi",
+        "hr",
+        "hu",
+        "id",
+        "is",
+        "it",
+        "ja",
+        "ka",
+        "ko",
+        "lt",
+        "lv",
+        "mk",
+        "nl",
+        "no",
+        "pl",
+        "pt",
+        "pt-BR",
+        "ro",
+        "ru",
+        "sk",
+        "sr",
+        "sv",
+        "th",
+        "tr",
+        "uk",
+        "vi",
+        "zh-CN",
+        "zh-TW"
+      ],
+      "x-nameToCode": {
+        "Abenaki": "abe",
+        "Arabic": "ar",
+        "Bulgarian": "bg",
+        "Chinese": "zh-CN",
+        "Chinese_Trad": "zh-TW",
+        "Croatian": "hr",
+        "Czech": "cs",
+        "Danish": "da",
+        "Dutch": "nl",
+        "English": "en",
+        "Finnish": "fi",
+        "French": "fr",
+        "Georgian": "ka",
+        "German": "de",
+        "Greek": "el",
+        "Hindi": "hi",
+        "Hungarian": "hu",
+        "Icelandic": "is",
+        "Indonesian": "id",
+        "Italian": "it",
+        "Japanese": "ja",
+        "Korean": "ko",
+        "Latvian": "lv",
+        "Lithuanian": "lt",
+        "Macedonian": "mk",
+        "Norwegian": "no",
+        "Polish": "pl",
+        "Portuguese_Brazilian": "pt-BR",
+        "Portuguese_European": "pt",
+        "Romanian": "ro",
+        "Russian": "ru",
+        "Serbian": "sr",
+        "Slovak": "sk",
+        "Spanish": "es",
+        "Swedish": "sv",
+        "Thai": "th",
+        "Turkish": "tr",
+        "Ukrainian": "uk",
+        "Vietnamese": "vi"
+      }
+    },
+    "ProblemCode": {
+      "type": "string",
+      "enum": [
+        "invalid-yaml",
+        "invalid-root",
+        "unknown-key",
+        "unknown-layout",
+        "no-entry-layer",
+        "unknown-name",
+        "duplicate-name",
+        "invalid-color",
+        "invalid-path",
+        "unsupported-file-type",
+        "invalid-boolean",
+        "invalid-number",
+        "invalid-option",
+        "missing-value",
+        "empty-text",
+        "invalid-entry",
+        "invalid-layer",
+        "too-many-layers",
+        "invalid-shape"
+      ]
+    },
+    "AnchorValues": {
+      "type": "string",
+      "enum": [
+        "Center",
+        "Left",
+        "Right",
+        "Top",
+        "Bottom",
+        "TopLeft",
+        "TopRight",
+        "BottomLeft",
+        "BottomRight"
+      ],
+      "x-enumValues": {
+        "Center": 0,
+        "Left": 1,
+        "Right": 2,
+        "Top": 3,
+        "Bottom": 4,
+        "TopLeft": 5,
+        "TopRight": 6,
+        "BottomLeft": 7,
+        "BottomRight": 8
+      }
+    },
+    "FitModeValues": {
+      "type": "string",
+      "enum": [
+        "Cover",
+        "Contain",
+        "Stretch",
+        "None",
+        "Box"
+      ],
+      "x-enumValues": {
+        "Cover": 0,
+        "Contain": 1,
+        "Stretch": 2,
+        "None": 3,
+        "Box": 4
+      }
+    },
+    "SidesValues": {
+      "type": "string",
+      "enum": [
+        "None",
+        "Left",
+        "Right",
+        "Top",
+        "Bottom",
+        "All"
+      ],
+      "x-enumValues": {
+        "None": 0,
+        "Left": 1,
+        "Right": 2,
+        "Top": 4,
+        "Bottom": 8,
+        "All": 15
+      }
+    },
+    "FadeCurveValues": {
+      "type": "string",
+      "enum": [
+        "Linear",
+        "Smooth"
+      ],
+      "x-enumValues": {
+        "Linear": 0,
+        "Smooth": 1
+      }
+    },
+    "ProgressStyleValues": {
+      "type": "string",
+      "enum": [
+        "Bar",
+        "Ring",
+        "Percent"
+      ],
+      "x-enumValues": {
+        "Bar": 0,
+        "Ring": 1,
+        "Percent": 2
+      }
+    },
+    "TextAlignValues": {
+      "type": "string",
+      "enum": [
+        "Left",
+        "Center",
+        "Right"
+      ],
+      "x-enumValues": {
+        "Left": 0,
+        "Center": 1,
+        "Right": 2
+      }
+    },
+    "ConditionKindValues": {
+      "type": "string",
+      "enum": [
+        "KnownItem",
+        "HasItem",
+        "KnownRecipe",
+        "KnownBiome",
+        "GlobalKey",
+        "PlayerKey"
+      ],
+      "x-enumValues": {
+        "KnownItem": 0,
+        "HasItem": 1,
+        "KnownRecipe": 2,
+        "KnownBiome": 3,
+        "GlobalKey": 4,
+        "PlayerKey": 5
+      }
+    },
+    "Conditions": {
+      "type": "object",
+      "properties": {
+        "knownItem": {
+          "oneOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          ]
+        },
+        "hasItem": {
+          "oneOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          ]
+        },
+        "knownRecipe": {
+          "oneOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          ]
+        },
+        "knownBiome": {
+          "oneOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          ]
+        },
+        "globalKey": {
+          "oneOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          ]
+        },
+        "playerKey": {
+          "oneOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          ]
+        },
+        "notKnownItem": {
+          "oneOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          ]
+        },
+        "notHasItem": {
+          "oneOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          ]
+        },
+        "notKnownRecipe": {
+          "oneOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          ]
+        },
+        "notKnownBiome": {
+          "oneOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          ]
+        },
+        "notGlobalKey": {
+          "oneOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          ]
+        },
+        "notPlayerKey": {
+          "oneOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          ]
+        }
+      },
+      "additionalProperties": false
+    },
+    "LegacyZoom": {
+      "type": "object",
+      "properties": {
+        "enabled": {
+          "type": "boolean"
+        },
+        "amount": {
+          "type": "number"
+        },
+        "seconds": {
+          "type": "number",
+          "exclusiveMinimum": 0
+        }
+      },
+      "additionalProperties": false
+    },
+    "LayoutValue": {
+      "oneOf": [
+        {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/Layer"
+          }
+        },
+        {
+          "$ref": "#/$defs/Layout"
+        }
+      ]
+    },
+    "EntryValue": {
+      "oneOf": [
+        {
+          "type": "string"
+        },
+        {
+          "$ref": "#/$defs/Entry"
+        }
+      ]
+    },
+    "EntryListValue": {
+      "oneOf": [
+        {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/EntryValue"
+          }
+        },
+        {
+          "$ref": "#/$defs/EntryList"
+        }
+      ]
+    },
+    "When": {
+      "type": "object",
+      "properties": {
+        "general": {
+          "$ref": "#/$defs/EntryListValue"
+        },
+        "sleep": {
+          "$ref": "#/$defs/EntryListValue"
+        },
+        "biome": {
+          "type": "object",
+          "additionalProperties": {
+            "$ref": "#/$defs/EntryListValue"
+          }
+        },
+        "death": {
+          "type": "object",
+          "additionalProperties": {
+            "$ref": "#/$defs/EntryListValue"
+          }
+        },
+        "enemy": {
+          "type": "object",
+          "additionalProperties": {
+            "$ref": "#/$defs/EntryListValue"
+          }
+        }
+      },
+      "additionalProperties": false
+    }
+  }
+}

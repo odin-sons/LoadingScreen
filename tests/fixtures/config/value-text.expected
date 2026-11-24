@@ -1,0 +1,2 @@
+5	invalid-option	layout 'unknown key' layer '0': 'place': invalid fit 'unknown key', use cover, contain, stretch, none or { width, height }
+9	invalid-option	layout 'invalid color' layer '0': 'place': invalid anchor 'must be true or false', use center, left, right, top, bottom or e.g. top-left
