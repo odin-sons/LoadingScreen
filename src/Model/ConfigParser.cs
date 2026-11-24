@@ -8,7 +8,6 @@ using System.Linq;
 using System.Reflection;
 
 using YamlDotNet.Core;
-using YamlDotNet.Core.Events;
 using YamlDotNet.RepresentationModel;
 
 public sealed class ConfigLoadResult {
@@ -20,8 +19,6 @@ public sealed class ConfigLoadResult {
 }
 
 public sealed class ConfigParser {
-  const int MaxNestingDepth = 32;
-
   static readonly string[] _placementKeys = ["fit", "position", "opacity", "fade"];
   static readonly string[] _animatedPlacementKeys = [.. _placementKeys, "animate"];
   static readonly string[] _defaultKeys = [
@@ -54,7 +51,7 @@ public sealed class ConfigParser {
     YamlStream stream = new();
 
     try {
-      string structureProblem = CheckStructure(yaml);
+      string structureProblem = YamlGuard.Check(yaml);
 
       if (structureProblem != null) {
         Warn(0, $"{structureProblem}, config ignored");
@@ -108,31 +105,6 @@ public sealed class ConfigParser {
 
     ValidateLayoutReferences();
     return _result;
-  }
-
-  static string CheckStructure(string yaml) {
-    Parser parser = new(new StringReader(yaml));
-    int depth = 0;
-
-    while (parser.MoveNext()) {
-      switch (parser.Current) {
-        case AnchorAlias:
-          return "YAML aliases (*name) are not supported";
-
-        case MappingStart or SequenceStart:
-          if (++depth > MaxNestingDepth) {
-            return $"YAML is nested deeper than {MaxNestingDepth} levels";
-          }
-
-          break;
-
-        case MappingEnd or SequenceEnd:
-          depth--;
-          break;
-      }
-    }
-
-    return null;
   }
 
   void ParseLayouts(YamlNode node) {

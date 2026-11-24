@@ -11,6 +11,7 @@ using YamlDotNet.RepresentationModel;
 
 public sealed class UiTranslations {
   public const string FileName = "translations.yaml";
+  public const int MaxBytes = 256 * 1024;
   const string ProgressTemplate = "<b>{percent}%</b>\n<size=-4>({seconds}{unit})</size>";
 
   static readonly (string Language, string Prompt, string Unit)[] BuiltIn = [
@@ -100,9 +101,20 @@ public sealed class UiTranslations {
   public static UiTranslations Parse(string yaml) {
     UiTranslations translations = new();
     if (string.IsNullOrWhiteSpace(yaml)) return translations;
+    if (yaml.Length > MaxBytes || System.Text.Encoding.UTF8.GetByteCount(yaml) > MaxBytes) {
+      translations.Warnings.Add(LogContext.Message("Translation overrides ignored.", ("file", FileName),
+          ("bytes", System.Text.Encoding.UTF8.GetByteCount(yaml)), ("maxBytes", MaxBytes)));
+      return translations;
+    }
 
     YamlStream stream = new();
     try {
+      string structureProblem = YamlGuard.Check(yaml);
+      if (structureProblem != null) {
+        translations.Warnings.Add(LogContext.Message("Translation overrides ignored.", ("file", FileName),
+            ("reason", structureProblem)));
+        return translations;
+      }
       stream.Load(new StringReader(yaml));
     } catch (YamlException exception) {
       translations.Warnings.Add(LogContext.Message("Could not parse translation overrides.", ("file", FileName),
