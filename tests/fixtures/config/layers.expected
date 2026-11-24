@@ -1,5 +1,5 @@
 5	invalid-layer	layout 'broken' layer '0': 'color' is ignored on an image layer
-6	invalid-option	layout 'broken' layer '1': 'text' needs caption or prompt, layer ignored
+6	invalid-option	layout 'broken' layer '1': 'text' needs caption, layer ignored
 8	invalid-number	layout 'broken' layer '2': 'size' must be a positive font size
 9	invalid-layer	layout 'broken' layer '2': a text layer supports only 'fit: { width }' (the text width)
 11	invalid-color	layout 'broken' layer '3': invalid color 'blue', use #RRGGBB or #RRGGBBAA
@@ -24,7 +24,9 @@
 34	invalid-layer	layout 'broken' layer '16': 'align' applies only to text layers
 35	invalid-layer	layout 'broken' layer '16': 'background' applies only to text layers
 39	invalid-boolean	layout 'broken' layer '17': 'place': 'animate' must be true or false
-43	invalid-layer	layout 'empty' has no valid layers, ignored
-44	duplicate-name	duplicate layout 'BROKEN', ignored
-48	missing-value	layout 'weird' needs a 'layers' list, ignored
+40	removed-option	layout 'broken' layer '18': 'text: prompt' was removed, layer ignored
+41	invalid-option	layout 'broken' layer '19': 'text' needs caption, layer ignored
+45	invalid-layer	layout 'empty' has no valid layers, ignored
+46	duplicate-name	duplicate layout 'BROKEN', ignored
+50	missing-value	layout 'weird' needs a 'layers' list, ignored
 0	no-entry-layer	layout 'noentry' has no 'image: entry' layer, so entry images are not shown with it

@@ -54,10 +54,10 @@ test('aliases, deep nesting and non-mapping roots are refused', () => {
 });
 
 test('known keys get their documented spelling', () => {
-  const { config } = parseSource('Defaults: { ContinuePrompt: { Size: 3 } }\nwhen: { General: [{ Image: a.png, When: { HASITEM: Wood } }] }\n');
+  const { config } = parseSource('Defaults: { Tip: { Size: 3 } }\nwhen: { General: [{ Image: a.png, When: { HASITEM: Wood } }] }\n');
   const renamed = canonicalizeKeys(config, schema);
   assert.equal(renamed.length, 7);
-  assert.deepEqual(config, { defaults: { continuePrompt: { size: '3' } }, when: { general: [{ image: 'a.png', when: { hasItem: 'Wood' } }] } });
+  assert.deepEqual(config, { defaults: { tip: { size: '3' } }, when: { general: [{ image: 'a.png', when: { hasItem: 'Wood' } }] } });
 });
 
 test('duplicate keys are refused without slowing down large maps', () => {

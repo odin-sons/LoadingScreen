@@ -42,34 +42,32 @@ internal static class HudScreen {
     bool dismissed = Input.anyKeyDown || ZInput.GetMouseButtonDown(0) || ZInput.GetMouseButtonDown(1)
         || ZInput.GetMouseButtonDown(2) || GamepadMoved();
     float now = Time.realtimeSinceStartup;
-    LoadingHoldDecision hold = _holdState.Update(
-        _loadingScreenState, ready, allowed, HoldLoadingScreen.Value, voiceActive, dismissed,
-        now, MaximumHoldSeconds.Value, exitActive);
+    bool holding = _holdState.Update(
+        _loadingScreenState, ready, allowed, voiceActive, dismissed, now, MaximumHoldSeconds.Value, exitActive);
     bool invulnerable = InvulnerableWhileHeld.Value;
-    bool pvp = hold.Holding && !invulnerable && player.IsPVPEnabled();
-    bool monster = hold.Holding && !invulnerable && !pvp && now >= _nextThreatScanAt
+    bool pvp = holding && !invulnerable && player.IsPVPEnabled();
+    bool monster = holding && !invulnerable && !pvp && now >= _nextThreatScanAt
         && HasHostileMonsterNoticed(player);
-    LoadingHoldSafetyAction safety = LoadingHoldSafety.Decide(hold.Holding, invulnerable, pvp, monster);
+    LoadingHoldSafetyAction safety = LoadingHoldSafety.Decide(holding, invulnerable, pvp, monster);
     if (safety is LoadingHoldSafetyAction.CloseForPvp or LoadingHoldSafetyAction.CloseForMonster) {
       _holdState.Reset();
-      hold = default;
+      holding = false;
       Log.Render.Info(LogContext.Message("Closed the held loading screen.",
           ("reason", safety == LoadingHoldSafetyAction.CloseForPvp ? "pvp" : "monster")));
     }
-    LoadingManager.ShowContinuePrompt(__instance, hold.ShowContinuePrompt);
-    _sleepExitHolding = _wasSleeping && !stillSleeping && hold.Holding;
+    _sleepExitHolding = _wasSleeping && !stillSleeping && holding;
 
-    if (hold.Holding) {
+    if (holding) {
       __instance.m_loadingScreen.gameObject.SetActive(true);
       __instance.m_loadingScreen.alpha = 1f;
       __instance.m_loadingProgress.SetActive(true);
     }
 
-    if (_wasSleeping && !stillSleeping && !hold.Holding) {
+    if (_wasSleeping && !stillSleeping && !holding) {
       __instance.m_loadingProgress.SetActive(false);
     }
 
-    return !hold.Holding;
+    return !holding;
   }
 
   static bool _gamepadWasMoved;

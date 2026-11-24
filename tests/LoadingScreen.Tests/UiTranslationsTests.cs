@@ -10,7 +10,7 @@ public class UiTranslationsTests {
   [InlineData(33)]
   public void DeepNestingFallsBackToBuiltInText(int depth) {
     UiTranslations translations = UiTranslations.Parse("English: " + new string('[', depth) + new string(']', depth));
-    Assert.Equal("Press any key to continue", translations.Get("English", "continuePrompt"));
+    Assert.Equal("s", translations.Get("English", "secondsUnit"));
     Assert.Contains(translations.Warnings, warning => warning.Contains("ignored"));
   }
 
@@ -22,13 +22,12 @@ public class UiTranslationsTests {
   }
 
   [Theory]
-  [InlineData("Russian", "Нажмите любую клавишу, чтобы продолжить", "с")]
-  [InlineData("zh-TW", "按任意鍵繼續", "秒")]
-  [InlineData("Portuguese_Brazilian", "Pressione qualquer tecla para continuar", "s")]
-  [InlineData("Abenaki", "Ôlmi", "s")]
-  public void UsesBuiltInGameLanguages(string language, string prompt, string unit) {
+  [InlineData("Russian", "с")]
+  [InlineData("zh-TW", "秒")]
+  [InlineData("Portuguese_Brazilian", "s")]
+  [InlineData("Abenaki", "s")]
+  public void UsesBuiltInGameLanguages(string language, string unit) {
     UiTranslations translations = new();
-    Assert.Equal(prompt, translations.Get(language, "continuePrompt"));
     Assert.Equal(unit, translations.Get(language, "secondsUnit"));
   }
 
@@ -59,14 +58,14 @@ public class UiTranslationsTests {
   public void OverridesOneKeyWithoutReplacingOtherKeysOrLanguages() {
     UiTranslations translations = UiTranslations.Parse("""
         Russian:
-          continuePrompt: "Продолжить"
+          connectingStage: "Подключение"
         en:
           secondsUnit: sec
         """);
 
-    Assert.Equal("Продолжить", translations.Get("Russian", "continuePrompt"));
+    Assert.Equal("Подключение", translations.Get("Russian", "connectingStage"));
     Assert.Equal("с", translations.Get("Russian", "secondsUnit"));
-    Assert.Equal("Press any key to continue", translations.Get("Unknown", "continuePrompt"));
+    Assert.Equal("Connecting", translations.Get("Unknown", "connectingStage"));
     Assert.Equal("sec", translations.Get("English", "secondsUnit"));
   }
 
@@ -74,20 +73,34 @@ public class UiTranslationsTests {
   public void UnknownLanguageAndInvalidOverridesFallBackPerKey() {
     UiTranslations translations = UiTranslations.Parse("""
         Russian:
-          continuePrompt: ""
+          connectingStage: ""
           secondsUnit: [invalid]
           unknownKey: unused
         Unknown:
-          continuePrompt: unused
+          connectingStage: unused
         """);
 
-    Assert.Equal("Нажмите любую клавишу, чтобы продолжить", translations.Get("Russian", "continuePrompt"));
+    Assert.Equal("Connecting", translations.Get("Russian", "connectingStage"));
     Assert.Equal("с", translations.Get("Russian", "secondsUnit"));
-    Assert.Equal("Press any key to continue", translations.Get("Unknown", "continuePrompt"));
+    Assert.Equal("Connecting", translations.Get("Unknown", "connectingStage"));
     Assert.Contains(translations.Warnings, warning => warning.StartsWith(
         "Unknown translation key ignored. file=translations.yaml line=") && warning.Contains("key=unknownKey"));
     Assert.Contains(translations.Warnings, warning =>
         warning.StartsWith("Unknown translation language ignored.") && warning.Contains("language=Unknown"));
+  }
+
+  [Fact]
+  public void RemovedContinuePromptKeyIsReportedAndIgnored() {
+    UiTranslations translations = UiTranslations.Parse("""
+        Russian:
+          continuePrompt: "Продолжить"
+        """);
+
+    Assert.Null(translations.Get("Russian", "continuePrompt"));
+    Assert.DoesNotContain("continuePrompt", UiTranslations.Keys);
+    Assert.Contains(translations.Warnings, warning =>
+        warning.StartsWith("Removed translation key ignored.") && warning.Contains("key=continuePrompt"));
+    Assert.DoesNotContain(translations.Warnings, warning => warning.StartsWith("Unknown translation key"));
   }
 
   [Fact]

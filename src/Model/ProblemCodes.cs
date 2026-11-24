@@ -4,6 +4,7 @@ public static class ProblemCodes {
   public const string InvalidYaml = "invalid-yaml";
   public const string InvalidRoot = "invalid-root";
   public const string UnknownKey = "unknown-key";
+  public const string RemovedOption = "removed-option";
   public const string UnknownLayout = "unknown-layout";
   public const string NoEntryLayer = "no-entry-layer";
   public const string UnknownName = "unknown-name";

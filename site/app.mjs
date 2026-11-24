@@ -225,12 +225,12 @@ function defaultsForm() {
   animationEditor(form, defaults, attach);
   effectsEditor(form, defaults, attach);
   Object.keys(options.defaultSections).forEach((name) => {
-    const section = group(form, name === 'continuePrompt' ? 'Continue prompt' : name[0].toUpperCase() + name.slice(1));
+    const section = group(form, name[0].toUpperCase() + name.slice(1));
     const object = mappingOr(defaults[name]);
     const keep = () => { attach(); defaults[name] = object; };
     const row = grid(section);
     ['x', 'bottom'].forEach((key) => field(row, key === 'x' ? 'Offset X (px)' : 'Bottom (px)', object[key], (v) => { keep(); set(object, key, v, true); }, { type: 'number' }));
-    if (name === 'tip' || name === 'continuePrompt') {
+    if (name === 'tip') {
       field(row, 'Font size', object.size, (v) => { keep(); set(object, 'size', v, true); }, { type: 'number' });
       field(row, 'Color', object.color, (v) => { keep(); set(object, 'color', v); });
     }

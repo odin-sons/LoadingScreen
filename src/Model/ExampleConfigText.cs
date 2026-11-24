@@ -59,8 +59,7 @@ public static class ExampleConfigText {
       # "spinner" (hammer, ring, dots, or a relative image path),
       # "progress" (bar, ring, or percent),
       # "image: entry" (the chosen entry's image), "image: separator" (the game's ornament line,
-      # takes placement and a "color" tint), "text: caption" (the entry text or a tip),
-      # and "text: prompt" (the localized key prompt while the screen waits for input).
+      # takes placement and a "color" tint), and "text: caption" (the entry text or a tip).
       # Exact extensionless "entry" and "separator" are keywords; files named entry.png or separator.png work normally.
       # A spinner spins by default; animation: pulse or another preset replaces that motion.
       # Place a spinner like an image. Without place.fit it uses the sprite's native size.
@@ -69,7 +68,7 @@ public static class ExampleConfigText {
       # A text layer takes place (position, opacity, fit: { width }) and: size, color, align (left | center | right),
       # background (a color box behind the text). color and background also accept auto;
       # auto picks light or dark from the image behind the text box (auto background uses 60% opacity).
-      # A layout shows only its layers. Add caption, prompt, separator, spinner, or progress layers when needed.
+      # A layout shows only its layers. Add caption, separator, spinner, or progress layers when needed.
       # Screens without a layout keep the game's tip, separator, progress indicator, and sleep UI.
 
       # defaults:
@@ -80,7 +79,6 @@ public static class ExampleConfigText {
       #   mask: { color: "#000000", opacity: 0.25 }
       #   animation: { enter: fade-in, idle: breathe, exit: fly-out-left }
       #   tip: { x: 0, bottom: 90, size: 24, color: "#FFFFFF" }
-      #   continuePrompt: { x: 0, bottom: 30, size: 20, color: "#FFFFFF" }
       #   separator: { show: true, x: 0, bottom: 150 }
       #   spinner: { center: true, x: 0, bottom: 200 }  # game start screens without a layout
 
@@ -121,9 +119,6 @@ public static class ExampleConfigText {
       #         color: auto
       #         background: auto
       #         place: { fit: { width: 50% }, position: { anchor: bottom, y: -6% } }
-      #       - text: prompt
-      #         size: 20
-      #         place: { fit: { width: 50% }, position: { anchor: bottom, y: -2% } }
 
       # when:
       #   general:

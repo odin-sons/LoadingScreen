@@ -42,8 +42,6 @@ public static class LoadingManager {
   static TMP_FontAsset _tipFont;
   static Material _tipMaterial;
   static FontStyles _tipStyle;
-  static TMP_Text _continuePrompt;
-  static bool _keyPromptWaiting;
   static Image _cachedLoadingImage;
   static Image _cachedLoadingBackground;
   static Transform _cachedPanelSeparator;
@@ -60,7 +58,6 @@ public static class LoadingManager {
     PruneDestroyedUi();
     Session.Reset();
     CurrentCaption = null;
-    _keyPromptWaiting = false;
     LoadingAudio.StopAllSounds();
     if (HudHost) HudHost.Hide();
     if (FejdStartupHost) FejdStartupHost.Hide();
@@ -106,7 +103,6 @@ public static class LoadingManager {
     if (FejdStartupTipText) FejdStartupTipText.gameObject.SetActive(false);
     if (_fejdStartupSeparator) _fejdStartupSeparator.gameObject.SetActive(false);
     if (_createdLoadingBackground) _createdLoadingBackground.gameObject.SetActive(false);
-    if (_continuePrompt) _continuePrompt.gameObject.SetActive(false);
     if (_loadingCanvas) {
       _loadingCanvas.overrideSorting = _loadingCanvasOverride;
       _loadingCanvas.sortingOrder = _loadingCanvasOrder;
@@ -144,7 +140,6 @@ public static class LoadingManager {
     foreach (TMP_Text text in _textLooks.Keys.ToList()) {
       if (text) SetupTipText(text);
     }
-    if (_continuePrompt) SetupContinuePromptAppearance();
     if (_cachedLoadingBackground) SetupLoadingBackground();
     if (_cachedPanelSeparator) SetupPanelSeparator();
     if (HudHost) HudHost.RefreshAppearance();
@@ -184,10 +179,6 @@ public static class LoadingManager {
     if (!host.Show(selection, caption, tipText, continueSession ? Session.AnimationElapsed : 0f,
             continueSession, stage == LoadingStage.Scene, stage, situation)) {
       return false;
-    }
-    if (host.IsShowingLayout) {
-      host.SetPrompt(stage == LoadingStage.Hud && _keyPromptWaiting);
-      if (_continuePrompt) _continuePrompt.gameObject.SetActive(false);
     }
 
     LoadingAudio.Play(host, selection, hasEntryText && tipText, continueSession);
@@ -510,40 +501,6 @@ public static class LoadingManager {
         .SetAnchorMax(Vector2.right)
         .SetPosition(new(defaults.X, defaults.Bottom))
         .SetSizeDelta(new(-50f, 78f));
-  }
-
-  public static void ShowContinuePrompt(Hud hud, bool show) {
-    _keyPromptWaiting = show;
-    if (HudHost) HudHost.SetPrompt(show);
-    show = show && (!HudHost || !HudHost.IsShowingLayout);
-    if (show && !_continuePrompt) {
-      _continuePrompt = Object.Instantiate(hud.m_loadingTip, hud.m_loadingProgress.transform);
-      _continuePrompt.name = "ContinuePrompt";
-      SetupContinuePromptAppearance();
-    }
-
-    if (_continuePrompt) {
-      if (show) {
-        string prompt = UiText.Get("continuePrompt");
-        if (_continuePrompt.text != prompt) _continuePrompt.SetText(prompt);
-      }
-      _continuePrompt.gameObject.SetActive(show);
-    }
-  }
-
-  static void SetupContinuePromptAppearance() {
-    ContinuePromptDefaults defaults = ScreenConfigLoader.Current.Defaults.ContinuePrompt;
-    _continuePrompt
-        .SetAlignment(TextAlignmentOptions.Center)
-        .SetTextWrappingMode(TextWrappingModes.Normal)
-        .SetFontSize(defaults.Size)
-        .SetColor(ToColor(defaults.Color));
-
-    _continuePrompt.GetComponent<RectTransform>()
-        .SetAnchorMin(Vector2.zero)
-        .SetAnchorMax(Vector2.right)
-        .SetPosition(new(defaults.X, defaults.Bottom))
-        .SetSizeDelta(new(-50f, 40f));
   }
 
   internal static Color ToColor(ColorValue value) {

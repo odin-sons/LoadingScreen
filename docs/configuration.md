@@ -67,18 +67,18 @@ create `translations.yaml` beside `loadingscreen.yaml`. Use a game language name
 
 ```yaml
 Russian:
-  continuePrompt: "Нажмите любую клавишу для продолжения"
+  connectingStage: "Подключение"
   secondsUnit: "с"
 German:
   gameStartProgress: "<b>{percent}%</b>\n<size=-4>({seconds} {unit})</size>"
 ```
 
-The keys are `continuePrompt`, `gameStartProgress`, `secondsUnit`, `connectingStage`, `passwordStage`,
+The keys are `gameStartProgress`, `secondsUnit`, `connectingStage`, `passwordStage`,
 `receivingWorldStage`, `configProblems`, `musicVolumeSlider`, and `voiceVolumeSlider`. The progress template accepts `{percent}`,
 `{seconds}`, and `{unit}`; percent and elapsed seconds are integers. The game-start percentage now follows the
 real scene load operation. Missing or invalid entries keep their built-in
-translations. `loadingscreen reload` re-reads the file. Translations for less common languages welcome review from
-native speakers.
+translations; the removed `continuePrompt` key is ignored with a log message. `loadingscreen reload` re-reads the
+file. Translations for less common languages welcome review from native speakers.
 
 Set `[3 - Timing] Change image every N seconds` to a positive number to change images while the HUD or game start
 loading screen stays visible. The default `0` turns the slideshow off. When a situational entry is showing, each
@@ -95,22 +95,17 @@ Set `[2 - When to show] Loading screen while sleeping` to `true` to show an imag
 The game's sleep text and spinner stay visible above plain images. A sleep-specific layout hides them and draws
 only its layers. Image slideshows and tip rotation also apply while sleeping.
 
-Set `[3 - Timing] Hold loading screen until a key is pressed` to `true` to keep the HUD loading screen and tip
-visible after loading finishes (default: off). A separate "Press any key to continue" line appears; any key or mouse
-click dismisses the key hold. `[3 - Timing] Invulnerable while held` defaults to `true` and protects the local player
-from damage while a HUD screen is held. If turned off, the held screen closes immediately when PvP is enabled or when
-a nearby hostile monster notices the player. Deer, tamed creatures, and non-enemies do not trigger this close.
-This setting only matters while a hold is active.
+By default the HUD loading screen closes the moment loading finishes. Set `[3 - Timing] Wait for the voice to
+finish` to `true` to keep it visible while its entry voice is loading or playing (default: off). It releases when the
+voice ends or fails to load; no voice or disabled sounds do not cause a hold. Set `Wait for the exit animation to
+finish` to play the layer exit phases before closing (default: off); otherwise the screen closes immediately and the
+exit phases are skipped. This also applies when sleep or the game start scene loader ends. A key press, mouse click
+or gamepad input ends either wait. `[3 - Timing] Maximum hold time in seconds` closes any wait automatically after
+30 seconds by default (allowed: 1 to 300). Waits do not run on dedicated servers or during cinematics.
 
-Set `[3 - Timing] Wait for the voice to finish` to `true` to keep the HUD screen
-visible while its entry voice is loading or playing after loading finishes (default: off). It releases when the voice
-ends or fails to load; no voice or disabled sounds do not cause a hold. A key press does not skip the voice, and when
-both settings are on, the screen closes after both the voice and key hold are done. Set `Wait for the exit animation
-to finish` to play the layer exit phases before closing (default: off); otherwise the screen closes immediately and
-the exit phases are skipped. This also applies when sleep or the game start scene loader ends. `[3 - Timing] Maximum hold time in
-seconds` closes any hold automatically after 30 seconds by default (allowed: 1 to 300). Holds do not run on
-dedicated servers or during cinematics. On screens without a layout, style the key prompt with
-`defaults.continuePrompt` in `loadingscreen.yaml`. A layout needs a `text: prompt` layer to show it.
+`[3 - Timing] Invulnerable while held` defaults to `true` and protects the local player from damage while the HUD
+screen waits. If turned off, the screen closes immediately when PvP is enabled or when a nearby hostile monster
+notices the player. Deer, tamed creatures, and non-enemies do not trigger this close.
 
 ## Selection
 
@@ -508,9 +503,6 @@ layouts:
         align: center
         background: "#00000099"
         place: { fit: { width: 50% }, position: { anchor: bottom, y: -6% } }
-      - text: prompt           # shown only while waiting for a key
-        size: 20
-        place: { fit: { width: 50% }, position: { anchor: bottom, y: -2% } }
       - image: separator        # the game's ornament line
         color: "#FFFFFFCC"     # optional tint
         place: { fit: { width: 35% }, position: { anchor: bottom, y: -14% } }
@@ -617,7 +609,6 @@ defaults:
   mask: { color: "#000000", opacity: 0.25 }
   animation: { enter: fade-in, idle: breathe, exit: fly-out-left }
   tip: { x: 0, bottom: 90, size: 24, color: "#FFFFFF" }
-  continuePrompt: { x: 0, bottom: 30, size: 20, color: "#FFFFFF" }
   separator: { show: true, x: 0, bottom: 150 }
   spinner: { center: true, x: 0, bottom: 200 }
 ```
@@ -630,15 +621,14 @@ built-ins; a layout can override individual values from `defaults`. Set `strengt
 layout to disable an inherited effect there. Color alpha also affects the final opacity. Effects cover
 layered screens and plain-image fallbacks.
 
-`continuePrompt` positions and styles the line shown during a key hold on screens without a layout; its `size`
-accepts `0` to `64`. `defaults.spinner` styles Valheim's game start indicator on screens without a layout. It
-does not add layers. Layouts show only their declared layers, regardless of `defaults` tip, separator, spinner,
-and continue prompt settings. An older `separator.onLayouts` value is accepted but has no effect.
+`defaults.spinner` styles Valheim's game start indicator on screens without a layout. It
+does not add layers. Layouts show only their declared layers, regardless of `defaults` tip, separator, and spinner
+settings. An older `separator.onLayouts` value is accepted but has no effect. The removed key prompt options,
+`defaults.continuePrompt` and `text: prompt` layers, are reported as `removed-option` and ignored.
 
 A text layer accepts `place` with `position`, `opacity`, and `fit: { width }` (the text box width, default 80% of the screen), plus
 `size`, `color`, `align` (`left`, `center`, `right`), `background` (a color box behind the text). Without a text
-layer, a layout shows no caption. `text: caption` shows the entry text or a tip. `text: prompt` shows the localized
-continue prompt only while the screen waits for a key; it accepts the same style and animation keys.
+layer, a layout shows no caption. `text: caption` shows the entry text or a tip.
 
 Set a text layer's `color: auto` to choose light or dark text from the average brightness of the image behind its
 text box. `background: auto` chooses a light or dark box at 60% opacity; `color: auto` also accounts for that box.
@@ -665,7 +655,7 @@ Behavior switches in `Odin_Sons.LoadingScreen.cfg`; each has a description in th
 |---|---|
 | `1 - General` | Lock Configuration, Mod enabled, Image folder, Text language, Log level, Share screens with players, Shared file bandwidth KiB per second |
 | `2 - When to show` | Loading screen on portal teleport, Loading screen while sleeping, Loading screen right after death, Random tip when an entry has no text |
-| `3 - Timing` | Change image every N seconds, Change tip every N seconds, Hold loading screen until a key is pressed, Invulnerable while held, Wait for the voice to finish, Wait for the exit animation to finish, Maximum hold time in seconds |
+| `3 - Timing` | Change image every N seconds, Change tip every N seconds, Invulnerable while held, Wait for the voice to finish, Wait for the exit animation to finish, Maximum hold time in seconds |
 | `4 - Game start screen` | Use loading images, Show progress |
 | `5 - Sound` | Play loading screen sounds, Music volume percent, Voice volume percent, Mute game sounds on loading screens |
 | `6 - Accessibility` | Readable text, Minimum text size |
@@ -688,12 +678,12 @@ no matching server plugin or sync path, settings stay local.
 
 The following cfg settings are server controlled by default with ServerSync, or `Conditional` with CCS so a server
 admin can choose ownership in `ConditionalConfigSync.SyncPolicy.cfg`:
-`Mod enabled`, `Share screens with players`, all settings in `2 - When to show`, and all settings in `3 - Timing`
-except `Hold loading screen until a key is pressed`. `Lock Configuration` controls the lock itself.
+`Mod enabled`, `Share screens with players`, all settings in `2 - When to show`, and all settings in `3 - Timing`.
+`Lock Configuration` controls the lock itself.
 `Shared file bandwidth KiB per second` is read only by the server and is not synchronized.
 It limits image and audio chunk traffic across all clients; compressed manifests have a separate aggregate
 limit of about 4 MiB/s and a retry hint when that limit is busy.
-The remaining settings are client controlled: `Image folder`, `Text language`, `Log level`, the key hold, both game start settings,
+The remaining settings are client controlled: `Image folder`, `Text language`, `Log level`, both game start settings,
 sound settings, and `Load world in background`. Each cfg description ends with its sync status. The server's
 `loadingscreen.yaml` and `animations.yaml` carry appearance defaults and presets through
 the existing screen transfer; they are not cfg settings.

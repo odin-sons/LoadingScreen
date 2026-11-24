@@ -24,9 +24,11 @@ public sealed class ConfigParser {
   static readonly string[] _placementKeys = ["fit", "position", "opacity", "fade"];
   static readonly string[] _animatedPlacementKeys = [.. _placementKeys, "animate"];
   static readonly string[] _defaultKeys = [
-    "place", "background", "tint", "vignette", "mask", "animation", "tip", "continueprompt", "separator", "spinner",
+    "place", "background", "tint", "vignette", "mask", "animation", "tip", "separator", "spinner",
     "zoom"
   ];
+  public static readonly string[] RemovedDefaultKeys = ["continuePrompt"];
+  public static readonly string[] RemovedTextSources = ["prompt"];
   static readonly string[] _layerKeys = [
     "id", "color", "image", "text", "spinner", "progress", "size", "align", "background", "place", "animation"
   ];
@@ -326,15 +328,18 @@ public sealed class ConfigParser {
 
   Layer ParseTextLayer(Layer layer, YamlMappingNode mapping, YamlNode text, string where) {
     string sourceName = Scalar(text);
-    if (!string.Equals(sourceName, "caption", StringComparison.OrdinalIgnoreCase)
-        && !string.Equals(sourceName, "prompt", StringComparison.OrdinalIgnoreCase)) {
-      Warn(ProblemCodes.InvalidOption, text, $"{where}: 'text' needs caption or prompt, layer ignored");
+    if (RemovedTextSources.Contains(sourceName, StringComparer.OrdinalIgnoreCase)) {
+      Warn(ProblemCodes.RemovedOption, text, $"{where}: 'text: {sourceName}' was removed, layer ignored");
+      return null;
+    }
+
+    if (!string.Equals(sourceName, "caption", StringComparison.OrdinalIgnoreCase)) {
+      Warn(ProblemCodes.InvalidOption, text, $"{where}: 'text' needs caption, layer ignored");
       return null;
     }
 
     layer.Kind = LayerKind.Text;
-    layer.TextSource = string.Equals(sourceName, "prompt", StringComparison.OrdinalIgnoreCase)
-        ? TextSource.Prompt : TextSource.Caption;
+    layer.TextSource = TextSource.Caption;
     layer.Text = new();
 
     YamlNode size = Child(mapping, "size");
@@ -626,7 +631,12 @@ public sealed class ConfigParser {
       return defaults;
     }
 
-    WarnUnknownKeys(mapping, _defaultKeys, "defaults");
+    foreach (YamlNode key in mapping.Children.Keys) {
+      string removed = RemovedDefaultKeys.FirstOrDefault(name => name.ToLowerInvariant() == Key(key));
+      if (removed != null) Warn(ProblemCodes.RemovedOption, key, $"defaults.{removed}: removed option, ignored");
+    }
+    WarnUnknownKeys(mapping, [.. _defaultKeys, .. RemovedDefaultKeys.Select(name => name.ToLowerInvariant())],
+        "defaults");
     ParsePlacement(Child(mapping, "place"), "defaults.place", defaults, _animatedPlacementKeys);
     defaults.Background = ParseDefaultColor(Child(mapping, "background"), "defaults.background", defaults.Background);
     defaults.Tint = ParseDefaultColor(Child(mapping, "tint"), "defaults.tint", defaults.Tint);
@@ -636,8 +646,6 @@ public sealed class ConfigParser {
         ?? LegacyAnimate(Child(mapping, "place"), "defaults.place")
         ?? LegacyZoom(Child(mapping, "zoom"));
     ParseDefaultSection(Child(mapping, "tip"), "tip", defaults.Tip,
-        new Dictionary<string, (float Min, float Max)> { ["Size"] = (0f, 64f) });
-    ParseDefaultSection(Child(mapping, "continueprompt"), "continuePrompt", defaults.ContinuePrompt,
         new Dictionary<string, (float Min, float Max)> { ["Size"] = (0f, 64f) });
     ParseDefaultSection(Child(mapping, "separator"), "separator", defaults.Separator);
     ParseDefaultSection(Child(mapping, "spinner"), "spinner", defaults.Spinner);

@@ -62,12 +62,6 @@
           "x-parserType": "color",
           "x-modelProperty": "Background"
         },
-        "continuePrompt": {
-          "$ref": "#/$defs/ContinuePromptDefaults",
-          "description": "Continue prompt appearance.",
-          "x-parserType": "value",
-          "x-modelProperty": "ContinuePrompt"
-        },
         "mask": {
           "$ref": "#/$defs/MaskSettings",
           "description": "Default color mask.",
@@ -106,7 +100,10 @@
           "x-modelProperty": "Vignette"
         }
       },
-      "additionalProperties": false
+      "additionalProperties": false,
+      "x-removedKeys": [
+        "continuePrompt"
+      ]
     },
     "Layout": {
       "type": "object",
@@ -235,7 +232,7 @@
         },
         "text": {
           "$ref": "#/$defs/TextSource",
-          "description": "Caption or prompt text source.",
+          "description": "Text source: caption.",
           "x-modelProperty": "Text"
         },
         "align": {
@@ -402,39 +399,6 @@
       "additionalProperties": false
     },
     "TipDefaults": {
-      "type": "object",
-      "properties": {
-        "bottom": {
-          "type": "number",
-          "description": "Distance from bottom.",
-          "x-parserType": "float",
-          "x-modelProperty": "Bottom"
-        },
-        "color": {
-          "type": "string",
-          "pattern": "^#?[0-9A-Fa-f]{6}([0-9A-Fa-f]{2})?$",
-          "description": "Text color.",
-          "x-parserType": "color",
-          "x-modelProperty": "Color"
-        },
-        "size": {
-          "type": "integer",
-          "description": "Text size.",
-          "minimum": 0,
-          "maximum": 64,
-          "x-parserType": "int",
-          "x-modelProperty": "Size"
-        },
-        "x": {
-          "type": "number",
-          "description": "Horizontal offset.",
-          "x-parserType": "float",
-          "x-modelProperty": "X"
-        }
-      },
-      "additionalProperties": false
-    },
-    "ContinuePromptDefaults": {
       "type": "object",
       "properties": {
         "bottom": {
@@ -832,10 +796,12 @@
     "TextSource": {
       "type": "string",
       "enum": [
-        "caption",
-        "prompt"
+        "caption"
       ],
-      "title": "Text source"
+      "title": "Text source",
+      "x-removedValues": [
+        "prompt"
+      ]
     },
     "PickOrder": {
       "type": "string",
@@ -1094,6 +1060,7 @@
         "invalid-yaml",
         "invalid-root",
         "unknown-key",
+        "removed-option",
         "unknown-layout",
         "no-entry-layer",
         "unknown-name",
