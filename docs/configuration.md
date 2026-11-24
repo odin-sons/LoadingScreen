@@ -661,7 +661,7 @@ Behavior switches in `Odin_Sons.LoadingScreen.cfg`; each has a description in th
 
 | Section | Settings |
 |---|---|
-| `1 - General` | Lock Configuration, Mod enabled, Image folder, Text language, Log level, Share screens with players |
+| `1 - General` | Lock Configuration, Mod enabled, Image folder, Text language, Log level, Share screens with players, Shared file bandwidth KiB per second |
 | `2 - When to show` | Loading screen on portal teleport, Loading screen while sleeping, Loading screen right after death, Random tip when an entry has no text |
 | `3 - Timing` | Change image every N seconds, Change tip every N seconds, Hold loading screen until a key is pressed, Invulnerable while held, Wait for the voice to finish, Wait for the exit animation to finish, Maximum hold time in seconds |
 | `4 - Game start screen` | Use loading images, Show progress |
@@ -688,6 +688,9 @@ The following cfg settings are server controlled by default with ServerSync, or 
 admin can choose ownership in `ConditionalConfigSync.SyncPolicy.cfg`:
 `Mod enabled`, `Share screens with players`, all settings in `2 - When to show`, and all settings in `3 - Timing`
 except `Hold loading screen until a key is pressed`. `Lock Configuration` controls the lock itself.
+`Shared file bandwidth KiB per second` is read only by the server and is not synchronized.
+It limits image and audio chunk traffic across all clients; compressed manifests have a separate aggregate
+limit of about 4 MiB/s and a retry hint when that limit is busy.
 The remaining settings are client controlled: `Image folder`, `Text language`, `Log level`, the key hold, both game start settings,
 sound settings, and `Load world in background`. Each cfg description ends with its sync status. The server's
 `loadingscreen.yaml` and `animations.yaml` carry appearance defaults and presets through

@@ -19,8 +19,10 @@ using static PluginConfig;
 public static class ServerImages {
   const string RpcRequestManifest = "LoadingScreen_RequestManifest";
   const string RpcManifest = "LoadingScreen_Manifest";
+  const string RpcManifestStatus = "LoadingScreen_ManifestStatus";
   const string RpcRequestChunk = "LoadingScreen_RequestChunk";
   const string RpcChunk = "LoadingScreen_Chunk";
+  const string RpcChunkStatus = "LoadingScreen_ChunkStatus";
 
   const int ProtocolVersion = 3;
   const int ChunkSize = 32 * 1024;
@@ -31,10 +33,14 @@ public static class ServerImages {
   const int MaxFiles = 2000;
   const int MaxYamlLength = 256 * 1024;
   const int MaxManifestSize = 4 * 1024 * 1024;
+  const int MaxCompressedManifestSize = MaxManifestSize + 1024;
+  const int ManifestBytesPerSecond = MaxCompressedManifestSize;
   const int MaxCaptionLength = 500;
   const float ChunkTimeoutSeconds = 10f;
-  const int MaxChunkRetries = 3;
   const int MaxChunkRequestsPerSecond = 64;
+  const int MaxRequestPacketBytes = 128;
+  const int MaxStatusPacketBytes = 128;
+  const int MaxChunkPacketBytes = ChunkSize + 128;
   const float ManifestRequestCooldownSeconds = 30f;
 
   sealed class ServedFile {
@@ -59,11 +65,15 @@ public static class ServerImages {
     public float WindowStart;
     public int ChunkRequests;
     public float LastManifestTime = float.MinValue;
+    public float LastManifestAttemptTime = float.MinValue;
   }
 
   static readonly Dictionary<string, ServedFile> _servedByPath = new(StringComparer.OrdinalIgnoreCase);
   static readonly Dictionary<string, ServedFile> _servedByHash = new(StringComparer.Ordinal);
   static readonly Dictionary<ZRpc, PeerLimits> _peerLimits = [];
+  static readonly object _globalBudgetLock = new();
+  static SharedFileFairBudget _globalBudget;
+  static SharedFileBandwidthBudget _manifestBudget;
   static byte[] _manifestData;
 
   static readonly Dictionary<string, ListedFile> _listedByPath = new(StringComparer.OrdinalIgnoreCase);
@@ -72,13 +82,19 @@ public static class ServerImages {
   static ListedFile _downloading;
   static MemoryStream _downloadBuffer;
   static int _nextChunk;
-  static int _retries;
+  static int _timeoutRetries;
+  static int _backoffAttempt;
   static float _lastRequestTime;
-  static float _lastManifestRequestTime;
+  static float _fileStartTime;
+  static float _retryAtTime;
+  static bool _awaitingChunk;
+  static float _nextManifestRequestTime;
+  static int _manifestBusyAttempt;
   static bool _manifestRequested;
   static bool _manifestReceived;
   static int _downloadedCount;
   static int _failedCount;
+  static readonly System.Random _retryRandom = new();
 
   public static string CacheDir => Path.Combine(Paths.CachePath, "LoadingScreen");
 
@@ -93,7 +109,9 @@ public static class ServerImages {
     } else {
       _serverRpc = peer.m_rpc;
       peer.m_rpc.Register<ZPackage>(RpcManifest, OnManifest);
+      peer.m_rpc.Register<ZPackage>(RpcManifestStatus, OnManifestStatus);
       peer.m_rpc.Register<ZPackage>(RpcChunk, OnChunk);
+      peer.m_rpc.Register<ZPackage>(RpcChunkStatus, OnChunkStatus);
     }
   }
 
@@ -107,12 +125,17 @@ public static class ServerImages {
     if (!IsModEnabled.Value || !ShareScreensWithPlayers.Value) {
       _manifestRequested = false;
       _manifestReceived = false;
+      _nextManifestRequestTime = 0;
+      _manifestBusyAttempt = 0;
       _listedByPath.Clear();
       _downloadQueue.Clear();
       _downloading = null;
       _downloadBuffer = null;
       _nextChunk = 0;
-      _retries = 0;
+      _timeoutRetries = 0;
+      _backoffAttempt = 0;
+      _retryAtTime = 0;
+      _awaitingChunk = false;
       _downloadedCount = 0;
       _failedCount = 0;
       ScreenConfigLoader.UseLocalConfig();
@@ -143,7 +166,7 @@ public static class ServerImages {
   }
 
   static void RequestManifest() {
-    _lastManifestRequestTime = Time.realtimeSinceStartup;
+    _nextManifestRequestTime = Time.realtimeSinceStartup + ManifestRequestCooldownSeconds + 1f;
     ZPackage request = new();
     request.Write(ProtocolVersion);
     _serverRpc.Invoke(RpcRequestManifest, request);
@@ -152,28 +175,159 @@ public static class ServerImages {
   public static void Tick() {
     if (_manifestRequested && !_manifestReceived && IsModEnabled.Value && ShareScreensWithPlayers.Value
         && _serverRpc != null && _serverRpc.IsConnected()
-        && Time.realtimeSinceStartup - _lastManifestRequestTime > ManifestRequestCooldownSeconds + 1f) {
+        && Time.realtimeSinceStartup >= _nextManifestRequestTime) {
       RequestManifest();
     }
 
-    if (_downloading == null || Time.realtimeSinceStartup - _lastRequestTime < ChunkTimeoutSeconds) {
+    if (_downloading == null) {
       return;
     }
 
+    float now = Time.realtimeSinceStartup;
     if (_serverRpc == null || !_serverRpc.IsConnected()) {
       _downloading = null;
       _downloadQueue.Clear();
       return;
     }
 
-    if (++_retries > MaxChunkRetries) {
-      _failedCount++;
-      Log.Server.Warning(LogContext.Message("Server file download timed out; skipped file.",
-          ("side", "client"), ("file", _downloading.Path), ("retries", _retries - 1),
-          ("timeoutSeconds", ChunkTimeoutSeconds)));
-      RequestNextFile();
+    double elapsed = now - _fileStartTime;
+    if (elapsed >= SharedFileTransferPolicy.MaxFileSeconds) {
+      FailCurrentFile("Server file download exceeded its time limit; skipped file.");
+      return;
+    }
+
+    if (_retryAtTime > 0) {
+      if (now >= _retryAtTime) {
+        _retryAtTime = 0;
+        RequestChunk();
+      }
+      return;
+    }
+
+    if (_awaitingChunk && now - _lastRequestTime >= ChunkTimeoutSeconds) {
+      if (!SharedFileTransferPolicy.ShouldRetryTimeout(_timeoutRetries, elapsed)) {
+        FailCurrentFile("Server file download timed out; skipped file.");
+        return;
+      }
+
+      _timeoutRetries++;
+      ScheduleRetry(0);
+    }
+  }
+
+  static void ScheduleRetry(int retryAfterMilliseconds) {
+    _awaitingChunk = false;
+    double delay = SharedFileTransferPolicy.BackoffSeconds(
+        _backoffAttempt++, retryAfterMilliseconds, () => _retryRandom.NextDouble());
+    _retryAtTime = Time.realtimeSinceStartup + (float) delay;
+  }
+
+  static void FailCurrentFile(string message) {
+    _failedCount++;
+    Log.Server.Warning(LogContext.Message(message,
+        ("side", "client"), ("file", _downloading.Path), ("chunk", _nextChunk + 1),
+        ("timeoutRetries", _timeoutRetries)));
+    RequestNextFile();
+  }
+
+  static bool TrySpendGlobalBudget(ZRpc rpc, int bytes, float now, out int retryAfterMilliseconds) {
+    lock (_globalBudgetLock) {
+      int rate = SharedFileBandwidthKiBPerSecond.Value * 1024;
+      if (_globalBudget == null || _globalBudget.BytesPerSecond != rate) {
+        _globalBudget = new SharedFileFairBudget(rate, ChunkSize, now);
+      }
+
+      return _globalBudget.TrySpend(rpc, bytes, now, out retryAfterMilliseconds);
+    }
+  }
+
+  static bool TrySpendManifestBudget(int bytes, float now, out int retryAfterMilliseconds) {
+    lock (_globalBudgetLock) {
+      _manifestBudget ??= new SharedFileBandwidthBudget(ManifestBytesPerSecond, now);
+      if (bytes > ManifestBytesPerSecond) {
+        retryAfterMilliseconds = SharedFileTransferPolicy.MaxRetryAfterMilliseconds;
+        return false;
+      }
+
+      return _manifestBudget.TrySpend(bytes, now, out retryAfterMilliseconds);
+    }
+  }
+
+  static void SendManifestBusy(ZRpc rpc, int retryAfterMilliseconds) {
+    if (rpc == null || !rpc.IsConnected()) return;
+
+    ZPackage response = new();
+    response.Write(SharedFileTransferPolicy.StatusProtocolVersion);
+    response.Write((int) SharedFileStatus.Busy);
+    response.Write(Math.Max(1000, retryAfterMilliseconds));
+    rpc.Invoke(RpcManifestStatus, response);
+  }
+
+  static void OnManifestStatus(ZRpc rpc, ZPackage response) {
+    if (rpc != _serverRpc || !_manifestRequested || _manifestReceived || response == null
+        || response.Size() != 3 * sizeof(int)) return;
+
+    int version;
+    int rawStatus;
+    int retryAfterMilliseconds;
+    try {
+      version = response.ReadInt();
+      rawStatus = response.ReadInt();
+      retryAfterMilliseconds = response.ReadInt();
+    } catch (Exception) {
+      return;
+    }
+
+    if (response.GetPos() != response.Size()
+        || !SharedFileTransferPolicy.TryParseManifestBusy(version, rawStatus, retryAfterMilliseconds)) return;
+
+    double delay = SharedFileTransferPolicy.BackoffSeconds(
+        _manifestBusyAttempt, retryAfterMilliseconds, () => _retryRandom.NextDouble());
+    _manifestBusyAttempt = Math.Min(_manifestBusyAttempt + 1, 3);
+    _nextManifestRequestTime = Time.realtimeSinceStartup + (float) delay;
+  }
+
+  static void SendChunkStatus(ZRpc rpc, string hash, int index, SharedFileStatus status,
+      int retryAfterMilliseconds = 0) {
+    if (rpc == null || !rpc.IsConnected()) return;
+
+    ZPackage response = new();
+    response.Write(SharedFileTransferPolicy.StatusProtocolVersion);
+    response.Write(hash ?? string.Empty);
+    response.Write(index);
+    response.Write((int) status);
+    response.Write(retryAfterMilliseconds);
+    rpc.Invoke(RpcChunkStatus, response);
+  }
+
+  static void OnChunkStatus(ZRpc rpc, ZPackage response) {
+    if (rpc != _serverRpc || _downloading == null || !_awaitingChunk || response == null
+        || response.Size() > MaxStatusPacketBytes) return;
+
+    int version;
+    string hash;
+    int index;
+    int rawStatus;
+    int retryAfterMilliseconds;
+    try {
+      version = response.ReadInt();
+      hash = response.ReadString();
+      index = response.ReadInt();
+      rawStatus = response.ReadInt();
+      retryAfterMilliseconds = response.ReadInt();
+    } catch (Exception) {
+      return;
+    }
+
+    if (response.GetPos() != response.Size()
+        || !SharedFileTransferPolicy.TryParseStatus(
+            version, hash, index, rawStatus, retryAfterMilliseconds, out SharedFileStatus status)
+        || hash != _downloading.Hash || index != _nextChunk) return;
+
+    if (SharedFileTransferPolicy.ShouldRetryStatus(status, Time.realtimeSinceStartup - _fileStartTime)) {
+      ScheduleRetry(retryAfterMilliseconds);
     } else {
-      RequestChunk();
+      FailCurrentFile($"Server refused file download ({status}); skipped file.");
     }
   }
 
@@ -181,14 +335,22 @@ public static class ServerImages {
     _servedByPath.Clear();
     _servedByHash.Clear();
     _peerLimits.Clear();
+    lock (_globalBudgetLock) {
+      _globalBudget = null;
+      _manifestBudget = null;
+    }
     _manifestData = null;
     _listedByPath.Clear();
     _downloadQueue.Clear();
     _serverRpc = null;
     _downloading = null;
     _downloadBuffer = null;
+    _retryAtTime = 0;
+    _awaitingChunk = false;
     _manifestRequested = false;
     _manifestReceived = false;
+    _nextManifestRequestTime = 0;
+    _manifestBusyAttempt = 0;
     _downloadedCount = 0;
     _failedCount = 0;
     ScreenConfigLoader.UseLocalConfig();
@@ -333,35 +495,54 @@ public static class ServerImages {
   }
 
   static void OnRequestManifest(ZRpc rpc, ZPackage request) {
-    if (!IsAcceptedPeer(rpc)) {
+    if (!IsAcceptedPeer(rpc) || request == null || request.Size() != sizeof(int)) {
+      return;
+    }
+
+    bool compatible;
+    try {
+      compatible = request.ReadInt() == ProtocolVersion;
+    } catch (Exception) {
       return;
     }
 
     PeerLimits limits = LimitsFor(rpc);
     float now = Time.realtimeSinceStartup;
+    if (now - limits.LastManifestAttemptTime < 1f) return;
+    limits.LastManifestAttemptTime = now;
 
     if (now - limits.LastManifestTime < ManifestRequestCooldownSeconds) {
+      int cooldownMilliseconds = Math.Min(SharedFileTransferPolicy.MaxRetryAfterMilliseconds,
+          Math.Max(1, (int) Math.Ceiling((ManifestRequestCooldownSeconds - (now - limits.LastManifestTime)) * 1000)));
+      SendManifestBusy(rpc, cooldownMilliseconds);
+      return;
+    }
+
+    byte[] data = compatible && _manifestData != null ? _manifestData : [];
+    if (data.Length > 0 && !TrySpendManifestBudget(data.Length, now, out int retryAfterMilliseconds)) {
+      SendManifestBusy(rpc, retryAfterMilliseconds);
       return;
     }
 
     limits.LastManifestTime = now;
-
     ZPackage envelope = new();
-    bool compatible = request.ReadInt() == ProtocolVersion;
-    envelope.Write(compatible && _manifestData != null ? _manifestData : []);
+    envelope.Write(data);
     rpc.Invoke(RpcManifest, envelope);
   }
 
   static void OnManifest(ZRpc rpc, ZPackage envelope) {
     if (rpc != _serverRpc || !_manifestRequested || _manifestReceived
-        || !IsModEnabled.Value || !ShareScreensWithPlayers.Value) {
+        || !IsModEnabled.Value || !ShareScreensWithPlayers.Value || envelope == null
+        || envelope.Size() > MaxCompressedManifestSize + sizeof(int)) {
       return;
     }
 
-    _manifestReceived = true;
-
     try {
-      byte[] compressed = envelope.ReadByteArray();
+      byte[] compressed = ReadBoundedByteArray(envelope, MaxCompressedManifestSize);
+
+      if (compressed == null || envelope.GetPos() != envelope.Size()) return;
+      _manifestReceived = true;
+      _manifestBusyAttempt = 0;
 
       if (compressed.Length == 0) {
         Log.Server.Info(LogContext.Message("Server has no loading screen files to share.",
@@ -413,17 +594,26 @@ public static class ServerImages {
     long total = 0;
 
     for (int i = 0; i < count; i++) {
+      string rawPath = manifest.ReadString();
+      string hash = manifest.ReadString();
+      long size = manifest.ReadLong();
+      int compressed = manifest.ReadInt();
+      long transferSize = manifest.ReadLong();
+      int chunkCount = manifest.ReadInt();
+      string path = rawPath.Length <= 1024 ? NormalizePath(rawPath) : string.Empty;
+
       ListedFile file = new() {
-        Path = NormalizePath(manifest.ReadString()),
-        Hash = manifest.ReadString().ToLowerInvariant(),
-        Size = manifest.ReadLong(),
-        Compressed = manifest.ReadInt() == 1,
-        TransferSize = manifest.ReadLong(),
-        ChunkCount = manifest.ReadInt(),
+        Path = path,
+        Hash = hash.Length == 64 ? hash.ToLowerInvariant() : string.Empty,
+        Size = size,
+        Compressed = compressed == 1,
+        TransferSize = transferSize,
+        ChunkCount = chunkCount,
       };
 
       bool valid =
-          IsHash(file.Hash)
+          rawPath.Length <= 1024 && hash.Length == 64 && (compressed == 0 || compressed == 1)
+          && SharedFileTransferPolicy.IsHash(file.Hash)
           && file.Size > 0 && file.Size <= FileLimit(file.Path)
           && file.TransferSize > 0 && file.TransferSize <= FileLimit(file.Path)
           && file.ChunkCount == (int) ((file.TransferSize + ChunkSize - 1) / ChunkSize)
@@ -536,7 +726,10 @@ public static class ServerImages {
   static void RequestNextFile() {
     _downloading = null;
     _downloadBuffer = null;
-    _retries = 0;
+    _timeoutRetries = 0;
+    _backoffAttempt = 0;
+    _retryAtTime = 0;
+    _awaitingChunk = false;
 
     while (_downloadQueue.Count > 0) {
       ListedFile next = _downloadQueue[0];
@@ -548,6 +741,7 @@ public static class ServerImages {
             ("side", "client"), ("file", next.Path), ("bytes", next.Size), ("chunks", next.ChunkCount)));
         _downloadBuffer = new MemoryStream((int) next.TransferSize);
         _nextChunk = 0;
+        _fileStartTime = Time.realtimeSinceStartup;
         RequestChunk();
         return;
       }
@@ -556,6 +750,7 @@ public static class ServerImages {
 
   static void RequestChunk() {
     _lastRequestTime = Time.realtimeSinceStartup;
+    _awaitingChunk = true;
 
     if (_serverRpc == null || !_serverRpc.IsConnected()) {
       return;
@@ -571,38 +766,74 @@ public static class ServerImages {
   }
 
   static void OnRequestChunk(ZRpc rpc, ZPackage request) {
-    if (!IsAcceptedPeer(rpc)) {
-      return;
-    }
+    if (!IsAcceptedPeer(rpc)) return;
 
     PeerLimits limits = LimitsFor(rpc);
     float now = Time.realtimeSinceStartup;
-
     if (now - limits.WindowStart >= 1f) {
       limits.WindowStart = now;
       limits.ChunkRequests = 0;
     }
 
-    if (++limits.ChunkRequests > MaxChunkRequestsPerSecond) {
+    if (limits.ChunkRequests >= MaxChunkRequestsPerSecond) return;
+    limits.ChunkRequests++;
+
+    if (request == null || request.Size() > MaxRequestPacketBytes) {
+      SendChunkStatus(rpc, string.Empty, 0, SharedFileStatus.Invalid);
       return;
     }
 
-    string hash = request.ReadString();
-    int index = request.ReadInt();
-    byte[] chunk = ReadChunk(hash, index);
+    string hash;
+    int index;
+    try {
+      hash = request.ReadString();
+      index = request.ReadInt();
+    } catch (Exception) {
+      SendChunkStatus(rpc, string.Empty, 0, SharedFileStatus.Invalid);
+      return;
+    }
+
+    if (request.GetPos() != request.Size() || !SharedFileTransferPolicy.IsHash(hash) || index < 0) {
+      SendChunkStatus(rpc, hash, index, SharedFileStatus.Invalid);
+      return;
+    }
+
+    if (!IsModEnabled.Value || !ShareScreensWithPlayers.Value) {
+      SendChunkStatus(rpc, hash, index, SharedFileStatus.Denied);
+      return;
+    }
+
+    if (!_servedByHash.TryGetValue(hash, out ServedFile file)) {
+      SendChunkStatus(rpc, hash, index, SharedFileStatus.NotFound);
+      return;
+    }
+
+    if (index >= file.ChunkCount) {
+      SendChunkStatus(rpc, hash, index, SharedFileStatus.Invalid);
+      return;
+    }
+
+    long offset = (long) index * ChunkSize;
+    int length = (int) Math.Min(ChunkSize, file.TransferSize - offset);
+    if (!TrySpendGlobalBudget(rpc, length, now, out int retryAfterMilliseconds)) {
+      SendChunkStatus(rpc, hash, index, SharedFileStatus.Busy, retryAfterMilliseconds);
+      return;
+    }
+
+    byte[] chunk = ReadChunk(file, index);
+    if (chunk == null) {
+      SendChunkStatus(rpc, hash, index, SharedFileStatus.NotFound);
+      return;
+    }
 
     ZPackage response = new();
     response.Write(hash);
-    response.Write(chunk == null ? NotAvailable : index);
-    response.Write(chunk ?? []);
+    response.Write(index);
+    response.Write(chunk);
     rpc.Invoke(RpcChunk, response);
   }
 
-  static byte[] ReadChunk(string hash, int index) {
-    if (!_servedByHash.TryGetValue(hash, out ServedFile file) || index < 0 || index >= file.ChunkCount) {
-      return null;
-    }
-
+  static byte[] ReadChunk(ServedFile file, int index) {
     long offset = (long) index * ChunkSize;
     int length = (int) Math.Min(ChunkSize, file.TransferSize - offset);
     byte[] chunk = new byte[length];
@@ -639,28 +870,40 @@ public static class ServerImages {
   }
 
   static void OnChunk(ZRpc rpc, ZPackage response) {
-    if (rpc != _serverRpc || _downloading == null) {
+    if (rpc != _serverRpc || _downloading == null || response == null
+        || response.Size() > MaxChunkPacketBytes) {
       return;
     }
 
-    string hash = response.ReadString();
-    int index = response.ReadInt();
+    string hash;
+    int index;
+    try {
+      hash = response.ReadString();
+      index = response.ReadInt();
+    } catch (Exception) {
+      return;
+    }
 
-    if (hash != _downloading.Hash) {
+    if (!SharedFileTransferPolicy.IsHash(hash) || hash != _downloading.Hash) {
       return;
     }
 
     if (index == NotAvailable) {
-      _failedCount++;
-      Log.Server.Warning(LogContext.Message("Server file is no longer available; skipped download.",
-          ("side", "client"), ("file", _downloading.Path), ("chunk", _nextChunk + 1)));
-      RequestNextFile();
+      FailCurrentFile("Server file is no longer available; skipped download.");
       return;
     }
 
-    byte[] chunk = response.ReadByteArray();
+    if (index != _nextChunk) return;
 
-    if (index != _nextChunk || _downloadBuffer.Length + chunk.LongLength > _downloading.TransferSize) {
+    byte[] chunk;
+    try {
+      chunk = ReadBoundedByteArray(response, ChunkSize);
+    } catch (Exception) {
+      return;
+    }
+
+    int expected = (int) Math.Min(ChunkSize, _downloading.TransferSize - _downloadBuffer.Length);
+    if (chunk == null || chunk.Length != expected || response.GetPos() != response.Size()) {
       return;
     }
 
@@ -669,7 +912,10 @@ public static class ServerImages {
         ("side", "client"), ("file", _downloading.Path), ("chunk", index + 1),
         ("totalChunks", _downloading.ChunkCount), ("bytes", chunk.Length)));
     _nextChunk++;
-    _retries = 0;
+    _timeoutRetries = 0;
+    _backoffAttempt = 0;
+    _retryAtTime = 0;
+    _awaitingChunk = false;
 
     if (_nextChunk < _downloading.ChunkCount) {
       RequestChunk();
@@ -752,8 +998,12 @@ public static class ServerImages {
     return KnownNames.AudioExtensions.Contains(CacheExtension(path)) ? AudioFile.MaxBytes : MaxFileSize;
   }
 
-  static bool IsHash(string hash) {
-    return hash.Length == 64 && hash.All(c => (c >= '0' && c <= '9') || (c >= 'a' && c <= 'f'));
+  static byte[] ReadBoundedByteArray(ZPackage package, int maxLength) {
+    int length = package.ReadInt();
+    if (length < 0 || length > maxLength || length > package.Size() - package.GetPos()) return null;
+
+    byte[] data = package.ReadByteArray(length);
+    return data.Length == length ? data : null;
   }
 
   static string NormalizePath(string path) {
