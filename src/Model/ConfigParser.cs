@@ -19,6 +19,8 @@ public sealed class ConfigLoadResult {
 }
 
 public sealed class ConfigParser {
+  public const int MaxLayers = 32;
+
   static readonly string[] _placementKeys = ["fit", "position", "opacity", "fade"];
   static readonly string[] _animatedPlacementKeys = [.. _placementKeys, "animate"];
   static readonly string[] _defaultKeys = [
@@ -159,12 +161,16 @@ public sealed class ConfigParser {
       return null;
     }
 
-    for (int index = 0; index < layers.Children.Count; index++) {
+    for (int index = 0; index < Math.Min(layers.Children.Count, MaxLayers); index++) {
       Layer layer = ParseLayer(layers.Children[index], name, index);
 
       if (layer != null) {
         layout.Layers.Add(layer);
       }
+    }
+
+    if (layers.Children.Count > MaxLayers) {
+      Warn(layers.Children[MaxLayers], $"layout '{name}': only the first {MaxLayers} layers are used, the rest are ignored");
     }
 
     if (layout.Layers.Count == 0) {

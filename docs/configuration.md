@@ -514,6 +514,9 @@ layouts:
         place: { fit: { width: 35% }, position: { anchor: bottom, y: -14% } }
 ```
 
+A layout uses at most 32 layers. The images on one screen share a budget of about 33 megapixels (two 4096x4096
+images); a layer image that does not fit is skipped with a log message.
+
 Placement options go under `place` in `defaults`, layouts, layers and entries. The most specific
 value wins: entry, then layer, then layout, then defaults. For example, `defaults.place: { fit: contain }`.
 

@@ -54,6 +54,8 @@ public sealed class LayerHost : MonoBehaviour {
   }
 
   const float TextBackgroundPadding = 12f;
+  const long MaxScreenPixels = 2 * 4096L * 4096L;
+  long _remainingPixels = MaxScreenPixels;
 
   static readonly Dictionary<Layer, string> _lastPoolPick = [];
 
@@ -161,6 +163,7 @@ public sealed class LayerHost : MonoBehaviour {
     _progressSituation = situation;
 
     bool drewEntryImage = false;
+    _remainingPixels = MaxScreenPixels;
 
     foreach (Layer layer in layout.Layers) {
       if (layer.Kind == LayerKind.Color) {
@@ -200,11 +203,14 @@ public sealed class LayerHost : MonoBehaviour {
           ? selection.Entry.Image ?? LoadingManager.Session.ImageFor(layer, CustomAssets.NextLoadingImagePath)
           : LoadingManager.Session.ImageFor(layer, () => PickFromPool(layer));
       Sprite sprite = CustomAssets.ReadLoadingImage(
-          layer.FromEntry && selection.Entry.Image == null ? path : ScreenConfigLoader.ResolveImagePath(path));
+          layer.FromEntry && selection.Entry.Image == null ? path : ScreenConfigLoader.ResolveImagePath(path),
+          _remainingPixels);
 
       if (!sprite) {
         continue;
       }
+
+      _remainingPixels -= CustomAssets.PixelCount(sprite);
 
       Placement placement =
           layer.FromEntry
@@ -363,9 +369,11 @@ public sealed class LayerHost : MonoBehaviour {
       SpinnerStyle.Hammer => SceneLoaderPatch.SpinnerSprite,
       SpinnerStyle.Ring => SpinnerSprites.Ring,
       SpinnerStyle.Dots => SpinnerSprites.Dots,
-      _ => CustomAssets.ReadLoadingImage(ScreenConfigLoader.ResolveImagePath(layer.Images.FirstOrDefault())),
+      _ => CustomAssets.ReadLoadingImage(ScreenConfigLoader.ResolveImagePath(layer.Images.FirstOrDefault()),
+          _remainingPixels),
     };
     if (!sprite) return;
+    if (layer.SpinnerStyle == SpinnerStyle.Image) _remainingPixels -= CustomAssets.PixelCount(sprite);
 
     Placement placement = Placement.Merge(
         layer.Placement, layout.Placement, new() { Fit = new() { Mode = FitMode.None } },
