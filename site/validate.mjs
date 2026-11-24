@@ -297,7 +297,8 @@ export function validate(parsed, schema) {
 
   function textLayer(mapping, textNode, where) {
     const source = scalar(textNode);
-    if (!same(source, 'caption') && !same(source, 'prompt')) { warn(textNode, where + ": 'text' needs caption or prompt, layer ignored", 'invalid-option'); return false; }
+    if (options.removedTextSources.some((removed) => same(removed, source))) { warn(textNode, where + ": 'text: " + source + "' was removed, layer ignored", 'removed-option'); return false; }
+    if (!same(source, 'caption')) { warn(textNode, where + ": 'text' needs caption, layer ignored", 'invalid-option'); return false; }
     const size = child(mapping, 'size');
     if (!isNull(size)) {
       const value = parseNumber(scalar(size));
@@ -538,7 +539,11 @@ export function validate(parsed, schema) {
   function defaults(node) {
     if (isNull(node)) return;
     if (!isMap(node)) { warn(node, 'defaults: expected a mapping', 'invalid-shape'); return; }
-    unknownKeys(node, keys.defaults, 'defaults');
+    for (const pair of node.items) {
+      const removed = options.removedDefaultKeys.find((candidate) => candidate.toLowerCase() === key(pair.key));
+      if (removed !== undefined) warn(pair.key, 'defaults.' + removed + ': removed option, ignored', 'removed-option');
+    }
+    unknownKeys(node, [...keys.defaults, ...options.removedDefaultKeys.map((removed) => removed.toLowerCase())], 'defaults');
     placement(child(node, 'place'), 'defaults.place', keys.animatedPlacement);
     for (const colorKey of ['background', 'tint']) {
       const value = child(node, colorKey);
@@ -549,7 +554,6 @@ export function validate(parsed, schema) {
     if (!animation(child(node, 'animation'), 'defaults.animation') && !legacyAnimate(child(node, 'place'), 'defaults.place'))
       legacyZoom(child(node, 'zoom'));
     defaultSection(child(node, 'tip'), 'tip');
-    defaultSection(child(node, 'continueprompt'), 'continuePrompt');
     defaultSection(child(node, 'separator'), 'separator');
     defaultSection(child(node, 'spinner'), 'spinner');
   }

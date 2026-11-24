@@ -147,7 +147,6 @@ public class ConfigParserTests {
           tint: "#ABCDEF"
           animation: { enter: fade-in, idle: breathe, exit: fly-out-left, speed: 1.25 }
           tip: { x: -12, bottom: 75, size: 32, color: "#112233" }
-          continuePrompt: { x: 8, bottom: 45, size: 18, color: "#445566" }
           separator: { show: false, x: 14, bottom: 120, onLayouts: false }
           spinner: { center: false, x: -5, bottom: 180 }
         """;
@@ -166,10 +165,6 @@ public class ConfigParserTests {
     Assert.Equal(75f, defaults.Tip.Bottom);
     Assert.Equal(32, defaults.Tip.Size);
     Assert.Equal(new ColorValue(0x11, 0x22, 0x33), defaults.Tip.Color);
-    Assert.Equal(8f, defaults.ContinuePrompt.X);
-    Assert.Equal(45f, defaults.ContinuePrompt.Bottom);
-    Assert.Equal(18, defaults.ContinuePrompt.Size);
-    Assert.Equal(new ColorValue(0x44, 0x55, 0x66), defaults.ContinuePrompt.Color);
     Assert.False(defaults.Separator.Show);
     Assert.Equal(14f, defaults.Separator.X);
     Assert.Equal(120f, defaults.Separator.Bottom);
@@ -230,15 +225,13 @@ public class ConfigParserTests {
   }
 
   [Fact]
-  public void InvalidContinuePromptValuesUseBuiltIns() {
-    ConfigLoadResult result = Parse("defaults:\n  continuePrompt: { x: nope, bottom: .nan, size: 65, color: bad, extra: true }\n");
+  public void RemovedContinuePromptIsReportedAndIgnored() {
+    ConfigLoadResult result = Parse("defaults:\n  ContinuePrompt: { x: 8, size: 18 }\n  tip: { size: 30 }\n");
 
-    Assert.Equal(0f, result.Config.Defaults.ContinuePrompt.X);
-    Assert.Equal(30f, result.Config.Defaults.ContinuePrompt.Bottom);
-    Assert.Equal(20, result.Config.Defaults.ContinuePrompt.Size);
-    Assert.Equal(new ColorValue(255, 255, 255), result.Config.Defaults.ContinuePrompt.Color);
-    Assert.Equal(5, result.Warnings.Count);
-    Assert.Contains(result.Warnings, warning => warning.Contains("continuePrompt: unknown key 'extra'"));
+    Assert.True(result.IsValid);
+    Assert.Equal(30, result.Config.Defaults.Tip.Size);
+    var problem = Assert.Single(result.Problems);
+    Assert.Equal((2L, ProblemCodes.RemovedOption, "defaults.continuePrompt: removed option, ignored"), problem);
   }
 
   static void AssertBuiltInAppearance(ScreenDefaults defaults) {
@@ -247,10 +240,6 @@ public class ConfigParserTests {
     Assert.Equal(90f, defaults.Tip.Bottom);
     Assert.Equal(24, defaults.Tip.Size);
     Assert.Equal(new ColorValue(255, 255, 255), defaults.Tip.Color);
-    Assert.Equal(0f, defaults.ContinuePrompt.X);
-    Assert.Equal(30f, defaults.ContinuePrompt.Bottom);
-    Assert.Equal(20, defaults.ContinuePrompt.Size);
-    Assert.Equal(new ColorValue(255, 255, 255), defaults.ContinuePrompt.Color);
     Assert.True(defaults.Separator.Show);
     Assert.Equal(0f, defaults.Separator.X);
     Assert.Equal(150f, defaults.Separator.Bottom);
@@ -769,7 +758,6 @@ public class ConfigParserTests {
         defaults:
           animation: { speed: 0, surprise: 1 }
           tip: { x: 4, size: 65, color: bad, extra: true }
-          continuePrompt: { size: 18, bottom: .nan }
           separator: { show: false, onLayouts: wrong }
           spinner: { center: false, x: .inf }
         """;
@@ -780,13 +768,11 @@ public class ConfigParserTests {
     Assert.Null(defaults.Animation.Speed);
     Assert.Equal(4f, defaults.Tip.X);
     Assert.Equal(24, defaults.Tip.Size);
-    Assert.Equal(18, defaults.ContinuePrompt.Size);
-    Assert.Equal(30f, defaults.ContinuePrompt.Bottom);
     Assert.False(defaults.Separator.Show);
     Assert.True(defaults.Separator.OnLayouts);
     Assert.False(defaults.Spinner.Center);
     Assert.Equal(0f, defaults.Spinner.X);
-    Assert.Equal(8, result.Warnings.Count);
+    Assert.Equal(7, result.Warnings.Count);
     Assert.All(result.Warnings, warning => Assert.Contains("line=", warning));
   }
 }
@@ -846,32 +832,22 @@ public class TextLayerTests {
   }
 
   [Fact]
-  public void ParsesPromptTextLayerWithCaptionStyling() {
+  public void RemovedPromptTextLayerIsReportedAndIgnored() {
     const string yaml = """
         layouts:
           held:
             layers:
               - image: entry
-              - text: prompt
+              - text: Prompt
                 size: 26
-                color: "#FFFFFF"
-                align: right
-                background: "#00000080"
-                place: { fit: { width: 40% }, position: { anchor: bottom } }
-                animation: { enter: fade-in }
         """;
 
     ConfigLoadResult result = new ConfigParser(_ => true).Parse(yaml);
-    Layer prompt = result.Config.Layouts["held"].Layers[1];
 
-    Assert.Empty(result.Warnings);
-    Assert.Equal(LayerKind.Text, prompt.Kind);
-    Assert.Equal(TextSource.Prompt, prompt.TextSource);
-    Assert.Equal(26f, prompt.Text.FontSize);
-    Assert.Equal(TextAlign.Right, prompt.Text.Align);
-    Assert.Equal(128, prompt.Text.Background.Value.A);
-    Assert.Equal(Anchor.Bottom, prompt.Placement.Anchor);
-    Assert.Equal("fade-in", prompt.Animation.Enter);
+    Assert.Single(result.Config.Layouts["held"].Layers);
+    var problem = Assert.Single(result.Problems);
+    Assert.Equal(ProblemCodes.RemovedOption, problem.Code);
+    Assert.Equal("layout 'held' layer '1': 'text: Prompt' was removed, layer ignored", problem.Detail);
   }
 
   [Fact]
@@ -898,7 +874,7 @@ public class TextLayerTests {
     Assert.Equal(3, layout.Layers.Count);
     Assert.Null(layout.Layers[1].Placement.Fit);
     Assert.Null(layout.Layers[1].Text.FontSize);
-    Assert.Contains(result.Warnings, warning => warning.Contains("caption or prompt"));
+    Assert.Contains(result.Warnings, warning => warning.Contains("'text' needs caption"));
     Assert.Contains(result.Warnings, warning => warning.Contains("only one of"));
     Assert.Contains(result.Warnings, warning => warning.Contains("text width"));
     Assert.Contains(result.Warnings, warning => warning.Contains("positive font size"));

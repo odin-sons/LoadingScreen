@@ -120,7 +120,7 @@ public static class ConfigSchemaGenerator {
     JsonObject defs = new();
     foreach (Type type in new[] {
         typeof(ScreenDefaults), typeof(Layout), typeof(Layer), typeof(TextStyle), typeof(Entry),
-        typeof(EntryList), typeof(TipDefaults), typeof(ContinuePromptDefaults), typeof(SeparatorDefaults),
+        typeof(EntryList), typeof(TipDefaults), typeof(SeparatorDefaults),
         typeof(SpinnerDefaults), typeof(Fit), typeof(Fade), typeof(AnimationSpec),
         typeof(VignetteSettings), typeof(MaskSettings) })
       defs[type.Name] = TypeDefinition(type, type == typeof(ScreenDefaults));
@@ -156,6 +156,8 @@ public static class ConfigSchemaGenerator {
     defs["SideName"] = EnumSchema("Fade side", new[] { "left", "right", "top", "bottom", "all" });
     defs["SpinnerStyle"] = EnumSchema("Spinner style", Enum.GetNames<SpinnerStyle>().Where(name => name != "Image").Select(Kebab));
     defs["TextSource"] = EnumSchema("Text source", Enum.GetNames<TextSource>().Select(Kebab));
+    defs["TextSource"]["x-removedValues"] = Strings(ConfigParser.RemovedTextSources);
+    defs["ScreenDefaults"]["x-removedKeys"] = Strings(ConfigParser.RemovedDefaultKeys);
     defs["PickOrder"] = EnumSchema("Order", Enum.GetNames<PickOrder>().Select(Kebab));
     defs["ProgressStyle"] = EnumSchema("Progress style", Enum.GetNames<ProgressStyle>().Select(Kebab));
     defs["TextAlign"] = EnumSchema("Text alignment", Enum.GetNames<TextAlign>().Select(Kebab));

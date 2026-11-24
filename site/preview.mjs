@@ -129,7 +129,7 @@ export function drawPreview(screen, layout, entry, defaults, images, ratio) {
       }
       fade(element, place.fade, itemWidth, itemHeight, scale);
     } else if (kind === 'text') {
-      const content = layer.text === 'prompt' ? 'Press any key to continue' : entry.text && typeof entry.text === 'object' ? scalar(entry.text.en) || Object.values(entry.text).find(scalar) || 'Caption' : scalar(entry.text) || 'Caption preview';
+      const content = entry.text && typeof entry.text === 'object' ? scalar(entry.text.en) || Object.values(entry.text).find(scalar) || 'Caption' : scalar(entry.text) || 'Caption preview';
       element.textContent = content;
       element.style.fontSize = Math.max(10, Number(layer.size || 28) * scale) + 'px';
       element.style.fontWeight = '600';

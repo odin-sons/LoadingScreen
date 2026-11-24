@@ -32,8 +32,7 @@ public enum TextAlign {
 }
 
 public enum TextSource {
-  Caption,
-  Prompt
+  Caption
 }
 
 public sealed class TextStyle {
@@ -68,7 +67,7 @@ public sealed class Layer {
   public List<string> Images { get; } = [];
   [SchemaField("color", "Layer color or image tint.", Form = "auto-color", LayerKind = true, LayerKindOrder = 4)]
   public ColorValue Color { get; set; }
-  [SchemaField("text", "Caption or prompt text source.", Form = "text-source", LayerKind = true, LayerKindOrder = 1)]
+  [SchemaField("text", "Text source: caption.", Form = "text-source", LayerKind = true, LayerKindOrder = 1)]
   public TextStyle Text { get; set; }
   public TextSource TextSource { get; set; }
   [SchemaField("place", "Layer placement.")]
@@ -151,17 +150,6 @@ public sealed class TipDefaults {
   public ColorValue Color { get; set; } = new(255, 255, 255);
 }
 
-public sealed class ContinuePromptDefaults {
-  [SchemaField("x", "Horizontal offset.")]
-  public float X { get; set; }
-  [SchemaField("bottom", "Distance from bottom.")]
-  public float Bottom { get; set; } = 30f;
-  [SchemaField("size", "Text size.", Minimum = 0, Maximum = 64)]
-  public int Size { get; set; } = 20;
-  [SchemaField("color", "Text color.")]
-  public ColorValue Color { get; set; } = new(255, 255, 255);
-}
-
 public sealed class SeparatorDefaults {
   [SchemaField("show", "Show the separator.")]
   public bool Show { get; set; } = true;
@@ -198,8 +186,6 @@ public sealed class ScreenDefaults : Placement {
   public AnimationCatalog Animations { get; set; } = new();
   [SchemaField("tip", "Tip appearance.")]
   public TipDefaults Tip { get; } = new();
-  [SchemaField("continuePrompt", "Continue prompt appearance.")]
-  public ContinuePromptDefaults ContinuePrompt { get; } = new();
   [SchemaField("separator", "Separator appearance.")]
   public SeparatorDefaults Separator { get; } = new();
   [SchemaField("spinner", "Spinner appearance.")]

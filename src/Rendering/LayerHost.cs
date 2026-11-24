@@ -179,8 +179,7 @@ public sealed class LayerHost : MonoBehaviour {
       if (layer.Kind == LayerKind.Text) {
         TMP_Text template = textTemplate ? textTemplate : gameStart ? SceneLoaderScreen.ProgressTextTemplate : null;
         if (template) {
-          string value = layer.TextSource == TextSource.Prompt ? UiText.Get("continuePrompt") : caption ?? string.Empty;
-          AddTextLayer(layer, Placement.Merge(layer.Placement, layout.Placement), value, template);
+          AddTextLayer(layer, Placement.Merge(layer.Placement, layout.Placement), caption ?? string.Empty, template);
         }
 
         continue;
@@ -504,14 +503,6 @@ public sealed class LayerHost : MonoBehaviour {
     }
   }
 
-  public void SetPrompt(bool show) {
-    foreach (PlacedText placed in _texts) {
-      if (placed.Source != TextSource.Prompt) continue;
-      if (show) placed.Text.SetText(UiText.Get("continuePrompt"));
-      placed.Rect.gameObject.SetActive(show);
-    }
-  }
-
   void AddTextLayer(Layer layer, Placement placement, string caption, TMP_Text template) {
     RectTransform container = CreateChild<RectTransform>($"Text-{layer.Id}", _root);
     TextStyle style = layer.Text ?? new();
@@ -524,7 +515,7 @@ public sealed class LayerHost : MonoBehaviour {
 
     TMP_Text text = Instantiate(template, container, worldPositionStays: false);
     LoadingManager.MatchTipFont(text);
-    text.name = layer.TextSource == TextSource.Prompt ? "ContinuePrompt" : "Caption";
+    text.name = "Caption";
     text.enabled = true;
     text.gameObject.SetActive(true);
     text.textWrappingMode = TextWrappingModes.Normal;
@@ -561,7 +552,6 @@ public sealed class LayerHost : MonoBehaviour {
         BaseColor = new(baseColor.r, baseColor.g, baseColor.b, baseColor.a),
         BaseSize = style.FontSize ?? template.fontSize });
     RegisterAnimation(layer, container);
-    if (layer.TextSource == TextSource.Prompt) container.gameObject.SetActive(false);
   }
 
   void AddImageLayer(Layer layer, Sprite sprite, Placement placement, bool defaultEntry = false,

@@ -6,7 +6,6 @@ defaults:
   vignette: { color: "#000000", size: 25%, strength: 0.6 }
   mask: { color: "#101010", opacity: 0.2 }
   tip: { x: 0, bottom: 90, size: 24, color: "#FFFFFF" }
-  continuePrompt: { x: 10, bottom: 30, size: 20, color: "#FFFFFFCC" }
   separator: { show: true, x: 0, bottom: 150, onLayouts: false }
   spinner: { center: true, x: 0, bottom: 200 }
 order: sequential

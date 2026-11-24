@@ -20,6 +20,8 @@ export function schemaOptions(schema) {
     imageExtensions: names('ImageExtension'),
     audioExtensions: names('AudioExtension'),
     layerKinds: defs.Layer['x-layerKinds'],
+    removedDefaultKeys: defs.ScreenDefaults['x-removedKeys'],
+    removedTextSources: defs.TextSource['x-removedValues'],
     maxLayers: fields('Layout').layers.maxItems,
     enums: Object.fromEntries([
       ['anchor', 'AnchorValues'],
@@ -32,7 +34,6 @@ export function schemaOptions(schema) {
     ].map(([key, name]) => [key, defs[name]['x-enumValues']])),
     defaultSections: {
       tip: section('TipDefaults'),
-      continuePrompt: section('ContinuePromptDefaults'),
       separator: section('SeparatorDefaults'),
       spinner: section('SpinnerDefaults')
     },

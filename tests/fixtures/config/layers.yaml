@@ -4,7 +4,7 @@ layouts:
       - image: entry
         color: "#ffffff"
       - text: title
-      - text: prompt
+      - text: caption
         size: -3
         place: { fit: cover }
       - text: caption
@@ -37,6 +37,7 @@ layouts:
         place: { animate: maybe }
       - image: img.png
         place: { animate: maybe }
+      - text: prompt
   shorthand:
     - image: entry
   empty:

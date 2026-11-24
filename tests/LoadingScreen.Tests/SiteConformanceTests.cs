@@ -66,7 +66,6 @@ public class SiteConformanceTests {
 
   [Theory]
   [InlineData("tip", typeof(TipDefaults))]
-  [InlineData("continuePrompt", typeof(ContinuePromptDefaults))]
   [InlineData("separator", typeof(SeparatorDefaults))]
   [InlineData("spinner", typeof(SpinnerDefaults))]
   public void SchemaDefaultSectionsMatchTheParser(string section, Type type) {

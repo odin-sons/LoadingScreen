@@ -20,7 +20,6 @@ public static class PluginConfig {
   public static ConfigEntry<bool> ShowLoadingScreenImmediatelyOnDeath { get; private set; }
   public static ConfigEntry<bool> ShowLoadingScreenOnTeleport { get; private set; }
   public static ConfigEntry<bool> ShowLoadingScreenWhileSleeping { get; private set; }
-  public static ConfigEntry<bool> HoldLoadingScreen { get; private set; }
   public static ConfigEntry<bool> InvulnerableWhileHeld { get; private set; }
   public static ConfigEntry<bool> WaitForVoice { get; private set; }
   public static ConfigEntry<bool> WaitForExitAnimation { get; private set; }
@@ -150,19 +149,12 @@ public static class PluginConfig {
             "Show another tip from tips.txt while a loading screen stays visible. 0 turns tip rotation off. "
                 + "Entry text stays fixed. [Synced with Server]");
 
-    HoldLoadingScreen =
-        config.BindInOrder(
-            Timing,
-            "Hold loading screen until a key is pressed",
-            false,
-            "After loading finishes, keep the screen and tip visible until a key is pressed or the mouse is clicked. Never holds during cinematics or on a dedicated server. [Not Synced with Server]");
-
     InvulnerableWhileHeld =
         config.BindInOrder(
             Timing,
             "Invulnerable while held",
             true,
-            "Protect the local player from damage while a loading screen is held. Only matters when a hold is on; when off, PvP or a monster noticing the player closes the screen. [Synced with Server]");
+            "Protect the local player from damage while the screen waits for the voice or exit animation. When off, PvP or a monster noticing the player closes the screen. [Synced with Server]");
 
     WaitForVoice =
         config.BindInOrder(
@@ -183,7 +175,7 @@ public static class PluginConfig {
             Timing,
             "Maximum hold time in seconds",
             30,
-            "Close a held loading screen automatically after this many seconds, even without input. [Synced with Server]",
+            "Close a loading screen that waits for the voice or exit animation after this many seconds. [Synced with Server]",
             new AcceptableValueRange<int>(1, 300));
 
     SceneLoaderUseLoadingImages =
@@ -231,7 +223,6 @@ public static class PluginConfig {
     sync.Register(ChangeTipEverySeconds);
     sync.Register(ShowLoadingScreenOnTeleport);
     sync.Register(ShowLoadingScreenWhileSleeping);
-    sync.Register(HoldLoadingScreen, clientControlled: true);
     sync.Register(InvulnerableWhileHeld);
     sync.Register(WaitForVoice);
     sync.Register(WaitForExitAnimation);

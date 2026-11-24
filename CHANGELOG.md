@@ -1,5 +1,14 @@
 ## Changelog
 
+### Unreleased
+
+#### Removed
+
+  * **Key hold.** The `Hold loading screen until a key is pressed` setting and its "Press any key to continue" line
+    are gone: `defaults.continuePrompt`, `text: prompt` layers and the `continuePrompt` translation key. The loading
+    screen closes as soon as loading ends unless `Wait for the voice to finish` or `Wait for the exit animation to
+    finish` is on. Old configs still load; the removed YAML options are reported as `removed-option` and ignored.
+
 ### 0.10.0 (2026-11-24)
 
 Safer server file sharing, lower memory use for images, and one set of config rules for the mod and the editor.
