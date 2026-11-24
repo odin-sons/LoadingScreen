@@ -297,7 +297,7 @@ export function validate(parsed, schema) {
 
   function textLayer(mapping, textNode, where) {
     const source = scalar(textNode);
-    if (options.removedTextSources.some((removed) => same(removed, source))) { warn(textNode, where + ": 'text: " + source + "' was removed, layer ignored", 'removed-option'); return false; }
+    if (options.removedTextSources.some((removed) => same(source, removed))) { warn(textNode, where + ": 'text: " + source + "' was removed, layer ignored", 'removed-option'); return false; }
     if (!same(source, 'caption')) { warn(textNode, where + ": 'text' needs caption, layer ignored", 'invalid-option'); return false; }
     const size = child(mapping, 'size');
     if (!isNull(size)) {

@@ -25,7 +25,8 @@
 35	invalid-layer	layout 'broken' layer '16': 'background' applies only to text layers
 39	invalid-boolean	layout 'broken' layer '17': 'place': 'animate' must be true or false
 40	removed-option	layout 'broken' layer '18': 'text: prompt' was removed, layer ignored
-44	invalid-layer	layout 'empty' has no valid layers, ignored
-45	duplicate-name	duplicate layout 'BROKEN', ignored
-49	missing-value	layout 'weird' needs a 'layers' list, ignored
+41	invalid-option	layout 'broken' layer '19': 'text' needs caption, layer ignored
+45	invalid-layer	layout 'empty' has no valid layers, ignored
+46	duplicate-name	duplicate layout 'BROKEN', ignored
+50	missing-value	layout 'weird' needs a 'layers' list, ignored
 0	no-entry-layer	layout 'noentry' has no 'image: entry' layer, so entry images are not shown with it

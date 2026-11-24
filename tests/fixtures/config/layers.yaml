@@ -38,6 +38,7 @@ layouts:
       - image: img.png
         place: { animate: maybe }
       - text: prompt
+      - text:
   shorthand:
     - image: entry
   empty:
