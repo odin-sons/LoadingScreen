@@ -34,7 +34,7 @@ that the site still agrees:
 
 ```sh
 LOADINGSCREEN_UPDATE_FIXTURES=1 dotnet test tests/LoadingScreen.Tests --filter SiteConformance
-node --test tests/site/
+node --test "tests/site/*.test.mjs"
 ```
 
 `SiteConformanceTests` also checks the name lists in `site/data/options.json` against the parser.
