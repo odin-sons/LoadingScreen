@@ -239,6 +239,6 @@ public static class ScreenConfigLoader {
     TickBiomeWarnings();
     LoadingManager.RefreshAppearance();
     ImageScaleUtils.RefreshAppearance();
-    SceneLoaderPatch.RefreshAppearance();
+    SceneLoaderScreen.RefreshAppearance();
   }
 }

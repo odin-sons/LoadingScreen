@@ -18,7 +18,7 @@ static class ProgressReader {
 
   public static ProgressValue Read(LoadingStage stage, Situation situation) {
     if (situation.Kind != SituationKind.Sleep) _sleepStart = double.NaN;
-    if (stage == LoadingStage.Scene) return SceneLoaderPatch.CurrentProgress;
+    if (stage == LoadingStage.Scene) return SceneLoaderScreen.CurrentProgress;
     if (stage == LoadingStage.Menu) return Connection();
 
     if (situation.Kind == SituationKind.Sleep) return Sleep();
