@@ -5,17 +5,46 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
 using System.Linq;
+using System.Text;
 
 public static class LogContext {
+  public const int MaxSentenceLength = 1000;
+  public const int MaxValueLength = 500;
+
   public static string Message(string sentence, params (string Key, object Value)[] details) =>
-      sentence + (details.Length == 0 ? string.Empty : " " + string.Join(" ", details.Select(
-          detail => $"{detail.Key}={Value(detail.Value)}")));
+      Escape(sentence ?? string.Empty, MaxSentenceLength) + (details.Length == 0 ? string.Empty : " " + string.Join(" ",
+          details.Select(detail => $"{detail.Key}={Value(detail.Value)}")));
 
   public static string Value(object value) {
-    string text = Convert.ToString(value, CultureInfo.InvariantCulture) ?? "null";
-    text = text.Replace("\r", "\\r").Replace("\n", "\\n").Replace("\"", "\\\"");
+    string text = Escape(Convert.ToString(value, CultureInfo.InvariantCulture) ?? "null", MaxValueLength)
+        .Replace("\"", "\\\"");
     return text.Length == 0 || text.Any(character => char.IsWhiteSpace(character) || character == '=' || character == '"')
         ? $"\"{text}\"" : text;
+  }
+
+  static string Escape(string text, int maxLength) {
+    bool truncated = text.Length > maxLength;
+    if (truncated) text = text.Substring(0, maxLength);
+    StringBuilder escaped = null;
+    for (int index = 0; index < text.Length; index++) {
+      char character = text[index];
+      string replacement = character switch {
+        '\r' => "\\r",
+        '\n' => "\\n",
+        '\t' => "\\t",
+        _ when char.IsControl(character) || character is '\u2028' or '\u2029'
+            => "\\u" + ((int)character).ToString("X4", CultureInfo.InvariantCulture),
+        _ => null,
+      };
+      if (replacement == null) {
+        escaped?.Append(character);
+        continue;
+      }
+      escaped ??= new StringBuilder(text, 0, index, text.Length + 16);
+      escaped.Append(replacement);
+    }
+    string result = escaped?.ToString() ?? text;
+    return truncated ? result + "..." : result;
   }
 
   public static string File(string path, string folder = null) {

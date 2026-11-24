@@ -6,6 +6,22 @@ using Xunit;
 
 public class UiTranslationsTests {
   [Theory]
+  [InlineData(100000)]
+  [InlineData(33)]
+  public void DeepNestingFallsBackToBuiltInText(int depth) {
+    UiTranslations translations = UiTranslations.Parse("English: " + new string('[', depth) + new string(']', depth));
+    Assert.Equal("Press any key to continue", translations.Get("English", "continuePrompt"));
+    Assert.Contains(translations.Warnings, warning => warning.Contains("ignored"));
+  }
+
+  [Fact]
+  public void AliasesAndOversizedFilesAreIgnored() {
+    Assert.Contains(UiTranslations.Parse("a: &x 1\nb: *x\n").Warnings, warning => warning.Contains("aliases"));
+    Assert.Contains(UiTranslations.Parse("# " + new string('x', UiTranslations.MaxBytes)).Warnings,
+        warning => warning.Contains("maxBytes"));
+  }
+
+  [Theory]
   [InlineData("Russian", "Нажмите любую клавишу, чтобы продолжить", "с")]
   [InlineData("zh-TW", "按任意鍵繼續", "秒")]
   [InlineData("Portuguese_Brazilian", "Pressione qualquer tecla para continuar", "s")]
