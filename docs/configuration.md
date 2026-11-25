@@ -555,6 +555,11 @@ matching the previous 1.05 scale over 15 seconds; plain images follow the idle p
 Enter plays once, idle starts after all layer enter phases finish, and exit plays once when the screen closes.
 A continued menu, scene loader or HUD handover resumes idle at the last drawn time without replaying enter.
 Animation time uses real time, so a blocked world load advances the phase clock.
+Enter and exit play relative to the idle pose: `fade-in` before `ken-burns` fades in at the first `ken-burns` pose,
+and an exit starts from the pose idle reached. An enter preset that ends at rest hands over to idle without a jump.
+On layers with `fit: cover` or `stretch` and on color layers, the idle phase adds a constant zoom so that panning,
+drifting or rotating never shows the screen edge. Presets with offscreen keyframes do not get this zoom, and an
+origin on the layer edge cannot hide motion away from that edge.
 
 | Built-in preset | Motion |
 |---|---|

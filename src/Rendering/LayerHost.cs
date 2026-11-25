@@ -34,10 +34,7 @@ public sealed class LayerHost : MonoBehaviour {
   sealed class AnimatedLayer {
     public RectTransform Rect;
     public CanvasGroup Group;
-    public AnimationPreset Enter;
-    public AnimationPreset Idle;
-    public AnimationPreset Exit;
-    public float Speed;
+    public LayerAnimation Animation;
     public Vector2 Origin;
     public Vector2 OriginShift;
     public Vector2 BasePosition;
@@ -490,7 +487,7 @@ public sealed class LayerHost : MonoBehaviour {
     rect.sizeDelta = Vector2.zero;
     image.color = ToColor(layer.Color);
     image.raycastTarget = false;
-    RegisterAnimation(layer, rect);
+    RegisterAnimation(layer, rect, fillsScreen: true);
   }
 
   public void SetCaption(string caption) {
@@ -597,7 +594,8 @@ public sealed class LayerHost : MonoBehaviour {
     }
 
     _placed.Add(placed);
-    RegisterAnimation(layer, image.rectTransform, defaultEntry);
+    RegisterAnimation(layer, image.rectTransform, defaultEntry,
+        placement.Fit?.Mode is FitMode.Cover or FitMode.Stretch);
   }
 
   void OnDestroy() {
@@ -617,24 +615,25 @@ public sealed class LayerHost : MonoBehaviour {
     }
   }
 
-  void RegisterAnimation(Layer layer, RectTransform rect, bool defaultEntry = false) {
+  void RegisterAnimation(Layer layer, RectTransform rect, bool defaultEntry = false, bool fillsScreen = false) {
     ScreenDefaults defaults = ScreenConfigLoader.Current.Defaults;
     AnimationSpec fallback = AnimationSpec.Merge(
         defaults.Animation, defaultEntry ? new() { Idle = "zoom-in" } : null);
     AnimationSpec spec = AnimationSpec.Merge(layer.Animation, fallback);
     AnimationCatalog catalog = defaults.Animations;
+    AnimationPreset enter = catalog.Resolve(spec.Enter, warning => LogAnimationWarning(warning, "enter", layer));
+    AnimationPreset idle = catalog.Resolve(spec.Idle, warning => LogAnimationWarning(warning, "idle", layer));
+    AnimationPreset exit = catalog.Resolve(spec.Exit, warning => LogAnimationWarning(warning, "exit", layer));
+    float speed = spec.Speed ?? 1f;
     AnimatedLayer animated = new() {
       Rect = rect,
       Group = rect.gameObject.AddComponent<CanvasGroup>(),
-      Enter = catalog.Resolve(spec.Enter, warning => LogAnimationWarning(warning, "enter", layer)),
-      Idle = catalog.Resolve(spec.Idle, warning => LogAnimationWarning(warning, "idle", layer)),
-      Exit = catalog.Resolve(spec.Exit, warning => LogAnimationWarning(warning, "exit", layer)),
-      Speed = spec.Speed ?? 1f,
+      Animation = new(enter, idle, exit, speed, fillsScreen),
       Origin = OriginPoint(spec.Origin ?? Anchor.Center),
     };
     _animated.Add(animated);
-    if (spec.Enter != "none") _enterDuration = Mathf.Max(_enterDuration, animated.Enter.EffectiveDuration(animated.Speed));
-    if (spec.Exit != "none") _exitDuration = Mathf.Max(_exitDuration, animated.Exit.EffectiveDuration(animated.Speed));
+    if (spec.Enter != "none") _enterDuration = Mathf.Max(_enterDuration, enter.EffectiveDuration(speed));
+    if (spec.Exit != "none") _exitDuration = Mathf.Max(_exitDuration, exit.EffectiveDuration(speed));
   }
 
   void LogAnimationWarning(string warning, string phase, Layer layer) =>
@@ -661,31 +660,17 @@ public sealed class LayerHost : MonoBehaviour {
     float exitElapsed = _exitStartedAt < 0f ? -1f : now - _exitStartedAt;
     foreach (AnimatedLayer layer in _animated) {
       if (!layer.Rect) continue;
-      AnimationPreset preset;
-      float phaseTime;
-      bool playOnce;
-      if (exitElapsed >= 0f) {
-        preset = layer.Exit;
-        phaseTime = exitElapsed;
-        playOnce = true;
-      } else if (!_skipEnter && elapsed < _enterDuration) {
-        preset = layer.Enter;
-        phaseTime = elapsed;
-        playOnce = true;
-      } else {
-        preset = layer.Idle;
-        phaseTime = idleElapsed;
-        playOnce = false;
-      }
       layer.Rect.anchoredPosition = layer.BasePosition;
       Vector3 pivotPosition = layer.Rect.localPosition;
       Vector2 pivot = layer.Rect.pivot;
-      Vector2 center = new(
-          pivotPosition.x + (0.5f - pivot.x) * layer.Rect.rect.width,
-          pivotPosition.y + (0.5f - pivot.y) * layer.Rect.rect.height);
-      AnimationSample sample = preset.Sample(
-          phaseTime, _root.rect.width, _root.rect.height, layer.Rect.rect.width, layer.Rect.rect.height,
-          center.x, center.y, layer.Speed, playOnce);
+      Rect rect = layer.Rect.rect;
+      LayerGeometry geometry = new(
+          _root.rect.width, _root.rect.height, rect.width, rect.height,
+          pivotPosition.x + (0.5f - pivot.x) * rect.width, pivotPosition.y + (0.5f - pivot.y) * rect.height,
+          (pivot.x - 0.5f) * rect.width, (pivot.y - 0.5f) * rect.height);
+      AnimationSample sample = exitElapsed >= 0f ? layer.Animation.SampleExit(exitElapsed, idleElapsed, geometry)
+          : !_skipEnter && elapsed < _enterDuration ? layer.Animation.SampleEnter(elapsed, geometry)
+          : layer.Animation.SampleIdle(idleElapsed, geometry);
       layer.Rect.anchoredPosition = layer.BasePosition + new Vector2(sample.X, -sample.Y);
       layer.Rect.localScale = Vector3.one * sample.Scale;
       layer.Rect.localEulerAngles = new Vector3(0f, 0f, -sample.Rotation);

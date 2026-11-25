@@ -110,6 +110,113 @@ public sealed class AnimationPreset {
   static float Lerp(float a, float b, float t) => a + (b - a) * t;
 }
 
+public readonly record struct LayerGeometry(
+    float ViewportWidth, float ViewportHeight, float Width, float Height,
+    float CenterX = 0f, float CenterY = 0f, float PivotX = 0f, float PivotY = 0f);
+
+public sealed class LayerAnimation {
+  const int CoverSamples = 256;
+  const float CoverTolerance = 1e-3f;
+
+  readonly AnimationPreset _enter;
+  readonly AnimationPreset _idle;
+  readonly AnimationPreset _exit;
+  readonly float _speed;
+  readonly bool _keepCovered;
+  LayerGeometry? _coverGeometry;
+  float _coverScale = 1f;
+
+  public LayerAnimation(AnimationPreset enter, AnimationPreset idle, AnimationPreset exit, float speed = 1f,
+      bool keepCovered = false) {
+    _enter = enter ?? new();
+    _idle = idle ?? new();
+    _exit = exit ?? new();
+    _speed = speed;
+    _keepCovered = keepCovered;
+  }
+
+  public AnimationSample SampleEnter(float time, LayerGeometry geometry) =>
+      Relative(_enter, time, SampleIdle(0f, geometry), geometry);
+
+  public AnimationSample SampleIdle(float time, LayerGeometry geometry) {
+    AnimationSample sample = Raw(_idle, time, geometry, false);
+    return sample with { Scale = sample.Scale * CoverScale(geometry) };
+  }
+
+  public AnimationSample SampleExit(float time, float idleTime, LayerGeometry geometry) =>
+      Relative(_exit, time, SampleIdle(idleTime, geometry), geometry);
+
+  public float CoverScale(LayerGeometry geometry) {
+    if (!_keepCovered || _idle.Keyframes.Count == 0) return 1f;
+    if (_coverGeometry == geometry) return _coverScale;
+    _coverGeometry = geometry;
+    _coverScale = ComputeCoverScale(geometry);
+    return _coverScale;
+  }
+
+  public static bool Covers(AnimationSample sample, LayerGeometry geometry) =>
+      RequiredScale(sample, geometry) <= sample.Scale * (1f + CoverTolerance);
+
+  float ComputeCoverScale(LayerGeometry geometry) {
+    foreach (AnimationKeyframe frame in _idle.Keyframes) {
+      if (frame.Offscreen != OffscreenEdge.None) return 1f;
+    }
+    if (!Covers(AnimationSample.Identity, geometry)) return 1f;
+    float duration = _idle.EffectiveDuration(_speed);
+    float factor = 1f;
+    for (int i = 0; i <= CoverSamples + _idle.Keyframes.Count; i++) {
+      float progress = i <= CoverSamples ? (float) i / CoverSamples : _idle.Keyframes[i - CoverSamples - 1].At;
+      AnimationSample sample = Raw(_idle, progress * duration, geometry, true);
+      float required = RequiredScale(sample, geometry);
+      if (float.IsInfinity(required) || sample.Scale <= 0f) continue;
+      factor = Math.Max(factor, required / sample.Scale);
+    }
+    return factor > 1f ? factor * (1f + CoverTolerance) : 1f;
+  }
+
+  AnimationSample Raw(AnimationPreset preset, float time, LayerGeometry geometry, bool playOnce) =>
+      preset.Sample(time, geometry.ViewportWidth, geometry.ViewportHeight, geometry.Width, geometry.Height,
+          geometry.CenterX, geometry.CenterY, _speed, playOnce);
+
+  AnimationSample Relative(AnimationPreset preset, float time, AnimationSample pose, LayerGeometry geometry) {
+    AnimationSample sample = preset.Sample(time, geometry.ViewportWidth, geometry.ViewportHeight,
+        geometry.Width * pose.Scale, geometry.Height * pose.Scale, geometry.CenterX + pose.X,
+        geometry.CenterY - pose.Y, _speed, true);
+    return new(sample.Scale * pose.Scale, sample.Rotation + pose.Rotation, sample.X + pose.X,
+        sample.Y + pose.Y, sample.Opacity * pose.Opacity);
+  }
+
+  static float RequiredScale(AnimationSample sample, LayerGeometry geometry) {
+    float pivotX = geometry.CenterX + geometry.PivotX + sample.X;
+    float pivotY = -geometry.CenterY - geometry.PivotY + sample.Y;
+    double angle = -sample.Rotation * Math.PI / 180.0;
+    float cos = (float) Math.Cos(angle);
+    float sin = (float) Math.Sin(angle);
+    float right = geometry.Width / 2f - geometry.PivotX;
+    float left = geometry.Width / 2f + geometry.PivotX;
+    float bottom = geometry.Height / 2f + geometry.PivotY;
+    float top = geometry.Height / 2f - geometry.PivotY;
+    float required = 0f;
+    foreach (float cornerX in new[] { -geometry.ViewportWidth / 2f, geometry.ViewportWidth / 2f }) {
+      foreach (float cornerY in new[] { -geometry.ViewportHeight / 2f, geometry.ViewportHeight / 2f }) {
+        float dx = cornerX - pivotX;
+        float dy = cornerY - pivotY;
+        float localX = dx * cos - dy * sin;
+        float localY = dx * sin + dy * cos;
+        required = Math.Max(required, Needed(localX, right, left));
+        required = Math.Max(required, Needed(localY, bottom, top));
+      }
+    }
+    return required;
+  }
+
+  static float Needed(float distance, float positiveExtent, float negativeExtent) {
+    if (Math.Abs(distance) < 1e-4f) return 0f;
+    float extent = distance > 0f ? positiveExtent : negativeExtent;
+    return extent <= 1e-4f ? float.PositiveInfinity : Math.Abs(distance) / extent;
+  }
+}
+
 public static class AnimationEasing {
   public static float Evaluate(string easing, float value, float overshoot = 1.70158f) {
     float t = Math.Max(0f, Math.Min(1f, value));
