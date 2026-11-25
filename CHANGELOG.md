@@ -4,6 +4,10 @@
 
 #### Fixed
 
+  * **Empty edges on panning backgrounds.** Idle presets such as `pan`, `drift` and `ken-burns` on `fit: cover`
+    or `stretch` images and on color layers now add a constant zoom, so the screen edge never shows.
+  * **Jump when idle starts.** Enter and exit presets play relative to the idle pose, so `fade-in` followed by
+    `ken-burns` no longer snaps to a different framing when idle begins, and exit starts from the current pose.
   * **Readable text on busy images.** `Readable text` now checks contrast against the darkest and brightest parts
     under the text instead of their average, and adds or strengthens the text box on high-contrast backgrounds, so a
     caption over a detailed image no longer stays hard to read. Tips get the same check.
