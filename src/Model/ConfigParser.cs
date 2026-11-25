@@ -597,13 +597,27 @@ public sealed class ConfigParser {
         return false;
       }
 
+      string key = Name(pair.Key);
+
+      if (Conditions.IsFlag(kind) || Conditions.IsCount(kind)) {
+        Condition single = ParseSingleCondition(pair.Value, kind, negated, key, where);
+
+        if (single == null) {
+          return false;
+        }
+
+        conditions.Add(single);
+        continue;
+      }
+
       IEnumerable<YamlNode> items = pair.Value is YamlSequenceNode sequence ? sequence.Children : [pair.Value];
+      Condition anyOf = null;
 
       foreach (YamlNode item in items) {
         string name = Scalar(item)?.Trim();
 
         if (string.IsNullOrEmpty(name)) {
-          Warn(ProblemCodes.MissingValue, item, $"{where}: '{Name(pair.Key)}' needs a name, entry ignored");
+          Warn(ProblemCodes.MissingValue, item, $"{where}: '{key}' needs a name, entry ignored");
           return false;
         }
 
@@ -614,11 +628,63 @@ public sealed class ConfigParser {
           name = biome ?? name;
         }
 
-        conditions.Add(new() { Kind = kind, Name = name, Negated = negated });
+        if (kind == ConditionKind.Time) {
+          string time = Enum.GetNames(typeof(TimeOfDay)).FirstOrDefault(
+              known => string.Equals(known, name, StringComparison.OrdinalIgnoreCase));
+
+          if (time == null) {
+            Warn(ProblemCodes.InvalidOption, item,
+                $"{where}: unknown time '{name}', use day, night, morning or evening; entry ignored");
+            return false;
+          }
+
+          name = time.ToLowerInvariant();
+        }
+
+        if (!Conditions.IsAnyOf(kind)) {
+          conditions.Add(new() { Kind = kind, Name = name, Negated = negated });
+        } else if (anyOf == null) {
+          anyOf = new() { Kind = kind, Name = name, Negated = negated };
+          conditions.Add(anyOf);
+        } else {
+          anyOf.Alternatives.Add(name);
+        }
       }
     }
 
     return true;
+  }
+
+  Condition ParseSingleCondition(YamlNode node, ConditionKind kind, bool negated, string key, string where) {
+    if (node is YamlSequenceNode or YamlMappingNode) {
+      Warn(ProblemCodes.InvalidShape, node, $"{where}: '{key}' must be a single value, entry ignored");
+      return null;
+    }
+
+    string value = Scalar(node)?.Trim();
+
+    if (string.IsNullOrEmpty(value)) {
+      Warn(ProblemCodes.MissingValue, node, $"{where}: '{key}' needs a value, entry ignored");
+      return null;
+    }
+
+    if (Conditions.IsFlag(kind)) {
+      if (!bool.TryParse(value, out bool flag)) {
+        Warn(ProblemCodes.InvalidBoolean, node, $"{where}: '{key}' must be true or false, entry ignored");
+        return null;
+      }
+
+      return new() { Kind = kind, Name = "true", Negated = negated != !flag };
+    }
+
+    if (!int.TryParse(value, NumberStyles.Integer, CultureInfo.InvariantCulture, out int count)
+        || count < 1 || count > Conditions.MaxPlayerCount) {
+      Warn(ProblemCodes.InvalidNumber, node,
+          $"{where}: '{key}' must be an integer from 1 to {Conditions.MaxPlayerCount}, entry ignored");
+      return null;
+    }
+
+    return new() { Kind = kind, Name = count.ToString(CultureInfo.InvariantCulture), Negated = negated };
   }
 
   ScreenDefaults ParseDefaults(YamlNode node) {

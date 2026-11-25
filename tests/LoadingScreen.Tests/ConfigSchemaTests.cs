@@ -186,10 +186,18 @@ public static class ConfigSchemaGenerator {
         typeof(ProgressStyle), typeof(TextAlign), typeof(ConditionKind) })
       defs[type.Name + "Values"] = NumericEnum(type);
 
+    defs["TimeOfDay"] = EnumSchema("Time of day", Enum.GetNames<TimeOfDay>().Select(Kebab));
     JsonObject conditionProperties = new();
-    foreach (string name in conditions.Concat(conditions.Select(value => "not" + value[0].ToString().ToUpperInvariant() + value.Substring(1))))
-      conditionProperties[name] = Choice(new JsonObject { ["type"] = "string" },
-          new JsonObject { ["type"] = "array", ["items"] = new JsonObject { ["type"] = "string" } });
+    foreach (ConditionKind kind in Enum.GetValues<ConditionKind>()) {
+      JsonObject value = Conditions.IsFlag(kind) ? new JsonObject { ["type"] = "boolean" }
+          : Conditions.IsCount(kind) ? new JsonObject {
+              ["type"] = "integer", ["minimum"] = 1, ["maximum"] = Conditions.MaxPlayerCount }
+          : kind == ConditionKind.Time ? Choice(Ref("TimeOfDay"), new JsonObject { ["type"] = "array", ["items"] = Ref("TimeOfDay") })
+          : Choice(new JsonObject { ["type"] = "string" },
+              new JsonObject { ["type"] = "array", ["items"] = new JsonObject { ["type"] = "string" } });
+      conditionProperties[Camel(kind.ToString())] = value;
+      conditionProperties["not" + kind] = value.DeepClone();
+    }
     defs["Conditions"] = Object(conditionProperties);
     defs["LegacyZoom"] = Object(new JsonObject {
       ["enabled"] = new JsonObject { ["type"] = "boolean" },

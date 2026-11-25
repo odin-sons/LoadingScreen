@@ -1,0 +1,8 @@
+9	invalid-option	general.entries[2]: 'when': unknown time 'noon', use day, night, morning or evening; entry ignored
+11	invalid-boolean	general.entries[3]: 'when': 'sailing' must be true or false, entry ignored
+13	invalid-number	general.entries[4]: 'when': 'minPlayers' must be an integer from 1 to 999, entry ignored
+15	invalid-number	general.entries[5]: 'when': 'maxPlayers' must be an integer from 1 to 999, entry ignored
+17	invalid-shape	general.entries[6]: 'when': 'multiplayer' must be a single value, entry ignored
+19	missing-value	general.entries[7]: 'when': 'minPlayers' needs a value, entry ignored
+21	invalid-number	general.entries[8]: 'when': 'maxPlayers' must be an integer from 1 to 999, entry ignored
+23	missing-value	general.entries[9]: 'when': 'weather' needs a name, entry ignored

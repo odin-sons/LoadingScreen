@@ -1,0 +1,23 @@
+when:
+  General:
+    entries:
+      - image: a.png
+        when: { time: [Night, evening], weather: [Rain, ThunderStorm], sailing: true, minPlayers: 2, maxPlayers: 10, multiplayer: false }
+      - image: a.png
+        when: { notTime: day, notSailing: true, notWeather: Snow }
+      - image: a.png
+        when: { time: noon }
+      - image: a.png
+        when: { sailing: maybe }
+      - image: a.png
+        when: { minPlayers: 0 }
+      - image: a.png
+        when: { maxPlayers: 1000 }
+      - image: a.png
+        when: { multiplayer: [true] }
+      - image: a.png
+        when: { minPlayers: "" }
+      - image: a.png
+        when: { maxPlayers: 2.5 }
+      - image: a.png
+        when: { weather: "" }

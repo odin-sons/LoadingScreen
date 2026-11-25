@@ -416,12 +416,37 @@ export function validate(parsed, schema) {
         warn(pair.key, where + ": unknown condition '" + conditionKey + "', entry ignored", 'unknown-name');
         return false;
       }
+      const kindValue = parseEnum(conditionKey, kinds) ?? parseEnum(conditionKey.slice(3), kinds);
+      const kind = Object.keys(kinds).find((member) => kinds[member] === kindValue);
+      const type = options.conditionTypes[kind.toLowerCase()];
       const value = valueOf(pair);
+      if (type === 'boolean' || type === 'integer') {
+        if (!singleCondition(value, type, conditionKey, where)) return false;
+        continue;
+      }
       for (const item of isSeq(value) ? value.items : [value]) {
         if (blank(scalar(item))) { warn(item, where + ": '" + conditionKey + "' needs a name, entry ignored", 'missing-value'); return false; }
+        if (kind === 'Time' && !options.timesOfDay.some((time) => same(time, scalar(item).trim()))) {
+          warn(item, where + ": unknown time '" + scalar(item).trim() + "', use day, night, morning or evening; entry ignored", 'invalid-option');
+          return false;
+        }
       }
     }
     return true;
+  }
+
+  function singleCondition(node, type, conditionKey, where) {
+    if (isSeq(node) || isMap(node)) { warn(node, where + ": '" + conditionKey + "' must be a single value, entry ignored", 'invalid-shape'); return false; }
+    if (blank(scalar(node))) { warn(node, where + ": '" + conditionKey + "' needs a value, entry ignored", 'missing-value'); return false; }
+    if (type === 'boolean') {
+      if (parseBoolean(scalar(node)) !== undefined) return true;
+      warn(node, where + ": '" + conditionKey + "' must be true or false, entry ignored", 'invalid-boolean');
+      return false;
+    }
+    const count = parseInteger(scalar(node));
+    if (count !== undefined && count >= 1 && count <= options.maxPlayerCount) return true;
+    warn(node, where + ": '" + conditionKey + "' must be an integer from 1 to " + options.maxPlayerCount + ', entry ignored', 'invalid-number');
+    return false;
   }
 
   function languageCode(value) {

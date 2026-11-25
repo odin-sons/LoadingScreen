@@ -377,7 +377,10 @@ function entryForm(parent, entries, index, attachEntries) {
         render();
       }
     }, { list: options.conditions, onChange: true });
-    const suggestions = key.toLowerCase().includes('biome') ? options.biomes : key.toLowerCase().includes('global') ? options.globalKeys : [];
+    const lower = key.toLowerCase();
+    const type = options.conditionTypes[lower.startsWith('not') && !options.conditionTypes[lower] ? lower.slice(3) : lower];
+    const suggestions = lower.includes('biome') ? options.biomes : lower.includes('global') ? options.globalKeys
+      : lower.endsWith('time') ? options.timesOfDay : type === 'boolean' ? ['true', 'false'] : [];
     field(fields, 'Name or comma-separated names', listText(value, ', '), (v) => { keepWhen(); define(when, key, v.includes(',') ? v.split(',').map((s) => s.trim()).filter(Boolean) : v); }, { list: suggestions });
   });
 }

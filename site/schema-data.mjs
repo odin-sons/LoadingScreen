@@ -23,6 +23,10 @@ export function schemaOptions(schema) {
     removedDefaultKeys: defs.ScreenDefaults['x-removedKeys'],
     removedTextSources: defs.TextSource['x-removedValues'],
     maxLayers: fields('Layout').layers.maxItems,
+    timesOfDay: names('TimeOfDay'),
+    maxPlayerCount: fields('Conditions').minPlayers.maximum,
+    conditionTypes: Object.fromEntries(Object.entries(fields('Conditions'))
+      .map(([name, field]) => [name.toLowerCase(), field.type])),
     enums: Object.fromEntries([
       ['anchor', 'AnchorValues'],
       ['fitMode', 'FitModeValues'],

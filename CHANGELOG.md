@@ -2,6 +2,13 @@
 
 ### Unreleased
 
+#### Added
+
+  * **World conditions.** Entries can match the time of day (`time: night`), the weather (`weather: [Rain,
+    ThunderStorm]`), sailing (`sailing: true`), the player count (`minPlayers`, `maxPlayers`) and a shared world
+    (`multiplayer: true`). They are unknown before the world loads, so such entries are skipped there. The config
+    editor and the JSON Schema check the new values.
+
 #### Fixed
 
   * **Empty edges on panning backgrounds.** Idle presets such as `pan`, `drift` and `ken-burns` on `fit: cover`
