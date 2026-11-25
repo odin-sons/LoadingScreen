@@ -613,6 +613,11 @@ public sealed class ConfigParser {
       IEnumerable<YamlNode> items = pair.Value is YamlSequenceNode sequence ? sequence.Children : [pair.Value];
       Condition anyOf = null;
 
+      if (Conditions.IsAnyOf(kind) && !items.Any()) {
+        Warn(ProblemCodes.MissingValue, pair.Value, $"{where}: '{key}' needs a name, entry ignored");
+        return false;
+      }
+
       foreach (YamlNode item in items) {
         string name = Scalar(item)?.Trim();
 

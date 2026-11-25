@@ -21,3 +21,5 @@ when:
         when: { maxPlayers: 2.5 }
       - image: a.png
         when: { weather: "" }
+      - image: a.png
+        when: { time: [] }

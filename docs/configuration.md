@@ -217,6 +217,7 @@ every name must match, except for `time` and `weather`, where any listed value m
 `when: { time: night, weather: [Rain, ThunderStorm] }`. `sailing`, `multiplayer`, `minPlayers` and `maxPlayers`
 take a single value. World conditions (`time`, `weather`, `sailing`, `minPlayers`, `maxPlayers`) need a loaded world
 and character, and `multiplayer` needs a started game, so entries with them are skipped like player conditions.
+They use the state when the screen is chosen, so a teleport screen sees the weather at the departure point.
 An unknown `weather` name logs a warning with the available environments. Player conditions need a loaded character, so entries with them are skipped on the main menu
 and on the first loading screen of a session. An entry with an unknown condition is ignored with a log message.
 Steam or Xbox achievements are not available to mods on every platform; use the global key or item the achievement

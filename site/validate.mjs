@@ -4,6 +4,7 @@ import { schemaOptions } from './schema-data.mjs';
 
 const INT_RANGE = [-2147483648, 2147483647];
 export const MAX_PROBLEMS = 200;
+const ANY_OF_CONDITIONS = ['Time', 'Weather'];
 
 const isNull = (node) => node === undefined || isNullNode(node);
 const scalar = (node) => isNull(node) || !isScalar(node) ? null : String(node.value ?? '');
@@ -424,7 +425,9 @@ export function validate(parsed, schema) {
         if (!singleCondition(value, type, conditionKey, where)) return false;
         continue;
       }
-      for (const item of isSeq(value) ? value.items : [value]) {
+      const items = isSeq(value) ? value.items : [value];
+      if (ANY_OF_CONDITIONS.includes(kind) && items.length === 0) { warn(value, where + ": '" + conditionKey + "' needs a name, entry ignored", 'missing-value'); return false; }
+      for (const item of items) {
         if (blank(scalar(item))) { warn(item, where + ": '" + conditionKey + "' needs a name, entry ignored", 'missing-value'); return false; }
         if (kind === 'Time' && !options.timesOfDay.some((time) => same(time, scalar(item).trim()))) {
           warn(item, where + ": unknown time '" + scalar(item).trim() + "', use day, night, morning or evening; entry ignored", 'invalid-option');
