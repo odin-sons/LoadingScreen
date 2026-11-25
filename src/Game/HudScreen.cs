@@ -18,6 +18,8 @@ internal static class HudScreen {
   static Situation _currentSituation;
   static readonly LoadingHoldState _holdState = new();
   static float _nextThreatScanAt;
+  static GameObject _indicatorOwner;
+  static bool _indicatorWasActive;
 
   internal static bool IsHolding => _holdState.Holding;
 
@@ -94,6 +96,23 @@ internal static class HudScreen {
   }
 
   internal static void OnAfterUpdate(Hud __instance) {
+    UpdateScreen(__instance);
+    SyncIndicator(__instance);
+  }
+
+  static void SyncIndicator(Hud hud) {
+    if (!hud.m_loadingIndicator) return;
+    GameObject indicator = hud.m_loadingIndicator.gameObject;
+    if (_indicatorOwner != indicator) {
+      _indicatorOwner = indicator;
+      _indicatorWasActive = indicator.activeSelf;
+    }
+    bool active = _indicatorWasActive
+        && !(IsModEnabled.Value && LoadingManager.HudHost && LoadingManager.HudHost.IsShowingLayout);
+    if (indicator.activeSelf != active) indicator.SetActive(active);
+  }
+
+  static void UpdateScreen(Hud __instance) {
     if (!IsModEnabled.Value || _sleepExitHolding) return;
     bool sleeping = ShowLoadingScreenWhileSleeping.Value && Player.m_localPlayer && Player.m_localPlayer.IsSleeping();
     if (sleeping && !_wasSleeping) ProgressReader.ResetSleep();
