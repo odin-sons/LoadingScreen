@@ -7,6 +7,9 @@
   * **Readable text on busy images.** `Readable text` now checks contrast against the darkest and brightest parts
     under the text instead of their average, and adds or strengthens the text box on high-contrast backgrounds, so a
     caption over a detailed image no longer stays hard to read. Tips get the same check.
+  * **Hammer over the progress text.** Valheim's HUD loading indicator no longer shows while a layout is shown, so it
+    stops covering the stage text of a `progress` layer while joining a world. Add a `spinner: hammer` layer to place
+    a hammer yourself.
 
 #### Removed
 

@@ -524,8 +524,9 @@ for Valheim's loading indicator sprite, `spinner: ring` or `spinner: dots` for g
 `spinner: common/indicator.png` for a custom image. Custom images use the same path rules and server transfer as
 image layers. Spinner layers use `place` like images and keep their native size unless `fit` is set. They use
 `spin` as their idle animation by default; `animation: pulse` or an `animation` phase mapping replaces it.
-On game start layouts, add `progress: ring` and `spinner: hammer` layers if you want a progress ring and Valheim's hammer.
-Valheim's own indicator stays hidden while a layout is shown.
+Valheim's own indicator stays hidden while a layout is shown, both on game start and on the HUD screens for
+joining, portal, death and sleep. Add `progress: ring` and `spinner: hammer` layers if you want a progress ring
+and Valheim's hammer placed by the layout.
 
 Use `progress: bar`, `progress: ring`, or `progress: percent` in any layout. It uses `place` like an image;
 `color` sets its color and `size` sets bar height, ring diameter, or percentage font size. Defaults are a 240 px
