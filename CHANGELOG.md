@@ -2,6 +2,12 @@
 
 ### Unreleased
 
+#### Fixed
+
+  * **Readable text on busy images.** `Readable text` now checks contrast against the darkest and brightest parts
+    under the text instead of their average, and adds or strengthens the text box on high-contrast backgrounds, so a
+    caption over a detailed image no longer stays hard to read. Tips get the same check.
+
 #### Removed
 
   * **Key hold.** The `Hold loading screen until a key is pressed` setting and its "Press any key to continue" line

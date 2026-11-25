@@ -46,14 +46,68 @@ public class ColorMathTests {
   }
 
   [Fact]
-  public void ReadableTextUsesTheSampledAverageAndRendersOpaque() {
+  public void ReadableTextUsesTheSampledRangeAndRendersOpaque() {
     ColorValue[] pixels = [new(0, 0, 0), new(255, 255, 255)];
-    double Luminance(ColorValue? box) => ColorMath.AverageLuminance(
+    (double Low, double High) Range(ColorValue? box) => ColorMath.LuminanceRange(
         pixels, 2, 1, 0d, 0d, 1d, 1d, box);
-    var result = ColorMath.Readable(new(90, 90, 90, 20), null, new(128, 128, 128), Luminance);
+    var result = ColorMath.Readable(new(90, 90, 90, 20), null, new(128, 128, 128), Range);
     Assert.Equal(255, result.Text.A);
+    Assert.True(result.Background.HasValue);
+    Assert.True(ColorMath.WorstContrast(ColorMath.RelativeLuminance(result.Text),
+        Range(result.Background)) >= 4.5d);
+  }
+
+  [Fact]
+  public void LuminanceRangeIgnoresRareOutliers() {
+    ColorValue[] pixels = new ColorValue[100];
+    for (int i = 0; i < pixels.Length; i++) pixels[i] = i == 0 ? new(255, 255, 255) : new(0, 0, 0);
+    var range = ColorMath.LuminanceRange(pixels, 10, 10, 0d, 0d, 1d, 1d);
+    Assert.Equal(0d, range.Low);
+    Assert.Equal(0d, range.High);
+  }
+
+  [Fact]
+  public void ReadableTextAddsBoxWhenTheMeanPassesButBusySamplesFail() {
+    ColorValue[] pixels = new ColorValue[64];
+    for (int y = 0; y < 8; y++) {
+      for (int x = 0; x < 8; x++) {
+        pixels[y * 8 + x] = (x + y) % 2 == 0 ? new(255, 255, 255) : new(90, 90, 90);
+      }
+    }
+    ColorValue text = new(20, 20, 20);
+    double mean = ColorMath.AverageLuminance(pixels, 8, 8, 0d, 0d, 1d, 1d);
+    Assert.True(ColorMath.ContrastRatio(ColorMath.RelativeLuminance(text), mean) >= 4.5d);
+    (double Low, double High) Range(ColorValue? box) => ColorMath.LuminanceRange(
+        pixels, 8, 8, 0d, 0d, 1d, 1d, box);
+    Assert.True(ColorMath.WorstContrast(ColorMath.RelativeLuminance(text), Range(null)) < 4.5d);
+
+    var result = ColorMath.Readable(text, null, new(172, 172, 172), Range);
+    Assert.True(result.Background.HasValue);
+    Assert.True(ColorMath.WorstContrast(ColorMath.RelativeLuminance(result.Text),
+        Range(result.Background)) >= 4.5d);
+  }
+
+  [Theory]
+  [InlineData(200, 90)]
+  [InlineData(128, 128)]
+  [InlineData(30, 60)]
+  public void ReadableTextOnUniformSamplesMatchesTheSolidColorResult(byte background, byte text) {
+    ColorValue color = new(background, background, background);
+    ColorValue[] pixels = new ColorValue[16];
+    for (int i = 0; i < pixels.Length; i++) pixels[i] = color;
+    var sampled = ColorMath.Readable(new(text, text, text), null, color,
+        box => ColorMath.LuminanceRange(pixels, 4, 4, 0d, 0d, 1d, 1d, box));
+    var solid = ColorMath.Readable(new(text, text, text), null, color);
+    Assert.Equal(solid.Text.ToString(), sampled.Text.ToString());
+    Assert.Equal(solid.Background?.ToString(), sampled.Background?.ToString());
+  }
+
+  [Fact]
+  public void ReadableTextOnUniformBackgroundOnlyShiftsLightness() {
+    var result = ColorMath.Readable(new(90, 90, 90), null, new(200, 200, 200));
+    Assert.False(result.Background.HasValue);
     Assert.True(ColorMath.ContrastRatio(ColorMath.RelativeLuminance(result.Text),
-        Luminance(result.Background)) >= 4.5d);
+        ColorMath.RelativeLuminance(new(200, 200, 200))) >= 4.5d);
   }
 
   [Fact]

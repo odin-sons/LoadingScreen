@@ -834,7 +834,7 @@ public sealed class LayerHost : MonoBehaviour {
     ColorValue text = style.AutoColor ? ColorMath.AutoText(effectiveLuminance) : placed.BaseColor;
     if (PluginConfig.ReadableText.Value) {
       (text, box) = ColorMath.Readable(text, box, image,
-          topSamples == null ? null : candidate => ColorMath.AverageLuminance(
+          topSamples == null ? null : candidate => ColorMath.LuminanceRange(
               topSamples, topSampleSize, topSampleSize,
               sampleLeft, sampleBottom, sampleRight, sampleTop, candidate, topBacking));
     }
