@@ -20,6 +20,11 @@ public sealed class ConfigLoadResult {
 
 public sealed class ConfigParser {
   public const int MaxLayers = 32;
+  public const int MaxEntries = 1000;
+  public const int MaxLayerImages = 256;
+  public const int MaxConditionValues = 64;
+  public const int MaxLayouts = 128;
+  public const int MaxNamedLists = 128;
 
   static readonly string[] _placementKeys = ["fit", "position", "opacity", "fade"];
   static readonly string[] _animatedPlacementKeys = [.. _placementKeys, "animate"];
@@ -121,7 +126,13 @@ public sealed class ConfigParser {
       return;
     }
 
+    int layoutIndex = 0;
     foreach (KeyValuePair<YamlNode, YamlNode> pair in mapping.Children) {
+      if (layoutIndex++ == MaxLayouts) {
+        Warn(ProblemCodes.TooManyItems, pair.Key, $"'layouts': only the first {MaxLayouts} layouts are used, the rest are ignored");
+        break;
+      }
+
       string name = Name(pair.Key);
 
       if (_result.Config.Layouts.ContainsKey(name)) {
@@ -308,7 +319,13 @@ public sealed class ConfigParser {
       return layer;
     }
 
-    IEnumerable<YamlNode> imageNodes = image is YamlSequenceNode sequence ? sequence.Children : [image];
+    IList<YamlNode> imageNodes = image is YamlSequenceNode sequence ? sequence.Children : [image];
+
+    if (imageNodes.Count > MaxLayerImages) {
+      Warn(ProblemCodes.TooManyItems, imageNodes[MaxLayerImages],
+          $"{where}: only the first {MaxLayerImages} images are used, the rest are ignored");
+      imageNodes = [.. imageNodes.Take(MaxLayerImages)];
+    }
 
     foreach (YamlNode imageNode in imageNodes) {
       string path = Scalar(imageNode);
@@ -444,7 +461,13 @@ public sealed class ConfigParser {
       return;
     }
 
+    int listIndex = 0;
     foreach (KeyValuePair<YamlNode, YamlNode> pair in mapping.Children) {
+      if (listIndex++ == MaxNamedLists) {
+        Warn(ProblemCodes.TooManyItems, pair.Key, $"'{situation}': only the first {MaxNamedLists} names are used, the rest are ignored");
+        break;
+      }
+
       string name = Name(pair.Key);
 
       if (situation == "biome") {
@@ -510,6 +533,11 @@ public sealed class ConfigParser {
     int index = 0;
     foreach (YamlNode entryNode in Sequence(entriesNode, $"'{name}' entries")) {
       _result.HasDeclaredEntries = true;
+      if (index == MaxEntries) {
+        Warn(ProblemCodes.TooManyItems, entryNode, $"'{name}': only the first {MaxEntries} entries are used, the rest are ignored");
+        break;
+      }
+
       Entry entry = ParseEntry(entryNode, $"{name}.entries[{index++}]");
 
       if (entry != null) {
@@ -610,10 +638,16 @@ public sealed class ConfigParser {
         continue;
       }
 
-      IEnumerable<YamlNode> items = pair.Value is YamlSequenceNode sequence ? sequence.Children : [pair.Value];
+      IList<YamlNode> items = pair.Value is YamlSequenceNode sequence ? sequence.Children : [pair.Value];
       Condition anyOf = null;
 
-      if (Conditions.IsAnyOf(kind) && !items.Any()) {
+      if (items.Count > MaxConditionValues) {
+        Warn(ProblemCodes.TooManyItems, items[MaxConditionValues],
+            $"{where}: '{key}' has more than {MaxConditionValues} values, entry ignored");
+        return false;
+      }
+
+      if (Conditions.IsAnyOf(kind) && items.Count == 0) {
         Warn(ProblemCodes.MissingValue, pair.Value, $"{where}: '{key}' needs a name, entry ignored");
         return false;
       }

@@ -97,6 +97,7 @@ export function validate(parsed, schema) {
   const IMAGE_EXTENSIONS = options.imageExtensions;
   const AUDIO_EXTENSIONS = options.audioExtensions;
   const MAX_LAYERS = options.maxLayers;
+  const { maxEntries, maxLayerImages, maxConditionValues, maxLayouts, maxNamedLists } = options;
   const problems = [];
   const layouts = new Map();
   const emptyList = (listName) => ({ name: listName, layout: null, entries: [] });
@@ -369,7 +370,12 @@ export function validate(parsed, schema) {
     if (colorNode !== undefined) warn(colorNode, where + ": 'color' is ignored on an image layer", 'invalid-layer');
     if (isScalar(image) && same(scalar(image), 'entry')) return { fromEntry: true };
     let usable = 0;
-    for (const item of isSeq(image) ? image.items : [image]) if (checkImage(item, scalar(item), where)) usable++;
+    let images = isSeq(image) ? image.items : [image];
+    if (images.length > maxLayerImages) {
+      warn(images[maxLayerImages], where + ': only the first ' + maxLayerImages + ' images are used, the rest are ignored', 'too-many-items');
+      images = images.slice(0, maxLayerImages);
+    }
+    for (const item of images) if (checkImage(item, scalar(item), where)) usable++;
     if (!usable) { warn(node, where + ': a layer has no usable images, ignored', 'missing-value'); return null; }
     return { fromEntry: false };
   }
@@ -399,7 +405,8 @@ export function validate(parsed, schema) {
   function parseLayouts(node) {
     if (isNull(node)) return;
     if (!isMap(node)) { warn(node, "'layouts' must be a mapping of layout names", 'invalid-shape'); return; }
-    for (const pair of node.items) {
+    for (const [layoutIndex, pair] of node.items.entries()) {
+      if (layoutIndex === maxLayouts) { warn(pair.key, "'layouts': only the first " + maxLayouts + ' layouts are used, the rest are ignored', 'too-many-items'); break; }
       const layoutName = name(pair.key);
       if (layouts.has(layoutName.toLowerCase())) { warn(pair.key, "duplicate layout '" + layoutName + "', ignored", 'duplicate-name'); continue; }
       const result = layout(layoutName, valueOf(pair));
@@ -426,6 +433,7 @@ export function validate(parsed, schema) {
         continue;
       }
       const items = isSeq(value) ? value.items : [value];
+      if (items.length > maxConditionValues) { warn(items[maxConditionValues], where + ": '" + conditionKey + "' has more than " + maxConditionValues + ' values, entry ignored', 'too-many-items'); return false; }
       if (ANY_OF_CONDITIONS.includes(kind) && items.length === 0) { warn(value, where + ": '" + conditionKey + "' needs a name, entry ignored", 'missing-value'); return false; }
       for (const item of items) {
         if (blank(scalar(item))) { warn(item, where + ": '" + conditionKey + "' needs a name, entry ignored", 'missing-value'); return false; }
@@ -500,17 +508,19 @@ export function validate(parsed, schema) {
     }
     if (isNull(entriesNode)) return list;
     if (!isSeq(entriesNode)) { warn(entriesNode, "'" + listName + "' entries must be a list", 'invalid-shape'); return list; }
-    entriesNode.items.forEach((item, index) => {
+    for (const [index, item] of entriesNode.items.entries()) {
+      if (index === maxEntries) { warn(item, "'" + listName + "': only the first " + maxEntries + ' entries are used, the rest are ignored', 'too-many-items'); break; }
       const result = entry(item, listName + '.entries[' + index + ']');
       if (result) list.entries.push(result);
-    });
+    }
     return list;
   }
 
   function namedLists(node, situation, target, knownNames) {
     if (isNull(node)) return;
     if (!isMap(node)) { warn(node, "'" + situation + "' must be a mapping of names to entries", 'invalid-shape'); return; }
-    for (const pair of node.items) {
+    for (const [listIndex, pair] of node.items.entries()) {
+      if (listIndex === maxNamedLists) { warn(pair.key, "'" + situation + "': only the first " + maxNamedLists + ' names are used, the rest are ignored', 'too-many-items'); break; }
       let listName = name(pair.key);
       if (situation === 'biome') listName = options.biomes.find((candidate) => same(candidate, listName)) ?? listName;
       else if (knownNames) {

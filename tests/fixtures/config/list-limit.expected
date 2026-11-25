@@ -1,0 +1,6 @@
+260	too-many-items	layout 'pool' layer '0': only the first 256 images are used, the rest are ignored
+388	too-many-items	'layouts': only the first 128 layouts are used, the rest are ignored
+519	too-many-items	'enemy': only the first 128 names are used, the rest are ignored
+588	too-many-items	sleep.entries[0]: 'when': 'knownItem' has more than 64 values, entry ignored
+1590	too-many-items	'general': only the first 1000 entries are used, the rest are ignored
+0	no-entry-layer	layout 'pool' has no 'image: entry' layer, so entry images are not shown with it

@@ -20,5 +20,6 @@ public static class ProblemCodes {
   public const string InvalidEntry = "invalid-entry";
   public const string InvalidLayer = "invalid-layer";
   public const string TooManyLayers = "too-many-layers";
+  public const string TooManyItems = "too-many-items";
   public const string InvalidShape = "invalid-shape";
 }

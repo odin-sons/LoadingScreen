@@ -6,6 +6,7 @@ export function schemaOptions(schema) {
   const names = (name) => defs[name].enum;
   const keys = (properties) => Object.keys(properties).map((name) => name.toLowerCase());
   const fields = (name) => defs[name].properties;
+  const arrayBranch = (field) => field.oneOf.find((choice) => choice.type === 'array');
   const section = (name) => Object.fromEntries(Object.entries(fields(name)).map(([key, field]) =>
     [field['x-modelProperty'] ?? key, field['x-parserType']]));
 
@@ -23,6 +24,11 @@ export function schemaOptions(schema) {
     removedDefaultKeys: defs.ScreenDefaults['x-removedKeys'],
     removedTextSources: defs.TextSource['x-removedValues'],
     maxLayers: fields('Layout').layers.maxItems,
+    maxEntries: fields('EntryList').entries.maxItems,
+    maxLayerImages: arrayBranch(fields('Layer').image).maxItems,
+    maxConditionValues: arrayBranch(fields('Conditions').knownItem).maxItems,
+    maxLayouts: schema.properties.layouts.maxProperties,
+    maxNamedLists: fields('When').biome.maxProperties,
     timesOfDay: names('TimeOfDay'),
     maxPlayerCount: fields('Conditions').minPlayers.maximum,
     conditionTypes: Object.fromEntries(Object.entries(fields('Conditions'))
