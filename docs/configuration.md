@@ -639,7 +639,8 @@ without a sampled custom image, the YAML default background is used.
 text hue while adjusting its lightness toward WCAG AA 4.5:1 contrast against the effective background and renders the
 text opaque. Over a sampled image the contrast must hold against both the darkest and the brightest parts under the
 text (5th and 95th percentile), not just their average. If lightness alone is not enough, or the area under the text
-is busy (its darkest and brightest parts differ by 3:1 or more), it adds or strengthens the text box instead. `[6 - Accessibility] Minimum text size` is also personal. Its default `0` disables the
+is busy (its darkest and brightest parts differ by 3:1 or more), it adds or strengthens the text box instead, until
+the box brings that spread below 3:1. `[6 - Accessibility] Minimum text size` is also personal. Its default `0` disables the
 minimum; positive values apply to text layers, tips, captions, and progress labels.
 
 Layouts hide the game's sleep text and spinner. Add `text: caption` or other layers if the sleep layout needs

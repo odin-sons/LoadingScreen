@@ -87,6 +87,40 @@ public class ColorMathTests {
         Range(result.Background)) >= 4.5d);
   }
 
+  static ColorValue[] Checkerboard(ColorValue first, ColorValue second) {
+    ColorValue[] pixels = new ColorValue[64];
+    for (int i = 0; i < pixels.Length; i++) pixels[i] = (i % 8 + i / 8) % 2 == 0 ? first : second;
+    return pixels;
+  }
+
+  [Fact]
+  public void ReadableTextPrefersABoxOverAShiftOnBusySamples() {
+    ColorValue[] pixels = Checkerboard(new(255, 255, 255), new(124, 124, 124));
+    (double Low, double High) Range(ColorValue? box) => ColorMath.LuminanceRange(
+        pixels, 8, 8, 0d, 0d, 1d, 1d, box);
+    ColorValue text = new(60, 60, 60);
+    Assert.True(ColorMath.WorstContrast(ColorMath.RelativeLuminance(new(0, 0, 0)), Range(null)) >= 4.5d);
+
+    var result = ColorMath.Readable(text, null, new(190, 190, 190), Range);
+    Assert.True(result.Background.HasValue);
+    (double Low, double High) boxed = Range(result.Background);
+    Assert.True(ColorMath.ContrastRatio(boxed.High, boxed.Low) < ColorMath.BusySpread);
+    Assert.True(ColorMath.WorstContrast(ColorMath.RelativeLuminance(result.Text), boxed) >= 4.5d);
+  }
+
+  [Fact]
+  public void ReadableTextStrengthensAUserBoxOnBusySamples() {
+    ColorValue[] pixels = Checkerboard(new(255, 255, 255), new(90, 90, 90));
+    (double Low, double High) Range(ColorValue? box) => ColorMath.LuminanceRange(
+        pixels, 8, 8, 0d, 0d, 1d, 1d, box);
+    ColorValue userBox = new(0, 0, 0, 20);
+    var result = ColorMath.Readable(new(230, 230, 230), userBox, new(172, 172, 172), Range);
+    Assert.True(result.Background.HasValue);
+    Assert.True(result.Background.Value.A > userBox.A);
+    Assert.True(ColorMath.WorstContrast(ColorMath.RelativeLuminance(result.Text),
+        Range(result.Background)) >= 4.5d);
+  }
+
   [Theory]
   [InlineData(200, 90)]
   [InlineData(128, 128)]

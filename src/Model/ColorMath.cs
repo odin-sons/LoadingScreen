@@ -142,6 +142,10 @@ public static class ColorMath {
       return (luminance, luminance);
     }
 
+    bool Fits((double Low, double High) candidate) =>
+        ContrastRatio(candidate.High, candidate.Low) < BusySpread
+        && WorstContrast(RelativeLuminance(AdjustLightness(text, candidate)), candidate) >= MinimumContrast;
+
     text = new(text.R, text.G, text.B);
     (double Low, double High) range = Range(box);
     if (WorstContrast(RelativeLuminance(text), range) >= MinimumContrast) return (text, box);
@@ -155,14 +159,11 @@ public static class ColorMath {
         new ColorValue(0, 0, 0, box?.A ?? 0),
         new ColorValue(255, 255, 255, box?.A ?? 0) }) {
       ColorValue solid = new(boxColor.R, boxColor.G, boxColor.B);
-      (double Low, double High) solidRange = Range(solid);
-      if (WorstContrast(RelativeLuminance(AdjustLightness(text, solidRange)), solidRange) < MinimumContrast) continue;
+      if (!Fits(Range(solid))) continue;
       int low = boxColor.A, high = 255;
       while (low < high) {
         int middle = (low + high) / 2;
-        (double Low, double High) candidateRange = Range(new ColorValue(boxColor.R, boxColor.G, boxColor.B, (byte) middle));
-        ColorValue candidateText = AdjustLightness(text, candidateRange);
-        if (WorstContrast(RelativeLuminance(candidateText), candidateRange) >= MinimumContrast) high = middle;
+        if (Fits(Range(new ColorValue(boxColor.R, boxColor.G, boxColor.B, (byte) middle)))) high = middle;
         else low = middle + 1;
       }
       ColorValue chosenBox = new(boxColor.R, boxColor.G, boxColor.B, (byte) low);
