@@ -205,9 +205,20 @@ when:
 | `knownBiome` | the player has discovered the biome | vanilla name or EWD `biome:` identifier |
 | `globalKey` | the world has the global key | key name (`defeated_bonemass`, `defeated_queen`, ...) |
 | `playerKey` | the player has the unique key | key name |
+| `time` | the world time of day is one of the values | `day`, `night`, `morning` (first half of the day), `evening` (second half) |
+| `weather` | the current environment is one of the names | environment name (`Rain`, `ThunderStorm`, `Snow`, `Mistlands_clear`, ...) |
+| `sailing` | the player is on board a ship | `true` or `false` |
+| `minPlayers` | at least this many players are in the world | integer from 1 to 999 |
+| `maxPlayers` | at most this many players are in the world | integer from 1 to 999 |
+| `multiplayer` | the world is shared: joined a server, or hosting with the server open | `true` or `false` |
 
 Prefix a condition with `not` to invert it (`notKnownItem`, `notGlobalKey`, ...). A value can be one name or a list;
-every name must match. Player conditions need a loaded character, so entries with them are skipped on the main menu
+every name must match, except for `time` and `weather`, where any listed value matches:
+`when: { time: night, weather: [Rain, ThunderStorm] }`. `sailing`, `multiplayer`, `minPlayers` and `maxPlayers`
+take a single value. World conditions (`time`, `weather`, `sailing`, `minPlayers`, `maxPlayers`) need a loaded world
+and character, and `multiplayer` needs a started game, so entries with them are skipped like player conditions.
+They use the state when the screen is chosen, so a teleport screen sees the weather at the departure point.
+An unknown `weather` name logs a warning with the available environments. Player conditions need a loaded character, so entries with them are skipped on the main menu
 and on the first loading screen of a session. An entry with an unknown condition is ignored with a log message.
 Steam or Xbox achievements are not available to mods on every platform; use the global key or item the achievement
 is about instead.

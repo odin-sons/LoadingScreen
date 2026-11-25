@@ -13,8 +13,15 @@ public sealed class PlayerConditions : IConditionContext {
 
   readonly Dictionary<string, string> _itemNames = new(StringComparer.OrdinalIgnoreCase);
   readonly HashSet<string> _reportedUnknown = new(StringComparer.OrdinalIgnoreCase);
+  const int MaxEnvironmentWarnings = 20;
+  int _reportedEnvironments;
 
   public bool? Check(ConditionKind kind, string name) {
+    if (WorldConditions.IsWorldCondition(kind)) {
+      if (kind == ConditionKind.Weather) WarnUnknownEnvironment(name);
+      return WorldConditions.Check(kind, name, CurrentWorld(kind));
+    }
+
     if (kind == ConditionKind.GlobalKey) {
       return ZoneSystem.instance ? ZoneSystem.instance.GetGlobalKey(name) : null;
     }
@@ -60,6 +67,38 @@ public sealed class PlayerConditions : IConditionContext {
             || (!string.IsNullOrEmpty(localized)
                 && known.IndexOf(localized, StringComparison.OrdinalIgnoreCase) >= 0)
             || (customName != null && string.Equals(known, customName, StringComparison.OrdinalIgnoreCase)));
+  }
+
+  static WorldState CurrentWorld(ConditionKind kind) {
+    if (kind == ConditionKind.Multiplayer) {
+      return new(Multiplayer: ZNet.instance ? !ZNet.IsSinglePlayer : null);
+    }
+
+    if (!Player.m_localPlayer) {
+      return default;
+    }
+
+    EnvMan environment = EnvMan.instance;
+    return new(
+        DayFraction: environment ? environment.GetDayFraction() : null,
+        Environment: environment ? environment.GetCurrentEnvironment()?.m_name : null,
+        Sailing: Ship.GetLocalShip(),
+        PlayerCount: ZNet.instance ? ZNet.instance.GetNrOfPlayers() : null);
+  }
+
+  void WarnUnknownEnvironment(string name) {
+    EnvMan environment = EnvMan.instance;
+
+    if (!environment || _reportedEnvironments >= MaxEnvironmentWarnings || _reportedUnknown.Contains("env:" + name)
+        || environment.m_environments.Any(env => string.Equals(env.m_name, name, StringComparison.OrdinalIgnoreCase))) {
+      return;
+    }
+
+    _reportedUnknown.Add("env:" + name);
+    _reportedEnvironments++;
+    Log.Config.Warning(LogContext.Message("Weather condition names an unknown environment.",
+        ("key", "when.*.entries[].when.weather"), ("environment", name),
+        ("available", string.Join(",", environment.m_environments.Select(env => env.m_name)))));
   }
 
   public void ClearCache() {

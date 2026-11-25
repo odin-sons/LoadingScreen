@@ -10,15 +10,30 @@ public enum ConditionKind {
   KnownBiome,
   GlobalKey,
   PlayerKey,
+  Time,
+  Weather,
+  Sailing,
+  MinPlayers,
+  MaxPlayers,
+  Multiplayer,
+}
+
+public enum TimeOfDay {
+  Day,
+  Night,
+  Morning,
+  Evening,
 }
 
 public sealed class Condition {
   public ConditionKind Kind { get; set; }
   public string Name { get; set; }
   public bool Negated { get; set; }
+  public List<string> Alternatives { get; } = [];
 
   public override string ToString() {
-    return $"{(Negated ? "not " : string.Empty)}{Kind} {Name}";
+    string names = Alternatives.Count == 0 ? Name : Name + "|" + string.Join("|", Alternatives);
+    return $"{(Negated ? "not " : string.Empty)}{Kind} {names}";
   }
 }
 
@@ -28,6 +43,13 @@ public interface IConditionContext {
 
 public static class Conditions {
   const string NegationPrefix = "not";
+  public const int MaxPlayerCount = 999;
+
+  public static bool IsAnyOf(ConditionKind kind) => kind is ConditionKind.Time or ConditionKind.Weather;
+
+  public static bool IsFlag(ConditionKind kind) => kind is ConditionKind.Sailing or ConditionKind.Multiplayer;
+
+  public static bool IsCount(ConditionKind kind) => kind is ConditionKind.MinPlayers or ConditionKind.MaxPlayers;
 
   public static bool TryParseKey(string key, out ConditionKind kind, out bool negated) {
     negated = false;
@@ -56,7 +78,7 @@ public static class Conditions {
     }
 
     foreach (Condition condition in conditions) {
-      bool? result = context.Check(condition.Kind, condition.Name);
+      bool? result = Check(condition, context);
 
       if (result == null || result.Value == condition.Negated) {
         return false;
@@ -64,5 +86,20 @@ public static class Conditions {
     }
 
     return true;
+  }
+
+  static bool? Check(Condition condition, IConditionContext context) {
+    bool? result = context.Check(condition.Kind, condition.Name);
+
+    foreach (string alternative in condition.Alternatives) {
+      if (result == true) {
+        break;
+      }
+
+      bool? next = context.Check(condition.Kind, alternative);
+      result = next == true ? true : result == null || next == null ? null : false;
+    }
+
+    return result;
   }
 }

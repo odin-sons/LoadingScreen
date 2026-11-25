@@ -960,12 +960,24 @@
         "knownBiome",
         "globalKey",
         "playerKey",
+        "time",
+        "weather",
+        "sailing",
+        "minPlayers",
+        "maxPlayers",
+        "multiplayer",
         "notKnownItem",
         "notHasItem",
         "notKnownRecipe",
         "notKnownBiome",
         "notGlobalKey",
-        "notPlayerKey"
+        "notPlayerKey",
+        "notTime",
+        "notWeather",
+        "notSailing",
+        "notMinPlayers",
+        "notMaxPlayers",
+        "notMultiplayer"
       ],
       "title": "Condition"
     },
@@ -1185,7 +1197,13 @@
         "KnownRecipe",
         "KnownBiome",
         "GlobalKey",
-        "PlayerKey"
+        "PlayerKey",
+        "Time",
+        "Weather",
+        "Sailing",
+        "MinPlayers",
+        "MaxPlayers",
+        "Multiplayer"
       ],
       "x-enumValues": {
         "KnownItem": 0,
@@ -1193,78 +1211,29 @@
         "KnownRecipe": 2,
         "KnownBiome": 3,
         "GlobalKey": 4,
-        "PlayerKey": 5
+        "PlayerKey": 5,
+        "Time": 6,
+        "Weather": 7,
+        "Sailing": 8,
+        "MinPlayers": 9,
+        "MaxPlayers": 10,
+        "Multiplayer": 11
       }
+    },
+    "TimeOfDay": {
+      "type": "string",
+      "enum": [
+        "day",
+        "night",
+        "morning",
+        "evening"
+      ],
+      "title": "Time of day"
     },
     "Conditions": {
       "type": "object",
       "properties": {
         "knownItem": {
-          "oneOf": [
-            {
-              "type": "string"
-            },
-            {
-              "type": "array",
-              "items": {
-                "type": "string"
-              }
-            }
-          ]
-        },
-        "hasItem": {
-          "oneOf": [
-            {
-              "type": "string"
-            },
-            {
-              "type": "array",
-              "items": {
-                "type": "string"
-              }
-            }
-          ]
-        },
-        "knownRecipe": {
-          "oneOf": [
-            {
-              "type": "string"
-            },
-            {
-              "type": "array",
-              "items": {
-                "type": "string"
-              }
-            }
-          ]
-        },
-        "knownBiome": {
-          "oneOf": [
-            {
-              "type": "string"
-            },
-            {
-              "type": "array",
-              "items": {
-                "type": "string"
-              }
-            }
-          ]
-        },
-        "globalKey": {
-          "oneOf": [
-            {
-              "type": "string"
-            },
-            {
-              "type": "array",
-              "items": {
-                "type": "string"
-              }
-            }
-          ]
-        },
-        "playerKey": {
           "oneOf": [
             {
               "type": "string"
@@ -1290,7 +1259,33 @@
             }
           ]
         },
+        "hasItem": {
+          "oneOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          ]
+        },
         "notHasItem": {
+          "oneOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          ]
+        },
+        "knownRecipe": {
           "oneOf": [
             {
               "type": "string"
@@ -1316,7 +1311,33 @@
             }
           ]
         },
+        "knownBiome": {
+          "oneOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          ]
+        },
         "notKnownBiome": {
+          "oneOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          ]
+        },
+        "globalKey": {
           "oneOf": [
             {
               "type": "string"
@@ -1342,6 +1363,19 @@
             }
           ]
         },
+        "playerKey": {
+          "oneOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          ]
+        },
         "notPlayerKey": {
           "oneOf": [
             {
@@ -1354,6 +1388,90 @@
               }
             }
           ]
+        },
+        "time": {
+          "oneOf": [
+            {
+              "$ref": "#/$defs/TimeOfDay"
+            },
+            {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/TimeOfDay"
+              }
+            }
+          ]
+        },
+        "notTime": {
+          "oneOf": [
+            {
+              "$ref": "#/$defs/TimeOfDay"
+            },
+            {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/TimeOfDay"
+              }
+            }
+          ]
+        },
+        "weather": {
+          "oneOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          ]
+        },
+        "notWeather": {
+          "oneOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          ]
+        },
+        "sailing": {
+          "type": "boolean"
+        },
+        "notSailing": {
+          "type": "boolean"
+        },
+        "minPlayers": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 999
+        },
+        "notMinPlayers": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 999
+        },
+        "maxPlayers": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 999
+        },
+        "notMaxPlayers": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 999
+        },
+        "multiplayer": {
+          "type": "boolean"
+        },
+        "notMultiplayer": {
+          "type": "boolean"
         }
       },
       "additionalProperties": false
