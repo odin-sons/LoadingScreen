@@ -208,12 +208,14 @@ public static class ConfigSchemaGenerator {
     });
     defs["LayoutValue"] = Choice(new JsonObject { ["type"] = "array", ["items"] = Ref("Layer") }, Ref("Layout"));
     defs["Layout"]["properties"]["layers"]["maxItems"] = ConfigParser.MaxLayers;
-    defs["Layer"]["properties"]["image"]["oneOf"][1]["maxItems"] = ConfigParser.MaxLayerImages;
+    ((JsonArray) defs["Layer"]["properties"]["image"]["oneOf"]).Single(choice => (string) choice["type"] == "array")
+        ["maxItems"] = ConfigParser.MaxLayerImages;
     defs["EntryList"]["properties"]["entries"]["maxItems"] = ConfigParser.MaxEntries;
     defs["EntryValue"] = Choice(new JsonObject { ["type"] = "string" }, Ref("Entry"));
     defs["EntryListValue"] = Choice(new JsonObject {
       ["type"] = "array", ["items"] = Ref("EntryValue"), ["maxItems"] = ConfigParser.MaxEntries }, Ref("EntryList"));
-    JsonObject namedLists = new() { ["type"] = "object", ["additionalProperties"] = Ref("EntryListValue") };
+    JsonObject namedLists = new() {
+      ["type"] = "object", ["additionalProperties"] = Ref("EntryListValue"), ["maxProperties"] = ConfigParser.MaxNamedLists };
     defs["When"] = Object(new JsonObject {
       ["general"] = Ref("EntryListValue"), ["sleep"] = Ref("EntryListValue"),
       ["biome"] = namedLists.DeepClone(), ["death"] = namedLists.DeepClone(), ["enemy"] = namedLists.DeepClone()

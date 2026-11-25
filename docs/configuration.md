@@ -519,9 +519,9 @@ layouts:
         place: { fit: { width: 35% }, position: { anchor: bottom, y: -14% } }
 ```
 
-A layout uses at most 32 layers and an image layer at most 256 images. A config uses at most 128 layouts and
-1000 entries per list, and a condition takes at most 64 values; the rest is ignored with a warning, and an entry
-with too many condition values is ignored.
+A layout uses at most 32 layers and an image layer at most 256 images. A config uses at most 128 layouts,
+1000 entries per list and 128 names per `biome`, `death` or `enemy` mapping, and a condition takes at most 64
+values. The rest is ignored with a warning; an entry with too many condition values is ignored.
 The images on one screen share a budget of about 33 megapixels (two 4096x4096
 images); a layer image that does not fit is skipped with a log message.
 

@@ -1562,19 +1562,22 @@
           "type": "object",
           "additionalProperties": {
             "$ref": "#/$defs/EntryListValue"
-          }
+          },
+          "maxProperties": 128
         },
         "death": {
           "type": "object",
           "additionalProperties": {
             "$ref": "#/$defs/EntryListValue"
-          }
+          },
+          "maxProperties": 128
         },
         "enemy": {
           "type": "object",
           "additionalProperties": {
             "$ref": "#/$defs/EntryListValue"
-          }
+          },
+          "maxProperties": 128
         }
       },
       "additionalProperties": false

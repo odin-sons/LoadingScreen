@@ -97,7 +97,7 @@ export function validate(parsed, schema) {
   const IMAGE_EXTENSIONS = options.imageExtensions;
   const AUDIO_EXTENSIONS = options.audioExtensions;
   const MAX_LAYERS = options.maxLayers;
-  const { maxEntries, maxLayerImages, maxConditionValues, maxLayouts } = options;
+  const { maxEntries, maxLayerImages, maxConditionValues, maxLayouts, maxNamedLists } = options;
   const problems = [];
   const layouts = new Map();
   const emptyList = (listName) => ({ name: listName, layout: null, entries: [] });
@@ -519,7 +519,8 @@ export function validate(parsed, schema) {
   function namedLists(node, situation, target, knownNames) {
     if (isNull(node)) return;
     if (!isMap(node)) { warn(node, "'" + situation + "' must be a mapping of names to entries", 'invalid-shape'); return; }
-    for (const pair of node.items) {
+    for (const [listIndex, pair] of node.items.entries()) {
+      if (listIndex === maxNamedLists) { warn(pair.key, "'" + situation + "': only the first " + maxNamedLists + ' names are used, the rest are ignored', 'too-many-items'); break; }
       let listName = name(pair.key);
       if (situation === 'biome') listName = options.biomes.find((candidate) => same(candidate, listName)) ?? listName;
       else if (knownNames) {

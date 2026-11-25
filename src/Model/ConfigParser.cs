@@ -24,6 +24,7 @@ public sealed class ConfigParser {
   public const int MaxLayerImages = 256;
   public const int MaxConditionValues = 64;
   public const int MaxLayouts = 128;
+  public const int MaxNamedLists = 128;
 
   static readonly string[] _placementKeys = ["fit", "position", "opacity", "fade"];
   static readonly string[] _animatedPlacementKeys = [.. _placementKeys, "animate"];
@@ -460,7 +461,13 @@ public sealed class ConfigParser {
       return;
     }
 
+    int listIndex = 0;
     foreach (KeyValuePair<YamlNode, YamlNode> pair in mapping.Children) {
+      if (listIndex++ == MaxNamedLists) {
+        Warn(ProblemCodes.TooManyItems, pair.Key, $"'{situation}': only the first {MaxNamedLists} names are used, the rest are ignored");
+        break;
+      }
+
       string name = Name(pair.Key);
 
       if (situation == "biome") {

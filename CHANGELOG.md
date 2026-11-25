@@ -11,9 +11,9 @@
 
 #### Fixed
 
-  * **List limits.** A config uses at most 1000 entries per list, 128 layouts and 256 images per image layer, and a
-    condition takes at most 64 values. Extra items are ignored with a `too-many-items` warning, so a large shared
-    config cannot make the model grow without bound.
+  * **List limits.** A config uses at most 1000 entries per list, 128 names per situation, 128 layouts and 256
+    images per image layer, and a condition takes at most 64 values. Extra items are ignored with a `too-many-items`
+    warning, so a large shared config cannot make the model grow without bound.
   * **Empty edges on panning backgrounds.** Idle presets such as `pan`, `drift` and `ken-burns` on `fit: cover`
     or `stretch` images and on color layers now add a constant zoom, so the screen edge never shows.
   * **Jump when idle starts.** Enter and exit presets play relative to the idle pose, so `fade-in` followed by
