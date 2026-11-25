@@ -4,6 +4,8 @@ using System;
 
 public static class ColorMath {
   public const double MinimumContrast = 4.5;
+  public const double BusySpread = 3d;
+  public const double RangePercentile = 0.05d;
 
   public static double RelativeLuminance(ColorValue color) {
     static double Linear(byte value) {
@@ -74,19 +76,49 @@ public static class ColorMath {
     return total / ((x1 - x0) * (y1 - y0));
   }
 
+  public static (double Low, double High) LuminanceRange(ColorValue[] pixels, int width, int height,
+      double left, double bottom, double right, double top, ColorValue? box = null,
+      ColorValue? backing = null) {
+    int x0 = Math.Max(0, Math.Min(width - 1, (int) Math.Floor(left * width)));
+    int x1 = Math.Max(x0 + 1, Math.Min(width, (int) Math.Ceiling(right * width)));
+    int y0 = Math.Max(0, Math.Min(height - 1, (int) Math.Floor(bottom * height)));
+    int y1 = Math.Max(y0 + 1, Math.Min(height, (int) Math.Ceiling(top * height)));
+    double[] values = new double[(x1 - x0) * (y1 - y0)];
+    int index = 0;
+    for (int y = y0; y < y1; y++) {
+      for (int x = x0; x < x1; x++) {
+        ColorValue pixel = pixels[y * width + x];
+        if (backing.HasValue) pixel = Blend(pixel, backing.Value);
+        values[index++] = RelativeLuminance(box.HasValue ? Blend(box.Value, pixel) : pixel);
+      }
+    }
+    Array.Sort(values);
+    int edge = (int) Math.Floor((values.Length - 1) * RangePercentile);
+    return (values[edge], values[values.Length - 1 - edge]);
+  }
+
+  public static double WorstContrast(double textLuminance, (double Low, double High) background) {
+    return Math.Min(ContrastRatio(textLuminance, background.Low), ContrastRatio(textLuminance, background.High));
+  }
+
   public static ColorValue AdjustLightness(ColorValue color, double backgroundLuminance, double minimumContrast = MinimumContrast) {
-    if (ContrastRatio(RelativeLuminance(color), backgroundLuminance) >= minimumContrast) return color;
+    return AdjustLightness(color, (backgroundLuminance, backgroundLuminance), minimumContrast);
+  }
+
+  public static ColorValue AdjustLightness(ColorValue color, (double Low, double High) background,
+      double minimumContrast = MinimumContrast) {
+    if (WorstContrast(RelativeLuminance(color), background) >= minimumContrast) return color;
     ToHsl(color, out double hue, out double saturation, out double lightness);
     ColorValue best = color;
     double nearest = double.MaxValue;
     foreach (double limit in new[] { 0.1d, 0.9d }) {
       ColorValue end = FromHsl(hue, saturation, limit);
-      if (ContrastRatio(RelativeLuminance(end), backgroundLuminance) < minimumContrast) continue;
+      if (WorstContrast(RelativeLuminance(end), background) < minimumContrast) continue;
       double low = Math.Min(lightness, limit);
       double high = Math.Max(lightness, limit);
       for (int i = 0; i < 20; i++) {
         double middle = (low + high) / 2d;
-        bool enough = ContrastRatio(RelativeLuminance(FromHsl(hue, saturation, middle)), backgroundLuminance) >= minimumContrast;
+        bool enough = WorstContrast(RelativeLuminance(FromHsl(hue, saturation, middle)), background) >= minimumContrast;
         if (limit < lightness) {
           if (enough) low = middle; else high = middle;
         } else {
@@ -103,13 +135,23 @@ public static class ColorMath {
 
   public static (ColorValue Text, ColorValue? Background) Readable(
       ColorValue text, ColorValue? box, ColorValue imageBackground,
-      Func<ColorValue?, double> effectiveLuminance = null) {
+      Func<ColorValue?, (double Low, double High)> backgroundRange = null) {
+    (double Low, double High) Range(ColorValue? candidate) {
+      if (backgroundRange != null) return backgroundRange(candidate);
+      double luminance = RelativeLuminance(candidate.HasValue ? Blend(candidate.Value, imageBackground) : imageBackground);
+      return (luminance, luminance);
+    }
+
+    bool Fits((double Low, double High) candidate) =>
+        ContrastRatio(candidate.High, candidate.Low) < BusySpread
+        && WorstContrast(RelativeLuminance(AdjustLightness(text, candidate)), candidate) >= MinimumContrast;
+
     text = new(text.R, text.G, text.B);
-    ColorValue background = box.HasValue ? Blend(box.Value, imageBackground) : imageBackground;
-    double luminance = effectiveLuminance?.Invoke(box) ?? RelativeLuminance(background);
-    ColorValue adjusted = AdjustLightness(text, luminance);
-    if (ContrastRatio(RelativeLuminance(adjusted), luminance) >= MinimumContrast) {
-      return (adjusted, box);
+    (double Low, double High) range = Range(box);
+    if (WorstContrast(RelativeLuminance(text), range) >= MinimumContrast) return (text, box);
+    if (ContrastRatio(range.High, range.Low) < BusySpread) {
+      ColorValue adjusted = AdjustLightness(text, range);
+      if (WorstContrast(RelativeLuminance(adjusted), range) >= MinimumContrast) return (adjusted, box);
     }
 
     foreach (ColorValue boxColor in new[] {
@@ -117,24 +159,15 @@ public static class ColorMath {
         new ColorValue(0, 0, 0, box?.A ?? 0),
         new ColorValue(255, 255, 255, box?.A ?? 0) }) {
       ColorValue solid = new(boxColor.R, boxColor.G, boxColor.B);
-      double solidLuminance = effectiveLuminance?.Invoke(solid)
-          ?? RelativeLuminance(Blend(solid, imageBackground));
-      if (ContrastRatio(RelativeLuminance(AdjustLightness(text, solidLuminance)), solidLuminance)
-          < MinimumContrast) continue;
+      if (!Fits(Range(solid))) continue;
       int low = boxColor.A, high = 255;
       while (low < high) {
         int middle = (low + high) / 2;
-        ColorValue candidateBox = new(boxColor.R, boxColor.G, boxColor.B, (byte) middle);
-        double candidateLuminance = effectiveLuminance?.Invoke(candidateBox)
-            ?? RelativeLuminance(Blend(candidateBox, imageBackground));
-        ColorValue candidateText = AdjustLightness(text, candidateLuminance);
-        if (ContrastRatio(RelativeLuminance(candidateText), candidateLuminance) >= MinimumContrast) high = middle;
+        if (Fits(Range(new ColorValue(boxColor.R, boxColor.G, boxColor.B, (byte) middle)))) high = middle;
         else low = middle + 1;
       }
       ColorValue chosenBox = new(boxColor.R, boxColor.G, boxColor.B, (byte) low);
-      double chosenLuminance = effectiveLuminance?.Invoke(chosenBox)
-          ?? RelativeLuminance(Blend(chosenBox, imageBackground));
-      return (AdjustLightness(text, chosenLuminance), chosenBox);
+      return (AdjustLightness(text, Range(chosenBox)), chosenBox);
     }
 
     ColorValue fallback = AutoText(RelativeLuminance(imageBackground));

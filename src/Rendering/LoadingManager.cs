@@ -285,7 +285,7 @@ public static class LoadingManager {
     Color32 original = ToColor(ScreenConfigLoader.Current.Defaults.Tip.Color);
     (ColorValue text, ColorValue? boxColor) = ColorMath.Readable(
         new(original.r, original.g, original.b, original.a), null, background,
-        areaPixels == null ? null : candidate => ColorMath.AverageLuminance(
+        areaPixels == null ? null : candidate => ColorMath.LuminanceRange(
             areaPixels, areaSize, areaSize,
             areaLeft, areaBottom, areaRight, areaTop, candidate, backing));
     tipText.color = ToColor(text);
