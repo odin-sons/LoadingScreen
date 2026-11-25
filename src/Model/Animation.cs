@@ -197,23 +197,22 @@ public sealed class LayerAnimation {
     float bottom = geometry.Height / 2f + geometry.PivotY;
     float top = geometry.Height / 2f - geometry.PivotY;
     float required = 0f;
-    foreach (float cornerX in new[] { -geometry.ViewportWidth / 2f, geometry.ViewportWidth / 2f }) {
-      foreach (float cornerY in new[] { -geometry.ViewportHeight / 2f, geometry.ViewportHeight / 2f }) {
-        float dx = cornerX - pivotX;
-        float dy = cornerY - pivotY;
-        float localX = dx * cos - dy * sin;
-        float localY = dx * sin + dy * cos;
-        required = Math.Max(required, Needed(localX, right, left));
-        required = Math.Max(required, Needed(localY, bottom, top));
-      }
+    for (int corner = 0; corner < 4; corner++) {
+      float dx = (corner % 2 == 0 ? -1f : 1f) * geometry.ViewportWidth / 2f - pivotX;
+      float dy = (corner < 2 ? -1f : 1f) * geometry.ViewportHeight / 2f - pivotY;
+      float localX = dx * cos - dy * sin;
+      float localY = dx * sin + dy * cos;
+      required = Math.Max(required, Needed(localX, right, left));
+      required = Math.Max(required, Needed(localY, bottom, top));
     }
     return required;
   }
 
   static float Needed(float distance, float positiveExtent, float negativeExtent) {
-    if (Math.Abs(distance) < 1e-4f) return 0f;
+    const float pixel = 0.01f;
+    if (Math.Abs(distance) < pixel) return 0f;
     float extent = distance > 0f ? positiveExtent : negativeExtent;
-    return extent <= 1e-4f ? float.PositiveInfinity : Math.Abs(distance) / extent;
+    return extent < pixel ? float.PositiveInfinity : Math.Abs(distance) / extent;
   }
 }
 

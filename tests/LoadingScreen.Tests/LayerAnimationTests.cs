@@ -42,6 +42,27 @@ public class LayerAnimationTests {
     }
   }
 
+  [Theory]
+  [InlineData("ken-burns", 0f, 0f, 0f, 0f)]
+  [InlineData("ken-burns", 120f, -60f, 0f, 0f)]
+  [InlineData("sway", 80f, 40f, 0f, 200f)]
+  [InlineData("drift", -100f, 50f, -200f, -120f)]
+  [InlineData("pan", 0f, 0f, 0f, 541f)]
+  public void ForwardTransformedCornersEncloseScreen(string idle, float centerX, float centerY, float pivotX, float pivotY) {
+    LayerGeometry geometry = new(1920f, 1080f, 1922f + 2f * Math.Abs(centerX), 1082f + 2f * Math.Abs(centerY),
+        centerX, centerY, pivotX, pivotY);
+    LayerAnimation animation = new(null, Catalog.Resolve(idle), null, keepCovered: true);
+    LayerAnimation uncorrected = new(null, Catalog.Resolve(idle), null);
+    float duration = Catalog.Resolve(idle).EffectiveDuration();
+    bool exposedWithoutCorrection = false;
+    for (int i = 0; i <= 400; i++) {
+      float time = duration * i / 400f;
+      Assert.True(Encloses(animation.SampleIdle(time, geometry), geometry), $"{idle} at {i}");
+      exposedWithoutCorrection |= !Encloses(uncorrected.SampleIdle(time, geometry), geometry);
+    }
+    Assert.True(exposedWithoutCorrection);
+  }
+
   [Fact]
   public void CoverFactorOnlyAppliesToLayersThatFillTheScreen() {
     LayerGeometry logo = new(1920f, 1080f, 400f, 200f);
@@ -94,6 +115,31 @@ public class LayerAnimationTests {
         keepCovered: true);
     AnimationSample start = animation.SampleEnter(0f, geometry);
     Assert.True(start.X + geometry.Width * start.Scale / 2f <= -geometry.ViewportWidth / 2f);
+  }
+
+  static bool Encloses(AnimationSample sample, LayerGeometry geometry) {
+    double angle = sample.Rotation * Math.PI / 180.0;
+    double cos = Math.Cos(angle), sin = Math.Sin(angle);
+    double pivotX = geometry.CenterX + geometry.PivotX + sample.X;
+    double pivotY = -(geometry.CenterY + geometry.PivotY) + sample.Y;
+    (double X, double Y)[] corners = new (double, double)[4];
+    for (int i = 0; i < 4; i++) {
+      double localX = (i == 0 || i == 3 ? -geometry.Width : geometry.Width) / 2.0 - geometry.PivotX;
+      double localY = (i < 2 ? -geometry.Height : geometry.Height) / 2.0 + geometry.PivotY;
+      localX *= sample.Scale;
+      localY *= sample.Scale;
+      corners[i] = (pivotX + localX * cos - localY * sin, pivotY + localX * sin + localY * cos);
+    }
+    for (int i = 0; i < 4; i++) {
+      double screenX = (i % 2 == 0 ? -1 : 1) * geometry.ViewportWidth / 2.0;
+      double screenY = (i < 2 ? -1 : 1) * geometry.ViewportHeight / 2.0;
+      for (int edge = 0; edge < 4; edge++) {
+        (double ax, double ay) = corners[edge];
+        (double bx, double by) = corners[(edge + 1) % 4];
+        if ((bx - ax) * (screenY - ay) - (by - ay) * (screenX - ax) < -0.5 * Math.Sqrt((bx - ax) * (bx - ax) + (by - ay) * (by - ay))) return false;
+      }
+    }
+    return true;
   }
 
   static void AssertClose(AnimationSample expected, AnimationSample actual) {
