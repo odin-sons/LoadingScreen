@@ -192,9 +192,11 @@ public static class ConfigSchemaGenerator {
       JsonObject value = Conditions.IsFlag(kind) ? new JsonObject { ["type"] = "boolean" }
           : Conditions.IsCount(kind) ? new JsonObject {
               ["type"] = "integer", ["minimum"] = 1, ["maximum"] = Conditions.MaxPlayerCount }
-          : kind == ConditionKind.Time ? Choice(Ref("TimeOfDay"), new JsonObject { ["type"] = "array", ["items"] = Ref("TimeOfDay") })
-          : Choice(new JsonObject { ["type"] = "string" },
-              new JsonObject { ["type"] = "array", ["items"] = new JsonObject { ["type"] = "string" } });
+          : kind == ConditionKind.Time ? Choice(Ref("TimeOfDay"), new JsonObject {
+              ["type"] = "array", ["items"] = Ref("TimeOfDay"), ["maxItems"] = ConfigParser.MaxConditionValues })
+          : Choice(new JsonObject { ["type"] = "string" }, new JsonObject {
+              ["type"] = "array", ["items"] = new JsonObject { ["type"] = "string" },
+              ["maxItems"] = ConfigParser.MaxConditionValues });
       conditionProperties[Camel(kind.ToString())] = value;
       conditionProperties["not" + kind] = value.DeepClone();
     }
@@ -206,8 +208,11 @@ public static class ConfigSchemaGenerator {
     });
     defs["LayoutValue"] = Choice(new JsonObject { ["type"] = "array", ["items"] = Ref("Layer") }, Ref("Layout"));
     defs["Layout"]["properties"]["layers"]["maxItems"] = ConfigParser.MaxLayers;
+    defs["Layer"]["properties"]["image"]["oneOf"][1]["maxItems"] = ConfigParser.MaxLayerImages;
+    defs["EntryList"]["properties"]["entries"]["maxItems"] = ConfigParser.MaxEntries;
     defs["EntryValue"] = Choice(new JsonObject { ["type"] = "string" }, Ref("Entry"));
-    defs["EntryListValue"] = Choice(new JsonObject { ["type"] = "array", ["items"] = Ref("EntryValue") }, Ref("EntryList"));
+    defs["EntryListValue"] = Choice(new JsonObject {
+      ["type"] = "array", ["items"] = Ref("EntryValue"), ["maxItems"] = ConfigParser.MaxEntries }, Ref("EntryList"));
     JsonObject namedLists = new() { ["type"] = "object", ["additionalProperties"] = Ref("EntryListValue") };
     defs["When"] = Object(new JsonObject {
       ["general"] = Ref("EntryListValue"), ["sleep"] = Ref("EntryListValue"),
@@ -215,6 +220,7 @@ public static class ConfigSchemaGenerator {
     });
 
     JsonObject root = Object(Properties(typeof(ScreenConfig)));
+    root["properties"]["layouts"]["maxProperties"] = ConfigParser.MaxLayouts;
     root["$schema"] = "https://json-schema.org/draft/2020-12/schema";
     root["$id"] = "https://odin-sons.github.io/LoadingScreen/data/config.schema.json";
     root["title"] = "LoadingScreen configuration";

@@ -23,6 +23,10 @@ export function schemaOptions(schema) {
     removedDefaultKeys: defs.ScreenDefaults['x-removedKeys'],
     removedTextSources: defs.TextSource['x-removedValues'],
     maxLayers: fields('Layout').layers.maxItems,
+    maxEntries: fields('EntryList').entries.maxItems,
+    maxLayerImages: fields('Layer').image.oneOf[1].maxItems,
+    maxConditionValues: fields('Conditions').knownItem.oneOf[1].maxItems,
+    maxLayouts: schema.properties.layouts.maxProperties,
     timesOfDay: names('TimeOfDay'),
     maxPlayerCount: fields('Conditions').minPlayers.maximum,
     conditionTypes: Object.fromEntries(Object.entries(fields('Conditions'))
